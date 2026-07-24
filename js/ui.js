@@ -51,7 +51,7 @@
       list.forEach(function (it) {
         var dc = (OC.DATACENTERS[it.dc] || { name: it.dc }).name;
         var sd = it.side ? '<span class="dc-side side-' + it.side + '">' + (it.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
-        var status = (it.alive ? '<span class="dc-alive">' + t('alive') + '</span>' : '<span class="dc-eta">' + UI.fmtDur(Math.max(0, it.etaSec)) + '</span>') + sd;
+        var status = (it.alive ? '<span class="dc-alive">' + t('alive') + '</span>' : '<span class="dc-eta" data-tk="eta" data-tv="' + it.nextEpoch + '">' + UI.fmtDur(Math.max(0, it.etaSec)) + '</span>') + sd;
         var ce = it.ceId && OC.CES[it.ceId] ? nm(OC.CES[it.ceId].name) : '';
         var ft = it.fateId && OC.FATES[it.fateId] ? nm(OC.FATES[it.fateId].name) : '';
         h += '<div class="dc-row' + (it.alive ? ' alive' : '') + '" data-tid="' + esc(it.id) + '">';
@@ -97,7 +97,7 @@
   function rowHtml(e, def, type, n) {
     var alive = e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time);
     var cls = 'p-row ' + type + (alive ? ' alive' : '') + (def.type === 'tower' ? ' tower' : '');
-    var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + esc(nm(def.name)) + '</span>' + badge(e, n, alive) + '</div>';
+    var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + esc(nm(def.name)) + '</span>' + badge(e, n, alive, type) + '</div>';
     var tags = '';
     if (def.type === 'tower') tags += '<span class="tag tw">' + t('tower') + '</span>';
     if (def.spawn_type && def.monster) tags += '<span class="tag mob">▸ ' + esc(nm(def.monster)) + '</span>';
@@ -106,12 +106,51 @@
     h += '<div class="p-row-mid">' + tags + '</div><div class="p-row-bot">' + UI.dropIcons(def.drops) + '</div></div>';
     return h;
   }
-  function badge(e, n, alive) {
-    if (alive) return '<span class="bdg alive">● ' + t('alive') + ' ' + UI.fmtClock(n - e.spawn_time) + '</span>';
+  function avgInterval(e) {
+    var r = e.respawn_times;
+    if (r && r.length) { var s = 0; r.forEach(function (x) { s += x; }); return Math.round(s / r.length); }
+    return 1800; // 缺省 30 分钟
+  }
+  function span(cls, kind, val) {
+    return '<span class="' + cls + '" data-tk="' + kind + '" data-tv="' + val + '">' + UI.timerText(kind, val) + '</span>';
+  }
+  function badge(e, n, alive, type) {
+    if (alive) return span('bdg alive', 'alive', e.spawn_time);
+    if (type === 'ce') {
+      var base = e.last_seen > 0 ? e.last_seen : (e.death_time > 0 ? e.death_time : 0);
+      if (base > 0) { var na = base + avgInterval(e); return span('bdg ' + (n >= na ? 'canpop' : 'gone'), 'cd', na); }
+      return span('bdg canpop', 'canpop', 0); // 从未出现视为可触发
+    }
+    if (type === 'pot') {
+      if (e.spawn_time > 0) return span('bdg gone', 'eta', e.spawn_time + 1800);
+      return '<span class="bdg unk">' + t('unknown') + '</span>';
+    }
     var seen = e.last_seen > 0 ? e.last_seen : (e.death_time > 0 ? e.death_time : 0);
-    if (seen > 0) return '<span class="bdg gone">' + t('last_seen') + ' ' + UI.fmtClock(n - seen) + '</span>';
+    if (seen > 0) return span('bdg gone', 'last', seen);
     return '<span class="bdg unk">' + t('unknown') + '</span>';
   }
+
+  // 计时文本（render 与每秒 tick 复用）
+  UI.timerText = function (kind, val, now) {
+    now = now || Math.floor(Date.now() / 1000);
+    switch (kind) {
+      case 'alive': return '● ' + t('alive') + ' ' + UI.fmtClock(now - val);
+      case 'last': return t('last_seen') + ' ' + UI.fmtClock(now - val);
+      case 'cd': return now >= val ? t('ce_can_trigger') : t('ce_cooldown') + ' ' + UI.fmtClock(val - now);
+      case 'canpop': return t('ce_can_trigger');
+      case 'eta': return now >= val ? t('pot_soon') : UI.fmtDur(val - now);
+    }
+    return '';
+  };
+  // 每秒只更新计时文本，不重绘整个面板（避免滚动被顶回 / 闪烁）
+  UI.tickPanel = function () {
+    var now = Math.floor(Date.now() / 1000);
+    document.querySelectorAll('#popover [data-tk]').forEach(function (el) {
+      var kind = el.getAttribute('data-tk');
+      el.textContent = UI.timerText(kind, Number(el.getAttribute('data-tv')) || 0, now);
+      if (kind === 'cd') el.className = 'bdg ' + (now >= Number(el.getAttribute('data-tv')) ? 'canpop' : 'gone');
+    });
+  };
 
   // ---- 通知 ----
   var last = {};

@@ -37,6 +37,7 @@
       h += '<div class="chips">';
       h += '<div id="chip-conn" class="chip chip-conn clickable" title="' + t('collapse') + '"></div>';
       h += '<div id="chip-pot" class="chip chip-pot clickable" title="' + t('my_island_hint') + '"></div>';
+      h += '<div id="chips-active" class="chips-active"></div>';
       h += '</div>';
       h += '<div class="rail">' + railHtml() + '</div>';
       h += '<div id="popover" class="popover hidden"></div>';
@@ -82,20 +83,26 @@
       this.updateMapVisible();
     },
 
-    // 通过场上 boss 确认玩家所在的岛（同大区多个岛时消歧）
+    // 确认玩家所在的岛：boss 命中最强；一旦锁定就保持（sticky），
+    // 不因为它暂时掉出撒娇罐总览列表而丢失（否则 CE 没打完就消失）。
     resolveMyIsland: function () {
       var pdc = OC.Overlay.playerDc;
       var inDc = (this._dc || []).filter(function (x) { return pdc ? x.dc === pdc : true; });
       var active = OC.Overlay.activeIds || [];
-      var id = null;
       if (active.length) {
         var hit = inDc.filter(function (x) { return active.indexOf(x.ceId) >= 0 || active.indexOf(x.fateId) >= 0; })[0];
-        if (hit) id = hit.id;
+        if (hit) { this.myIslandId = hit.id; return hit.id; }
       }
-      if (!id && inDc.length === 1) id = inDc[0].id;             // 该大区只有一个岛
-      if (!id && this.myIslandId && inDc.some(function (x) { return x.id === App.myIslandId; })) id = this.myIslandId; // 保持上次
-      this.myIslandId = id;
-      return id;
+      if (this.myIslandId) return this.myIslandId;               // 已锁定则保持
+      if (inDc.length === 1) { this.myIslandId = inDc[0].id; return this.myIslandId; } // 该大区仅一个岛
+      return null;
+    },
+
+    // 离开新月岛时清空锁定，重进本会重新识别
+    resetIsland: function () {
+      this.myIslandId = null; this._island = null; this._potAlertedFor = null;
+      OC.State.highlights = [];
+      OC.Map.updateHighlights(document.getElementById('mapLayer'));
     },
 
     // 地图仅在新月岛内且未折叠时显示；折叠/离岛时隐藏地图与右侧按钮，仅留胶囊
@@ -176,12 +183,31 @@
         pot.classList.toggle('ready', ready);
         pot.innerHTML = body;
       }
+      this.updateActive();
+    },
+
+    // 当前岛正在进行的 FATE/CE 胶囊（随界面缩放；带掉落颜色后缀）
+    updateActive: function () {
+      var box = document.getElementById('chips-active');
+      if (!box) return;
+      var isl = this._island;
+      if (!isl) { box.innerHTML = ''; return; }
+      var alive = isl.ce.concat(isl.fate).filter(isAlive);
+      box.innerHTML = alive.map(function (e) {
+        var isCe = !!OC.CES[e.fate_id];
+        var def = isCe ? OC.CES[e.fate_id] : OC.FATES[e.fate_id];
+        if (!def) return '';
+        return '<div class="chip chip-act ' + (isCe ? 'ce' : 'fate') + '">' + OC.UI.esc(nm(def.name)) + demiatmaSuffix(def.drops) + '</div>';
+      }).join('');
     },
 
     wireOverlay: function () {
       OC.Overlay.on('connected', function () { App.updateChips(); App.updateMapVisible(); });
       OC.Overlay.on('disconnected', function () { App.updateChips(); App.updateMapVisible(); });
-      OC.Overlay.on('zone', function () { App.updateChips(); App.updateMapVisible(); });
+      OC.Overlay.on('zone', function () {
+        if (!OC.Overlay.inOccult) App.resetIsland(); // 离岛清空锁定
+        App.updateChips(); App.updateMapVisible();
+      });
       OC.Overlay.on('position', function () {
         OC.Map.updatePlayer(document.getElementById('mapLayer'));
       });
@@ -234,8 +260,18 @@
           if (hit) App.fireAlert(tp, nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')));
         });
       });
-      if (OC.Settings.get('alertPot')) {
-        h.pot.forEach(function (e) { if (newlyAlive(e, prev.pot)) App.fireAlert('pot', nm((OC.POTS[e.fate_id] || {}).name) || t('alert_pot')); });
+    },
+
+    // 撒娇罐：预计出现前 3 分钟提示（而非出现时）
+    checkPotPreAlert: function () {
+      if (!OC.Settings.get('alertPot')) return;
+      var mine = this.myIslandId ? (this._dc || []).filter(function (x) { return x.id === App.myIslandId; })[0] : null;
+      if (!mine || mine.alive || !mine.nextEpoch) return;
+      var eta = mine.nextEpoch - Math.floor(Date.now() / 1000);
+      if (eta > 0 && eta <= 180 && this._potAlertedFor !== mine.nextEpoch) {
+        this._potAlertedFor = mine.nextEpoch;
+        var side = mine.side === 'north' ? t('pot_north') : mine.side === 'south' ? t('pot_south') : '';
+        App.fireAlert('pot', t('pot_pre_alert') + (side ? ' · ' + side : ''));
       }
     },
 
@@ -252,15 +288,11 @@
     startLoops: function () {
       // 每 5 秒刷新国服总览（顶部胶囊 + 面板）
       setInterval(function () { App.fetchDc(); }, 5000);
-      // 每秒刷新倒计时
+      // 每秒：更新胶囊 + 面板计时文本（不重绘，避免滚动被顶回/闪烁）+ 撒娇罐提前提示
       setInterval(function () {
         App.updateChips();
-        if (App.openPanel === 'dcpots') App.renderPanel();
-        else if (App.openPanel === 'battle' && State.detail) {
-          App._dcTick++;
-          if (State.detailId && App._dcTick % 5 === 0) App.showIsland(State.detailId);
-          else App.renderPanel();
-        }
+        App.checkPotPreAlert();
+        if (App.openPanel === 'dcpots' || App.openPanel === 'battle') OC.UI.tickPanel();
       }, 1000);
     },
 
@@ -315,6 +347,16 @@
 
   function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }
   function isAlive(e) { return e && e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time); }
+
+  // 半魂晶颜色后缀：如“（黄）”并用对应颜色字体
+  var DEMIATMA = { 47744: ['青', '#4aa3ff'], 47745: ['碧', '#2ec4b6'], 47746: ['绿', '#3ddb63'], 47747: ['橙', '#ff8a3c'], 47748: ['紫', '#b061ff'], 47749: ['黄', '#ffce4d'] };
+  function demiatmaSuffix(drops) {
+    var out = '';
+    (drops || []).forEach(function (id) {
+      if (DEMIATMA[id]) out += '<span class="dm-c" style="color:' + DEMIATMA[id][1] + '">（' + DEMIATMA[id][0] + '）</span>';
+    });
+    return out;
+  }
   function row(l, c) { return '<div class="s-row"><label>' + l + '</label>' + c + '</div>'; }
   function rowChk(id, l, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + l + '</label></div>'; }
   function bindChk(pop, id, key) {
