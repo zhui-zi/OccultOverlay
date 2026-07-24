@@ -290,6 +290,7 @@
   function scanBosses(combatants) {
     if (!_bossIndex) buildBossIndex();
     var found = {};
+    Overlay.bossPos = Overlay.bossPos || {};
     (combatants || []).forEach(function (c) {
       var name = c && c.Name; if (!name || name.length < 2) return;
       // 仅 BNpc/敌方单位（type 2）才可能是 FATE/CE boss；排除玩家等
@@ -297,7 +298,12 @@
       for (var i = 0; i < _bossIndex.length; i++) {
         var b = _bossIndex[i];
         // 精确匹配，或战斗单位名包含完整 boss 名（不做反向包含，避免误报）
-        if (name === b.t || name.indexOf(b.t) >= 0) { found[b.id] = 1; break; }
+        if (name === b.t || name.indexOf(b.t) >= 0) {
+          found[b.id] = 1;
+          // 记录 boss 实际坐标，用于地图精确定位（静态表可能有误）
+          if (c.PosX != null) Overlay.bossPos[b.id] = [c.PosX, c.PosY];
+          break;
+        }
       }
     });
     return Object.keys(found).map(Number);

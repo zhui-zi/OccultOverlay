@@ -77,11 +77,13 @@
     var ids = (OC.State && OC.State.highlights) || [];
     var s = '';
     ids.forEach(function (id) {
-      var loc = OC.MAP.encounters[id]; if (!loc) return;
+      // 优先使用侦测到的 boss 实际坐标（静态表可能不准），否则用固定刷新点
+      var live = OC.Overlay && OC.Overlay.bossPos && OC.Overlay.bossPos[id];
+      var loc = live || OC.MAP.encounters[id]; if (!loc) return;
       var isCe = !!OC.CES[id];
-      var col = isCe ? '#ff4d4d' : '#ffd24d';
+      var col = isCe ? '#ff4d4d' : (OC.POTS[id] ? '#b061ff' : '#ffd24d');
       var x = loc[0] + 1024, y = loc[1] + 1024;
-      var label = OC.localName((OC.CES[id] || OC.FATES[id] || {}).name, OC.Settings.get('lang')) || '';
+      var label = OC.localName((OC.CES[id] || OC.FATES[id] || OC.POTS[id] || {}).name, OC.Settings.get('lang')) || '';
       s += '<g class="hi-mark">' +
         '<circle cx="' + x + '" cy="' + y + '" r="42" fill="none" stroke="' + col + '" stroke-width="8"/>' +
         '<circle cx="' + x + '" cy="' + y + '" r="14" fill="' + col + '" stroke="#000" stroke-width="3"/>' +

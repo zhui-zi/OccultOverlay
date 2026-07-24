@@ -48,6 +48,7 @@ html, body {
 .chip-act { font-weight: 600; }
 .chip-act.ce { border-color: var(--ce); box-shadow: 0 0 8px rgba(255,92,92,0.35); }
 .chip-act.fate { border-color: var(--fate); box-shadow: 0 0 8px rgba(91,155,213,0.35); }
+.chip-act.pot { border-color: var(--pot); box-shadow: 0 0 8px rgba(176,97,255,0.35); }
 .chip-act .dm-c { font-weight: 800; }
 .chip {
   display: inline-flex; align-items: center; gap: 6px;
@@ -184,11 +185,11 @@ html, body {
 .dc-fate::before { content: "FATE "; opacity: .6; }
 
 /* ---- 通知 ---- */
-#toasts { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 999; pointer-events: none; align-items: center; }
+#toasts { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column-reverse; gap: 6px; z-index: 999; pointer-events: none; align-items: center; }
 .toast {
   min-width: 200px; max-width: 320px; padding: 9px 14px; border-radius: 10px;
   background: var(--glass-2); border: 1px solid var(--line); box-shadow: 0 8px 26px rgba(0,0,0,0.55);
-  transform: translateY(-16px); opacity: 0; transition: .35s cubic-bezier(.2,.8,.2,1); backdrop-filter: blur(6px);
+  transform: translateY(16px); opacity: 0; transition: .35s cubic-bezier(.2,.8,.2,1); backdrop-filter: blur(6px);
 }
 .toast.show { transform: translateY(0); opacity: 1; }
 .toast-ce { border-left: 4px solid var(--ce); }

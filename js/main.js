@@ -202,10 +202,11 @@
       if (!box) return;
       var ids = OC.State.highlights || [];
       box.innerHTML = ids.map(function (id) {
-        var isCe = !!OC.CES[id];
-        var def = isCe ? OC.CES[id] : OC.FATES[id];
+        var isCe = !!OC.CES[id], isPot = !!OC.POTS[id];
+        var def = isCe ? OC.CES[id] : isPot ? OC.POTS[id] : OC.FATES[id];
         if (!def) return '';
-        return '<div class="chip chip-act ' + (isCe ? 'ce' : 'fate') + '">' + OC.UI.esc(nm(def.name)) + demiatmaSuffix(def.drops) + '</div>';
+        var cls = isCe ? 'ce' : isPot ? 'pot' : 'fate';
+        return '<div class="chip chip-act ' + cls + '">' + OC.UI.esc(nm(def.name)) + demiatmaSuffix(def.drops) + '</div>';
       }).join('');
     },
 
@@ -253,7 +254,7 @@
     refreshHighlights: function () {
       var ids = [];
       var isl = this._island;
-      if (isl) isl.ce.concat(isl.fate).forEach(function (e) { if (isAlive(e) && ids.indexOf(e.fate_id) < 0) ids.push(e.fate_id); });
+      if (isl) isl.ce.concat(isl.fate).concat(isl.pot).forEach(function (e) { if (isAlive(e) && ids.indexOf(e.fate_id) < 0) ids.push(e.fate_id); });
       (OC.Overlay.activeIds || []).forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
       OC.State.highlights = ids;
       OC.Map.updateHighlights(document.getElementById('mapLayer'));
@@ -266,14 +267,19 @@
       var first = !this._island;                 // 首次拉取该岛：只建立基线，不提示
       var alerted = this._alerted = this._alerted || {};
       var colors = OC.Settings.get('alertColors') || {};
-      ['ce', 'fate'].forEach(function (tp) {
+      ['ce', 'fate', 'pot'].forEach(function (tp) {
         h[tp].forEach(function (e) {
           var key = tp + ':' + e.fate_id;
           if (!isAlive(e)) { delete alerted[key]; return; }   // 已结束 -> 允许下次再提示
           if (alerted[key]) return;                            // 存活期间已提示过
           alerted[key] = 1;
           if (first) return;                                   // 基线不提示
-          var def = tp === 'ce' ? OC.CES[e.fate_id] : OC.FATES[e.fate_id]; if (!def) return;
+          var def = tp === 'ce' ? OC.CES[e.fate_id] : tp === 'pot' ? OC.POTS[e.fate_id] : OC.FATES[e.fate_id];
+          if (!def) return;
+          if (tp === 'pot') {                                  // 撒娇罐出现即提示
+            if (OC.Settings.get('alertPot')) App.fireAlert('pot', nm(def.name));
+            return;
+          }
           var hit = (def.drops || []).filter(function (d) { return colors[d]; })[0];
           if (hit) App.fireAlert(tp, nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')));
         });
