@@ -107,17 +107,17 @@
 
   // --- 普通 FATE（fate_id -> 定义） --------------------------------------
   OC.FATES = {
-    1962: { name: { zh: '波涛汹涌', en: 'Rough Waters', ja: '波起こしの海魔「ナンム」' }, drops: [47744], encounter_id: 28 },
-    1963: { name: { zh: '黄金守护者', en: 'The Golden Guardian', ja: '金色の怪石「ゴールデンブロックス」' }, drops: [47744], encounter_id: 14 },
-    1964: { name: { zh: '新月之王', en: 'King of the Crescent', ja: '悲鳴の蒐集者「ロプロス」' }, drops: [47749], encounter_id: 10 },
-    1965: { name: { zh: '振翅之惧', en: 'The Winged Terror', ja: '甲板の掃除人「巨大鳥」' }, drops: [47747], encounter_id: 27 },
-    1966: { name: { zh: '无尽之责', en: 'An Unending Duty', ja: '神罰の石獣「シジフォス」' }, drops: [47746], encounter_id: 26 },
-    1967: { name: { zh: '汲脑者', en: 'Brain Drain', ja: '進化せし怪蛇「アドバンスドエイビス」' }, drops: [47747], encounter_id: 24 },
-    1968: { name: { zh: '微妙的平衡', en: 'A Delicate Balance', ja: '湿度の狩手「ディヒューミディファイア」' }, drops: [47745], encounter_id: 25 },
-    1969: { name: { zh: '誓与泥土', en: 'Sworn to Soil', ja: '土壌の守り手「マッドマッド」' }, drops: [47745], encounter_id: 18 },
-    1970: { name: { zh: '窥探之眼', en: 'A Prying Eye', ja: '監視の瞳「アイルオブザーバー」' }, drops: [47744], encounter_id: 29 },
-    1971: { name: { zh: '致命诱惑', en: 'Fatal Allure', ja: '美しき呪殺者「イグゼクレーター」' }, drops: [47749], encounter_id: 17 },
-    1972: { name: { zh: '侍奉黑暗', en: 'Serving Darkness', ja: '命の収奪者「ライフギャザラー」' }, drops: [47748], encounter_id: 24 }
+    1962: { name: { en: 'Rough Waters', ja: '波起こしの海魔「ナンム」' }, drops: [47744], encounter_id: 28 },
+    1963: { name: { en: 'The Golden Guardian', ja: '金色の怪石「ゴールデンブロックス」' }, drops: [47744], encounter_id: 14 },
+    1964: { name: { en: 'King of the Crescent', ja: '悲鳴の蒐集者「ロプロス」' }, drops: [47749], encounter_id: 10 },
+    1965: { name: { en: 'The Winged Terror', ja: '甲板の掃除人「巨大鳥」' }, drops: [47747], encounter_id: 27 },
+    1966: { name: { en: 'An Unending Duty', ja: '神罰の石獣「シジフォス」' }, drops: [47746], encounter_id: 26 },
+    1967: { name: { en: 'Brain Drain', ja: '進化せし怪蛇「アドバンスドエイビス」' }, drops: [47747], encounter_id: 24 },
+    1968: { name: { en: 'A Delicate Balance', ja: '湿度の狩手「ディヒューミディファイア」' }, drops: [47745], encounter_id: 25 },
+    1969: { name: { en: 'Sworn to Soil', ja: '土壌の守り手「マッドマッド」' }, drops: [47745], encounter_id: 18 },
+    1970: { name: { en: 'A Prying Eye', ja: '監視の瞳「アイルオブザーバー」' }, drops: [47744], encounter_id: 29 },
+    1971: { name: { en: 'Fatal Allure', ja: '美しき呪殺者「イグゼクレーター」' }, drops: [47749], encounter_id: 17 },
+    1972: { name: { en: 'Serving Darkness', ja: '命の収奪者「ライフギャザラー」' }, drops: [47748], encounter_id: 24 }
   };
 
   // --- 撒娇罐 Pots（fate_id -> 定义），1976 北 / 1977 南 -----------------
@@ -129,22 +129,22 @@
   // --- 危命任务 CE（encounter_id -> 定义），33-47 常规 + 48 岔路塔 -------
   // spawn_type=true 表示由特定怪物（monster）击杀触发。
   OC.CES = {
-    33: { name: { zh: '心智之灾', en: 'Scourge of the Mind', ja: '脳髄愛好家「マインドフレイア」' }, drops: [49831, 49826, 47744], spawn_type: true, monster: { zh: '新月武僧', en: 'Crescent Monk', ja: 'クレセント・モンク' } },
-    34: { name: { zh: '黑色军团', en: 'The Black Regiment', ja: '黒の連隊' }, drops: [49831, 49826, 47749, 47752, 47732], spawn_type: false },
-    35: { name: { zh: '狂暴之徒', en: 'The Unbridled', ja: '怒れる人造人間「クレセント・バーサーカー」' }, drops: [49831, 49826, 47744, 47751, 47730], spawn_type: false },
-    36: { name: { zh: '爬行之死', en: 'Crawling Death', ja: '忍び寄る爪「デスクロー」' }, drops: [49831, 49826, 47744], spawn_type: false },
-    37: { name: { zh: '封印大妖', en: 'Calamity Bound', ja: '封印大妖「クロイスターデーモン」' }, drops: [49831, 49826, 47745, 47728, 48008], spawn_type: true, monster: { zh: '新月墨渍', en: 'Crescent Inkstain', ja: 'クレセント・インクステイン' } },
-    38: { name: { zh: '利爪试炼', en: 'Trial by Claw', ja: '模造されしもの「水晶竜」' }, drops: [49833, 49828, 47746], spawn_type: false },
-    39: { name: { zh: '往昔之时', en: 'From Times Bygone', ja: '神秘の偶像「ミシカルアイドル」' }, drops: [49833, 49828, 47746, 47729], spawn_type: true, monster: { zh: '新月比布洛斯', en: 'Crescent Byblos', ja: 'クレセント・ビブロス' } },
-    40: { name: { zh: '石之军团', en: 'Company of Stone', ja: '石造りの守護騎士たち' }, drops: [49827, 49832, 47748], spawn_type: false },
-    41: { name: { zh: '鲨鱼来袭', en: 'Shark Attack', ja: '伝説の鮫「ニーム・ペタロドゥス」' }, drops: [49833, 49828, 47747, 47731], spawn_type: true, monster: { zh: '新月次级鲨', en: 'Crescent Petalodite', ja: 'クレセント・レッサーペタロドゥス' } },
-    42: { name: { zh: '狩猎进行时', en: 'On the Hunt', ja: '二足の獅子「ランパントライオン」' }, drops: [49827, 49832, 47748, 47757], spawn_type: true, monster: { zh: '新月扇兽', en: 'Crescent Fan', ja: 'クレセント・ファン' } },
-    43: { name: { zh: '格杀勿论', en: 'With Extreme Prejudice', ja: 'セキュリティ・コマンドー' }, drops: [49833, 49828, 47747], spawn_type: false },
-    44: { name: { zh: '噪音投诉', en: 'Noise Complaint', ja: '鳥嫌いの巨獣「ネオガルラ」' }, drops: [49827, 49832, 47749], spawn_type: true, monster: { zh: '新月加尔拉', en: 'Crescent Garula', ja: 'クレセント・ガルラ' } },
-    45: { name: { zh: '受诅之忧', en: 'Cursed Concern', ja: '呪いの商亀「コイントートス」' }, drops: [49827, 49832, 47747, 47733], spawn_type: false },
-    46: { name: { zh: '永恒守望', en: 'Eternal Watch', ja: '復元された獅子像「リペアドライオン」' }, drops: [49827, 49832, 47748], spawn_type: false },
-    47: { name: { zh: '黄昏之焰', en: 'Flame of Dusk', ja: '昏き篝火「ヒンキーパンク」' }, drops: [49833, 49828, 47746], spawn_type: false },
-    48: { name: { zh: '岔路塔：血', en: 'The Forked Tower: Blood', ja: 'フォークタワー：力の塔' }, drops: [47868, 47734, 47735, 47736, 47737], spawn_type: false, type: 'tower' }
+    33: { name: { en: 'Scourge of the Mind', ja: '脳髄愛好家「マインドフレイア」' }, drops: [49831, 49826, 47744], spawn_type: true, monster: { en: 'Crescent Monk', ja: 'クレセント・モンク' } },
+    34: { name: { en: 'The Black Regiment', ja: '黒の連隊' }, drops: [49831, 49826, 47749, 47752, 47732], spawn_type: false },
+    35: { name: { en: 'The Unbridled', ja: '怒れる人造人間「クレセント・バーサーカー」' }, drops: [49831, 49826, 47744, 47751, 47730], spawn_type: false },
+    36: { name: { en: 'Crawling Death', ja: '忍び寄る爪「デスクロー」' }, drops: [49831, 49826, 47744], spawn_type: false },
+    37: { name: { en: 'Calamity Bound', ja: '封印大妖「クロイスターデーモン」' }, drops: [49831, 49826, 47745, 47728, 48008], spawn_type: true, monster: { en: 'Crescent Inkstain', ja: 'クレセント・インクステイン' } },
+    38: { name: { en: 'Trial by Claw', ja: '模造されしもの「水晶竜」' }, drops: [49833, 49828, 47746], spawn_type: false },
+    39: { name: { en: 'From Times Bygone', ja: '神秘の偶像「ミシカルアイドル」' }, drops: [49833, 49828, 47746, 47729], spawn_type: true, monster: { en: 'Crescent Byblos', ja: 'クレセント・ビブロス' } },
+    40: { name: { en: 'Company of Stone', ja: '石造りの守護騎士たち' }, drops: [49827, 49832, 47748], spawn_type: false },
+    41: { name: { en: 'Shark Attack', ja: '伝説の鮫「ニーム・ペタロドゥス」' }, drops: [49833, 49828, 47747, 47731], spawn_type: true, monster: { en: 'Crescent Petalodite', ja: 'クレセント・レッサーペタロドゥス' } },
+    42: { name: { en: 'On the Hunt', ja: '二足の獅子「ランパントライオン」' }, drops: [49827, 49832, 47748, 47757], spawn_type: true, monster: { en: 'Crescent Fan', ja: 'クレセント・ファン' } },
+    43: { name: { en: 'With Extreme Prejudice', ja: 'セキュリティ・コマンドー' }, drops: [49833, 49828, 47747], spawn_type: false },
+    44: { name: { en: 'Noise Complaint', ja: '鳥嫌いの巨獣「ネオガルラ」' }, drops: [49827, 49832, 47749], spawn_type: true, monster: { en: 'Crescent Garula', ja: 'クレセント・ガルラ' } },
+    45: { name: { en: 'Cursed Concern', ja: '呪いの商亀「コイントートス」' }, drops: [49827, 49832, 47747, 47733], spawn_type: false },
+    46: { name: { en: 'Eternal Watch', ja: '復元された獅子像「リペアドライオン」' }, drops: [49827, 49832, 47748], spawn_type: false },
+    47: { name: { en: 'Flame of Dusk', ja: '昏き篝火「ヒンキーパンク」' }, drops: [49833, 49828, 47746], spawn_type: false },
+    48: { name: { en: 'The Forked Tower: Blood', ja: 'フォークタワー：力の塔' }, drops: [47868, 47734, 47735, 47736, 47737], spawn_type: false, type: 'tower' }
   };
 
   // --- 撒娇罐时刻表常量（分钟），取自社区实测 ----------------------------

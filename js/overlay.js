@@ -119,9 +119,60 @@
     if (e && e.detail) handleMessage(e.detail);
   });
 
+  // ---- 请求/响应（getCombatants 等，读内存） ---------------------------
+  var _rseq = 0;
+  var _pending = {};
+  Overlay.callHandler = function (obj) {
+    // 旧版：OverlayPluginApi.callHandler(msg, cb)
+    if (global.OverlayPluginApi && global.OverlayPluginApi.ready) {
+      return new Promise(function (resolve) {
+        global.OverlayPluginApi.callHandler(JSON.stringify(obj), function (data) {
+          try { resolve(JSON.parse(data)); } catch (e) { resolve(null); }
+        });
+      });
+    }
+    // 现代 WS：用 rseq 关联响应
+    if (ws && ws.readyState === 1) {
+      var id = ++_rseq;
+      obj.rseq = id;
+      return new Promise(function (resolve) {
+        _pending[id] = resolve;
+        try { ws.send(JSON.stringify(obj)); } catch (e) { delete _pending[id]; resolve(null); }
+        setTimeout(function () { if (_pending[id]) { delete _pending[id]; resolve(null); } }, 4000);
+      });
+    }
+    return Promise.resolve(null);
+  };
+
+  // 定时读取自己坐标（内存），供地图显示玩家位置
+  var posTimer = null;
+  function startPositionPolling() {
+    if (posTimer) return;
+    posTimer = setInterval(function () {
+      if (!Overlay.connected) return;
+      Overlay.callHandler({ call: 'getCombatants' }).then(function (data) {
+        if (!data || !data.combatants) return;
+        var arr = data.combatants;
+        // 自己：type===1（PC）且与主角名匹配，否则取第一个 PC
+        var me = null;
+        for (var i = 0; i < arr.length; i++) {
+          var c = arr[i];
+          if (c.type === 1 && (!Overlay.playerName || c.Name === Overlay.playerName)) { me = c; break; }
+        }
+        if (!me) for (var j = 0; j < arr.length; j++) if (arr[j].type === 1) { me = arr[j]; break; }
+        if (!me) return;
+        // Dalamud(x,z) 水平 == OverlayPlugin(PosX, PosY)
+        Overlay.playerPos = { x: me.PosX, z: me.PosY, h: me.Heading };
+        if (me.WorldID) Overlay.playerWorld = me.WorldID;
+        Overlay.emit('position', Overlay.playerPos);
+      });
+    }, 2000);
+  }
+
   // ---- 消息分发 ---------------------------------------------------------
   function handleMessage(d) {
     if (!d || !d.type) return;
+    if (d.rseq != null && _pending[d.rseq]) { var f = _pending[d.rseq]; delete _pending[d.rseq]; f(d); return; }
     switch (d.type) {
       case 'ChangeZone':
         setZone(d.zoneID != null ? d.zoneID : d.zoneId, d.zoneName);
@@ -207,6 +258,7 @@
       // 同时尝试 WS（部分 IINACT 也开放 ws 端口）
     }
     connectWs();
+    startPositionPolling();
   };
 
   // 手动设置区域（演示 / 调试用）

@@ -28,7 +28,11 @@
       set_sound: '声音提醒', set_auto: '自动上报（侦测到即提交云端）', set_opacity: '不透明度',
       saved: '已保存', no_tracker: '未设置 Tracker ID：仅显示本地演示，无法同步云端',
       notify_ce: '紧急遭遇战', notify_fate: '危命任务', notify_pot: '撒娇罐',
-      cloud_hint: '数据来自共享云端，请配合游戏内工具自动上报'
+      cloud_hint: '数据来自共享云端，请配合游戏内工具自动上报',
+      panel_dcpots: '国服撒娇罐总览', dc_pots_title: '国服撒娇罐总览',
+      dc_pots_hint: '四大区当前活跃岛屿，按下一只撒娇罐剩余时间升序（点击可打开对应岛）',
+      no_active_island: '当前四大区暂无活跃岛屿', updated: '更新', loading: '加载中…',
+      dc_sources: '重复上报的岛屿数量（已合并）'
     },
     en: {
       title: 'Occult Crescent',
@@ -50,7 +54,11 @@
       set_sound: 'Sound alert', set_auto: 'Auto-report to cloud on detect', set_opacity: 'Opacity',
       saved: 'Saved', no_tracker: 'No Tracker ID: local demo only, no cloud sync',
       notify_ce: 'CE', notify_fate: 'FATE', notify_pot: 'Pot',
-      cloud_hint: 'Data comes from the shared cloud; pair with an in-game reporter'
+      cloud_hint: 'Data comes from the shared cloud; pair with an in-game reporter',
+      panel_dcpots: 'CN DC Pots', dc_pots_title: 'CN Datacenter Pot Overview',
+      dc_pots_hint: 'Active islands across the 4 CN DCs, sorted by next pot ETA (click to open)',
+      no_active_island: 'No active islands right now', updated: 'upd', loading: 'Loading…',
+      dc_sources: 'Duplicate islands merged'
     },
     ja: {
       title: '南方海域',
@@ -72,7 +80,11 @@
       set_sound: '音で通知', set_auto: '検知でクラウド自動報告', set_opacity: '不透明度',
       saved: '保存しました', no_tracker: 'トラッカーID未設定：ローカルデモのみ',
       notify_ce: '危機的遭遇', notify_fate: 'FATE', notify_pot: 'ポット',
-      cloud_hint: 'データは共有クラウド由来。ゲーム内ツールと併用してください'
+      cloud_hint: 'データは共有クラウド由来。ゲーム内ツールと併用してください',
+      panel_dcpots: '中国DCポット', dc_pots_title: '中国DC ポット一覧',
+      dc_pots_hint: '中国4DCのアクティブ島を次ポット残り時間の昇順で表示（クリックで開く）',
+      no_active_island: '現在アクティブな島はありません', updated: '更新', loading: '読込中…',
+      dc_sources: '重複した島を統合'
     }
   };
 

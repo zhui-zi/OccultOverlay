@@ -6,8 +6,10 @@
 
   var OC = global.OC = global.OC || {};
   var KEY = 'occultOverlay.settings';
+  var SCHEMA_V = 2; // 递增此值会重置地图图层等易变默认项
 
   var defaults = {
+    _v: SCHEMA_V,
     lang: 'zh',
     trackerId: '',
     trackerPassword: '',
@@ -19,7 +21,7 @@
     notifyOnlyInZone: true,
     autoReport: true,           // 侦测到 CE/FATE/罐 时自动提交到云端（无人工上报）
     opacity: 0.9,
-    mapLayers: { bronze: true, silver: true, potN: true, potS: true, reroll: false, bunny: false }
+    mapLayers: { bronze: false, silver: false, potN: false, potS: false, reroll: false, bunny: false }
   };
 
   var data = load();
@@ -28,10 +30,15 @@
     try {
       var raw = localStorage.getItem(KEY);
       var obj = raw ? JSON.parse(raw) : {};
+      // 版本升级：重置地图图层为默认（全部关闭），避免旧的“全部显示”遗留
+      if (obj._v !== SCHEMA_V) obj.mapLayers = clone(defaults.mapLayers);
       var out = {};
       for (var k in defaults) out[k] = (k in obj) ? obj[k] : clone(defaults[k]);
-      // 合并 mapLayers 缺省项
-      for (var m in defaults.mapLayers) if (!(m in out.mapLayers)) out.mapLayers[m] = defaults.mapLayers[m];
+      out._v = SCHEMA_V;
+      // 只保留合法图层键
+      var ml = {};
+      for (var m in defaults.mapLayers) ml[m] = (m in out.mapLayers) ? !!out.mapLayers[m] : defaults.mapLayers[m];
+      out.mapLayers = ml;
       return out;
     } catch (e) { return clone(defaults); }
   }

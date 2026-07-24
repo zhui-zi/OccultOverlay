@@ -27,8 +27,10 @@ html, body {
 #app { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
 
 /* ---- 地图主体 ---- */
-.map-layer { position: absolute; inset: 0; opacity: var(--app-opacity); }
+.map-layer { position: absolute; inset: 0; }
 .map-svg { width: 100%; height: 100%; display: block; }
+.map-bg { opacity: var(--app-opacity); }   /* 仅底图受不透明度影响 */
+.map-marks { opacity: 1; }                   /* 标记始终清晰 */
 .hi-mark circle:first-child { animation: pulse 1.4s ease-in-out infinite; transform-origin: center; }
 .you circle { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
@@ -138,6 +140,28 @@ html, body {
 .mini:hover, .save:hover { background: rgba(201,162,39,0.2); border-color: var(--accent); }
 .save { background: rgba(201,162,39,0.25); border-color: var(--accent); font-weight: 700; }
 .cloud-hint { color: var(--fg-dim); font-size: 11px; margin-top: 10px; line-height: 1.5; }
+
+/* ---- 国服撒娇罐总览 ---- */
+.rbtn.dc { font-size: 14px; }
+.dc-hint { color: var(--fg-dim); font-size: 11px; line-height: 1.5; margin-bottom: 8px; }
+.dc-loading, .dc-empty { color: var(--fg-dim); text-align: center; padding: 20px 0; }
+.dc-list { display: flex; flex-direction: column; gap: 5px; }
+.dc-row {
+  display: grid; grid-template-columns: 1fr auto auto auto auto; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line); cursor: pointer;
+}
+.dc-row:hover { background: rgba(255,255,255,0.08); }
+.dc-row.side-north { border-left: 3px solid var(--fate); }
+.dc-row.side-south { border-left: 3px solid var(--ce); }
+.dc-row.soon { animation: pulse 1s ease-in-out infinite; border-color: var(--accent); }
+.dc-name { font-weight: 600; font-size: 12.5px; }
+.dc-side { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 8px; }
+.dc-side.side-north { background: rgba(74,144,255,0.22); color: #9cc3ff; }
+.dc-side.side-south { background: rgba(255,138,60,0.22); color: #ffbd8a; }
+.dc-eta { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
+.dc-ago { font-size: 10px; color: var(--fg-dim); }
+.dc-src { font-size: 10px; color: var(--fg-dim); background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 6px; }
 
 /* ---- 通知 ---- */
 #toasts { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 999; pointer-events: none; align-items: center; }

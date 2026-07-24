@@ -1,69 +1,86 @@
-# 新月岛悬浮窗 · Occult Crescent Overlay
+# Occult Crescent Overlay
 
-一个以**地图为主体**的《最终幻想14》**新月岛（南方海域 / Occult Crescent · South Horn）** 悬浮窗，
-可在 **ACT / OverlayPlugin**（也兼容 IINACT、浏览器）中使用，数据来自公开的社区云端 Tracker。
+A map-centric overlay for FFXIV's **Occult Crescent (South Horn)**, usable inside
+**ACT / OverlayPlugin** (also IINACT, or standalone in a browser). Data is read from and
+reported to the public community tracker cloud.
 
-> 设计原则：**数据只从云端获取与提交，不做人工上报、不做本地推算**，尽量保证可靠。
+> Design principle: **the cloud is the single source of truth**. The overlay only fetches
+> from and submits to the cloud — no manual reporting and no local timer guessing.
 
-## 界面
+## UI
 
-- **半透明真实地图**为主视图，右侧一排**圆形小按钮**：
-  - 图层开关：**铜宝箱 / 银宝箱 / 北罐 / 南罐 / 额外机会（续罐）/ 胡萝卜（萝卜）**
-  - 面板：**战斗**（CE/FATE/罐 一览）、**设置**
-- 顶部常驻信息胶囊：当前区域、**紧急遭遇战（CE）**状态、**撒娇罐**倒计时。
+- A translucent, real in-game map is the main view. A column of round buttons on the right:
+  - Layer toggles: **Bronze coffers / Silver coffers / North pot / South pot / Reroll / Carrot**
+    (all off by default; markers stay fully opaque regardless of map opacity).
+  - Panels: **Battle** (CE / FATE / Pot list), **CN DC Pots**, **Settings**.
+- Always-on chips at the top: current zone, **Critical Engagement** state, **Pot** countdown.
+- Your character position is drawn on the map (read from game memory via OverlayPlugin `getCombatants`).
 
-## 功能
+## Features
 
-- **CE / FATE 通知**：所在区域出现紧急遭遇战 / 危命任务时弹窗提醒（可开声音），并在地图上高亮其位置。
-- **掉落一览**：每个 CE / FATE / 罐显示掉落的**半魂晶 / 调查记录 / 灵魂碎晶 / 饰品**（带游戏图标）。
-- **CE 触发状态**：**进行中** / **可触发** / **冷却 mm:ss**（依据云端 spawn/death 时间）。
-- **撒娇罐预告**：下一只 = 云端记录的上次出现时间 **+30 分钟**（北=1976 / 南=1977），非人工估算。
-- **地图点位**：铜/银宝箱、南北罐、续罐、萝卜的真实坐标，可分别开关。
-- **云端同步**：每秒轮询共享 Tracker；侦测到 CE/FATE/罐 时**自动提交**（无人工按钮）。
-- **多语言**：中文 / English / 日本語。
+- **CE / FATE alerts**: toast + sound when a Critical Engagement / FATE spawns in your instance,
+  with its fixed location highlighted on the map.
+- **Drops**: every CE / FATE / pot shows its drops (Demiatma / Notes / Soul Shard / Accessory) with icons.
+- **CE state**: Active / Ready / Cooldown, derived from the cloud spawn/death times.
+- **Pot ETA**: next pot = cloud `spawn_time + 30min` (North = 1976, South = 1977). No local estimation.
+- **CN DC Pot Overview**: one click lists every active island across the 4 CN datacenters, sorted by
+  shortest pot ETA, labeled by datacenter. Duplicate islands (same DC + same pot spawn times) are merged.
+- **Map data**: real coordinates for coffers, pots, reroll spots, and carrots.
+- **Localization**: zh / en / ja UI. Encounter names come from the game data (Occult Crescent is not on
+  CN servers yet, so no official CN names exist; zh falls back to the English game name — switch the
+  language to JA for Japanese names).
 
-## 使用（ACT / OverlayPlugin）
+## Reporting model (no duplicate islands)
 
-1. ACT → 插件 → OverlayPlugin → 新建 **自定义 / URL** 悬浮窗。
-2. URL 填 `index.html` 路径，或填已部署的网址（见下方 Cloudflare Pages）。
-3. 悬浮窗自动连接 `ws://127.0.0.1:10501/ws`（端口不同可在设置里改，或用 `?OVERLAY_WS=` 参数）。
-4. 设置页填 **Tracker ID**（在 [tracker.xivstats.com](https://tracker.xivstats.com) 新建，或点“新建”），即可同步云端。
+The overlay reports by `PATCH`-ing a single configured tracker id; it never auto-creates trackers.
+Duplicate islands on the site come from multiple people each creating their own tracker for the same
+physical instance — an inherent property of the platform, not of this overlay. Mitigations here:
+tracker creation is explicit-only, and the CN DC overview de-duplicates identical islands.
 
-## 部署到 Cloudflare Pages（开放给所有人用）
+## Use in ACT / OverlayPlugin
 
-本项目是纯静态站点，可直接部署：
+1. ACT → Plugins → OverlayPlugin → new **Custom / URL** overlay.
+2. Set the URL to `index.html` (local path) or your deployed address (see below).
+3. It auto-connects to `ws://127.0.0.1:10501/ws`. Override with `?OVERLAY_WS=ws://host:port/ws` if needed.
+4. Optional: set a shared **Tracker ID** in Settings to sync your party's instance.
+5. Player position, CE alerts, and the CN pot overview work without any tracker id.
 
-1. Fork / 使用本仓库，登录 Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**。
-2. 选择本仓库，**Framework preset = None**，**Build command 留空**，**Build output directory = `/`（根目录）**。
-3. 部署后得到 `https://<项目名>.pages.dev`，把该网址填进 OverlayPlugin 的 URL 即可。
+> Cache: the include URLs carry a `?v=` version. Bump it when deploying so ACT's embedded browser reloads.
 
-> 关于混合内容：页面走 HTTPS，而 OverlayPlugin 走 `ws://127.0.0.1`。OverlayPlugin 内置浏览器（CEF）允许此本地连接，
-> 因此 Pages 上的 HTTPS 页面在 ACT 内可正常连游戏；普通浏览器里则只能作独立查看（无游戏数据）。
+## Deploy to Cloudflare Pages
 
-也可用 Wrangler：`npx wrangler pages deploy . --project-name occult-overlay`。
+Static site, deploy as-is:
 
-## 数据与坐标来源
+1. Cloudflare → Workers & Pages → Create → Pages → Connect to Git → this repo.
+2. Framework preset = None, empty build command, build output directory = `/`.
+3. Use the resulting `https://<project>.pages.dev` as the OverlayPlugin URL.
 
-- 云端数据模型 / 图标：社区 Tracker（`tracker.xivstats.com` / `infi.ovh`）。
-- 地图与点位坐标（铜/银宝箱、南北罐、续罐、萝卜）、中文术语：取自作者本人的
-  [EurekaTrackerAutoPopper](https://github.com/zhui-zi/EurekaTrackerAutoPopper)。
-- 地图底图 `assets/map.png` 与掉落图标：`xivapi.com`（Map o6b1/01，2048×2048）。
-- 世界坐标 → 贴图像素：`px = x + 1024, py = z + 1024`（SizeFactor=100，Offset=0）。
+Mixed content note: the page is HTTPS while OverlayPlugin uses `ws://127.0.0.1`. OverlayPlugin's embedded
+browser (CEF) permits this local connection, so a hosted HTTPS page works in ACT; a normal browser can
+only use it as a standalone viewer (no game data). Wrangler alternative: `npx wrangler pages deploy .`.
 
-## 目录结构
+## Data sources & credits
+
+- Cloud data model, item ids, icons: community tracker (`tracker.xivstats.com` / `infi.ovh`).
+- Map, coordinates (coffers / pots / reroll / carrots), encounter positions, CN terminology:
+  the author's own [EurekaTrackerAutoPopper](https://github.com/zhui-zi/EurekaTrackerAutoPopper).
+- Map tile `assets/map.png` and drop icons: `xivapi.com` (Map o6b1/01, 2048x2048).
+- World-to-pixel: `px = x + 1024, py = z + 1024` (SizeFactor 100, offset 0).
+
+## Layout
 
 ```
 OccultOverlay/
 ├─ index.html
-├─ assets/map.png          # 南方海域地图底图
+├─ assets/map.png
 ├─ css/style.css
-├─ data/mapPoints.js       # 真实点位坐标（60 铜 / 8 银 / 30 北罐 / 30 南罐 / 20 续罐 / 25 萝卜）
+├─ data/mapPoints.js      # real point coordinates + encounter positions
 └─ js/
    ├─ data.js   ├─ api.js    ├─ overlay.js ├─ pots.js
    ├─ ce.js     ├─ map.js    ├─ ui.js      ├─ settings.js
    ├─ i18n.js   └─ main.js
 ```
 
-## 许可
+## License
 
-MIT，见 [LICENSE](LICENSE)。与 SQUARE ENIX 无关。FINAL FANTASY XIV © SQUARE ENIX。
+MIT (see [LICENSE](LICENSE)). Not affiliated with SQUARE ENIX. FINAL FANTASY XIV © SQUARE ENIX.

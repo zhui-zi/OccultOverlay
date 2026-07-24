@@ -127,6 +127,56 @@
     return '<span class="bdg unk">' + t('unknown') + '</span>';
   }
 
+  // ---- 国服撒娇罐总览 ----
+  UI.renderDcPots = function (host, list, loading) {
+    var n = now();
+    var h = '<div class="panel-head">' + t('dc_pots_title') +
+      '<button class="pclose" data-close>' + t('close') + '</button></div>';
+    h += '<div class="panel-body">';
+    h += '<div class="dc-hint">' + t('dc_pots_hint') + '</div>';
+    if (loading && (!list || !list.length)) {
+      h += '<div class="dc-loading">' + t('loading') + '</div>';
+    } else if (!list || !list.length) {
+      h += '<div class="dc-empty">' + t('no_active_island') + '</div>';
+    } else {
+      h += '<div class="dc-list">';
+      list.forEach(function (it) {
+        var dc = OC.DATACENTERS[it.dc] || { name: it.dc };
+        var eta = it.etaSec;
+        var etaTxt = eta <= 0 ? t('pot_soon') : UI.fmtDur(eta);
+        var soon = eta <= 60;
+        h += '<div class="dc-row side-' + it.side + (soon ? ' soon' : '') + '" data-tid="' + esc(it.id) + '">';
+        h += '<span class="dc-name">' + esc(dc.name) + '</span>';
+        h += '<span class="dc-side side-' + it.side + '">' + (it.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>';
+        h += '<span class="dc-eta">' + etaTxt + '</span>';
+        h += '<span class="dc-ago">' + t('updated') + ' ' + agoTxt(it.ago) + '</span>';
+        if (it.sources > 1) h += '<span class="dc-src" title="' + t('dc_sources') + '">×' + it.sources + '</span>';
+        h += '</div>';
+      });
+      h += '</div>';
+    }
+    h += '</div>';
+    host.innerHTML = h;
+    host.querySelectorAll('.dc-row').forEach(function (row) {
+      row.addEventListener('click', function () {
+        window.open('https://tracker.xivstats.com/' + row.getAttribute('data-tid'), '_blank');
+      });
+    });
+    host.querySelectorAll('[data-close]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        OC.App.openPanel = null;
+        document.getElementById('popover').classList.add('hidden');
+      });
+    });
+  };
+
+  function agoTxt(sec) {
+    sec = Math.max(0, Math.round(sec));
+    if (sec < 60) return sec + 's';
+    var m = Math.floor(sec / 60);
+    return m + 'm';
+  }
+
   // ---- 通知 ----
   var lastNotify = {};
   UI.notify = function (kind, title, body, key) {

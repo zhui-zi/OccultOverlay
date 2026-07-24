@@ -86,6 +86,7 @@
       if (this.openPanel === which) { this.openPanel = null; pop.classList.add('hidden'); return; }
       this.openPanel = which;
       pop.classList.remove('hidden');
+      if (which === 'dcpots') { this._dcLoaded = false; this._dcTick = 0; this.fetchDcPots(); }
       this.renderPanel();
       pop.querySelectorAll('[data-close]').forEach(function (b) {
         b.addEventListener('click', function () { App.openPanel = null; pop.classList.add('hidden'); });
@@ -96,6 +97,18 @@
       var pop = document.getElementById('popover');
       if (this.openPanel === 'battle') OC.UI.renderBattlePanel(pop);
       else if (this.openPanel === 'settings') this.renderSettings(pop);
+      else if (this.openPanel === 'dcpots') OC.UI.renderDcPots(pop, this._dcData || [], !this._dcLoaded);
+    },
+
+    fetchDcPots: function () {
+      OC.Api.fetchDcPots([101, 102, 103, 104], 3 * 3600).then(function (rows) {
+        App._dcData = OC.Pots.dcOverview(rows);
+        App._dcLoaded = true;
+        if (App.openPanel === 'dcpots') App.renderPanel();
+      }).catch(function () {
+        App._dcLoaded = true;
+        if (App.openPanel === 'dcpots') App.renderPanel();
+      });
     },
 
     updateChips: function () {
@@ -116,6 +129,7 @@
       OC.Overlay.on('connected', function () { App.updateChips(); });
       OC.Overlay.on('disconnected', function () { App.updateChips(); });
       OC.Overlay.on('zone', function () { App.updateChips(); });
+      OC.Overlay.on('position', function () { OC.Map.updatePlayer(document.getElementById('mapLayer')); });
       OC.Overlay.on('ce', function (d) { App.onDetected('ce', d.encounterId, d.name); });
       OC.Overlay.on('fate', function (d) {
         App.onDetected(OC.POTS[d.fateId] ? 'pot' : 'fate', d.fateId, d.name);
@@ -209,7 +223,13 @@
       // 胶囊每秒刷新倒计时（轻量，不重绘地图）
       setInterval(function () {
         App.updateChips();
-        if (App.openPanel === 'battle') App.renderPanel();
+        if (App.openPanel === 'battle') {
+          App.renderPanel();
+        } else if (App.openPanel === 'dcpots') {
+          App._dcTick = (App._dcTick || 0) + 1;
+          if (App._dcTick % 5 === 0) App.fetchDcPots(); // 每 5 秒重新拉取
+          else App.renderPanel();                        // 其余秒仅刷新倒计时
+        }
       }, 1000);
     },
 
@@ -233,10 +253,6 @@
       h += r(t('set_dc'), '<select id="s-dc">' + dc + '</select>');
       h += '<div class="s-row s-btns"><button id="s-create" class="mini">' + t('set_create') + '</button>' +
         '<button id="s-open" class="mini">' + t('set_open') + '</button></div>';
-      h += grp('OverlayPlugin');
-      h += r(t('set_ws'), '<input id="s-ws" value="' + OC.UI.esc(g('wsUrl')) + '" placeholder="ws://127.0.0.1:10501/ws">');
-      h += r(t('set_territory'), '<input id="s-terr" value="' + OC.UI.esc(g('occultTerritoryId')) + '" placeholder="1252">');
-      h += r(t('set_ce_cd'), '<input id="s-cecd" value="' + OC.UI.esc(g('ceCooldownSec')) + '" placeholder="3600">');
       h += grp(t('panel_settings'));
       h += chk('s-sound', t('set_sound'), g('notifySound'));
       h += chk('s-auto', t('set_auto'), g('autoReport'));
@@ -254,9 +270,6 @@
           trackerId: pop.querySelector('#s-tid').value.trim(),
           trackerPassword: pop.querySelector('#s-pw').value,
           datacenter: Number(pop.querySelector('#s-dc').value) || 0,
-          wsUrl: pop.querySelector('#s-ws').value.trim(),
-          occultTerritoryId: pop.querySelector('#s-terr').value.trim(),
-          ceCooldownSec: pop.querySelector('#s-cecd').value.trim(),
           notifySound: pop.querySelector('#s-sound').checked,
           autoReport: pop.querySelector('#s-auto').checked,
           opacity: Number(pop.querySelector('#s-op').value)
@@ -300,6 +313,7 @@
     });
     h += '<div class="rail-div"></div>';
     h += '<button class="rbtn panel" data-panel="battle" title="' + OC.i18n.t('panel_battle') + '">⚔</button>';
+    h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + OC.i18n.t('panel_dcpots') + '">国</button>';
     h += '<button class="rbtn panel" data-panel="settings" title="' + OC.i18n.t('panel_settings') + '">⚙</button>';
     return h;
   }

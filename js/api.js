@@ -114,6 +114,18 @@
       });
     },
 
+    /** 拉取若干大区最近活跃的岛屿（含 pot_history），用于总览 */
+    fetchDcPots: function (dcList, sinceSec) {
+      var now = Math.floor(Date.now() / 1000);
+      var url = OC.BACKEND.url +
+        '?datacenter=in.(' + dcList.join(',') + ')' +
+        '&last_update=gt.' + (now - sinceSec) +
+        '&select=tracker_id,datacenter,last_update,pot_history';
+      return fetch(url, { headers: headers() }).then(function (r) {
+        return r.ok ? r.json() : [];
+      });
+    },
+
     /** 新建一个 tracker，返回 tracker_id */
     create: function (password, datacenter) {
       var rec = defaultRecord(password, datacenter);
