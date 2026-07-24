@@ -100,16 +100,20 @@
 
     // 离开新月岛时清空锁定，重进本会重新识别
     resetIsland: function () {
-      this.myIslandId = null; this._island = null; this._potAlertedFor = null;
+      this.myIslandId = null; this._island = null; this._potAlertedFor = null; this._alerted = {};
       OC.State.highlights = [];
       OC.Map.updateHighlights(document.getElementById('mapLayer'));
     },
 
-    // 地图仅在新月岛内且未折叠时显示；折叠/离岛时隐藏地图与右侧按钮，仅留胶囊
+    // 不在新月岛时完全隐藏悬浮窗；在岛内则按折叠状态决定是否显示地图
     updateMapVisible: function () {
       var app = document.getElementById('app'); if (!app) return;
-      var noMap = this.collapsed || (OC.Overlay.connected && !OC.Overlay.inOccult);
-      app.classList.toggle('no-map', noMap);
+      // 未连接游戏=独立/调试模式，保持显示
+      var outside = OC.Overlay.connected && !OC.Overlay.inOccult;
+      app.style.display = outside ? 'none' : '';
+      var toasts = document.getElementById('toasts');
+      if (toasts) toasts.style.display = outside ? 'none' : '';
+      app.classList.toggle('no-map', this.collapsed);
     },
 
     togglePanel: function (which) {
@@ -190,12 +194,10 @@
     updateActive: function () {
       var box = document.getElementById('chips-active');
       if (!box) return;
-      var isl = this._island;
-      if (!isl) { box.innerHTML = ''; return; }
-      var alive = isl.ce.concat(isl.fate).filter(isAlive);
-      box.innerHTML = alive.map(function (e) {
-        var isCe = !!OC.CES[e.fate_id];
-        var def = isCe ? OC.CES[e.fate_id] : OC.FATES[e.fate_id];
+      var ids = OC.State.highlights || [];
+      box.innerHTML = ids.map(function (id) {
+        var isCe = !!OC.CES[id];
+        var def = isCe ? OC.CES[id] : OC.FATES[id];
         if (!def) return '';
         return '<div class="chip chip-act ' + (isCe ? 'ce' : 'fate') + '">' + OC.UI.esc(nm(def.name)) + demiatmaSuffix(def.drops) + '</div>';
       }).join('');
@@ -210,6 +212,7 @@
       });
       OC.Overlay.on('position', function () {
         OC.Map.updatePlayer(document.getElementById('mapLayer'));
+        App.refreshHighlights();   // 视野内的 boss 也纳入高亮
       });
     },
 
@@ -234,27 +237,35 @@
         var h = { ce: pj(rec.encounter_history), fate: pj(rec.fate_history), pot: pj(rec.pot_history) };
         App.checkIslandAlerts(h);
         App._island = h;
-        // 地图高亮 = 进行中的 CE/FATE
-        var hl = [];
-        h.ce.concat(h.fate).forEach(function (e) { if (isAlive(e)) hl.push(e.fate_id); });
-        OC.State.highlights = hl;
-        OC.Map.updateHighlights(document.getElementById('mapLayer'));
+        App.refreshHighlights();
         if (App.openPanel === 'battle' && State.detailId === id) { State.detail = h; App.renderPanel(); }
       }).catch(function () {});
     },
 
-    // 岛上 FATE/CE/罐 刷新（云端 spawn_time 由无到有 / 变新）就提示
+    // 地图高亮 = 云端本岛进行中的 CE/FATE ∪ 视野内侦测到的 boss（可同时显示多个）
+    refreshHighlights: function () {
+      var ids = [];
+      var isl = this._island;
+      if (isl) isl.ce.concat(isl.fate).forEach(function (e) { if (isAlive(e) && ids.indexOf(e.fate_id) < 0) ids.push(e.fate_id); });
+      (OC.Overlay.activeIds || []).forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
+      OC.State.highlights = ids;
+      OC.Map.updateHighlights(document.getElementById('mapLayer'));
+      this.updateActive();
+    },
+
+    // 岛上 FATE/CE 刷新时提示：同一目标在“存活期间”只提示一次
+    // （云端 spawn_time 会被不同上报者反复更新，不能用它判断“新出现”）
     checkIslandAlerts: function (h) {
-      var prev = this._island;
-      if (!prev) return; // 首次仅建立基线
+      var first = !this._island;                 // 首次拉取该岛：只建立基线，不提示
+      var alerted = this._alerted = this._alerted || {};
       var colors = OC.Settings.get('alertColors') || {};
-      function newlyAlive(e, arr) {
-        var pe = (arr || []).filter(function (x) { return x.fate_id === e.fate_id; })[0];
-        return e.spawn_time > 0 && isAlive(e) && (!pe || e.spawn_time > pe.spawn_time);
-      }
       ['ce', 'fate'].forEach(function (tp) {
         h[tp].forEach(function (e) {
-          if (!newlyAlive(e, prev[tp])) return;
+          var key = tp + ':' + e.fate_id;
+          if (!isAlive(e)) { delete alerted[key]; return; }   // 已结束 -> 允许下次再提示
+          if (alerted[key]) return;                            // 存活期间已提示过
+          alerted[key] = 1;
+          if (first) return;                                   // 基线不提示
           var def = tp === 'ce' ? OC.CES[e.fate_id] : OC.FATES[e.fate_id]; if (!def) return;
           var hit = (def.drops || []).filter(function (d) { return colors[d]; })[0];
           if (hit) App.fireAlert(tp, nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')));
