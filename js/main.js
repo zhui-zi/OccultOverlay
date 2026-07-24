@@ -62,6 +62,7 @@
       OC.Map.render(document.getElementById('mapLayer'));
       this.bindRail();
       this.updateChips();
+      this.updateVisibility();
       // 胶囊点击打开战斗面板
       app.querySelectorAll('[data-open]').forEach(function (el) {
         el.addEventListener('click', function () { App.togglePanel(el.getAttribute('data-open')); });
@@ -111,6 +112,16 @@
       });
     },
 
+    // 仅在新月岛内显示悬浮窗（未连接游戏时=独立/浏览器模式，仍显示以便调试）
+    updateVisibility: function () {
+      var app = document.getElementById('app');
+      if (!app) return;
+      var show = OC.Overlay.inOccult || !OC.Overlay.connected;
+      app.style.display = show ? '' : 'none';
+      var toasts = document.getElementById('toasts');
+      if (toasts) toasts.style.display = show ? '' : 'none';
+    },
+
     updateChips: function () {
       var conn = document.getElementById('chip-conn');
       if (conn) {
@@ -126,9 +137,9 @@
 
     // -------- Overlay 事件 --------
     wireOverlay: function () {
-      OC.Overlay.on('connected', function () { App.updateChips(); });
-      OC.Overlay.on('disconnected', function () { App.updateChips(); });
-      OC.Overlay.on('zone', function () { App.updateChips(); });
+      OC.Overlay.on('connected', function () { App.updateChips(); App.updateVisibility(); });
+      OC.Overlay.on('disconnected', function () { App.updateChips(); App.updateVisibility(); });
+      OC.Overlay.on('zone', function () { App.updateChips(); App.updateVisibility(); });
       OC.Overlay.on('position', function () { OC.Map.updatePlayer(document.getElementById('mapLayer')); });
       OC.Overlay.on('ce', function (d) { App.onDetected('ce', d.encounterId, d.name); });
       OC.Overlay.on('fate', function (d) {
