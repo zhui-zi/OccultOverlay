@@ -143,15 +143,11 @@
     } catch (e) {}
   }
   UI.beep = beep;
+  // 使用 ACT 自带 TTS（OverlayPlugin），不调用系统 TTS；未连接则返回 false 退回提示音
   UI.speak = function (text) {
-    if (!OC.Settings.get('useTts') || !global.speechSynthesis) return false;
-    try {
-      var u = new SpeechSynthesisUtterance(text);
-      u.lang = 'zh-CN'; u.rate = 1.1;
-      global.speechSynthesis.cancel();
-      global.speechSynthesis.speak(u);
-      return true;
-    } catch (e) { return false; }
+    if (!OC.Settings.get('useTts')) return false;
+    if (OC.Overlay && OC.Overlay.connected && OC.Overlay.say(text)) return true;
+    return false;
   };
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });

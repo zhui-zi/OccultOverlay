@@ -68,12 +68,12 @@
   // cat 为掉落分类；name 为多语言；img 为游戏图标 tex 路径。
   OC.ITEMS = {
     // 半魂晶 Demiatma
-    47744: { cat: 'demiatma', img: 'ui/icon/026000/026025.tex', name: { zh: '青晶半魂晶', en: 'Azurite Demiatma', ja: '青晶のデミアートマ' } },
-    47745: { cat: 'demiatma', img: 'ui/icon/026000/026035.tex', name: { zh: '碧晶半魂晶', en: 'Verdigris Demiatma', ja: '碧晶のデミアートマ' } },
-    47746: { cat: 'demiatma', img: 'ui/icon/026000/026034.tex', name: { zh: '绿晶半魂晶', en: 'Malachite Demiatma', ja: '緑晶のデミアートマ' } },
-    47747: { cat: 'demiatma', img: 'ui/icon/026000/026026.tex', name: { zh: '橙晶半魂晶', en: 'Realgar Demiatma', ja: '橙晶のデミアートマ' } },
-    47748: { cat: 'demiatma', img: 'ui/icon/026000/026027.tex', name: { zh: '紫晶半魂晶', en: 'Caput Mortuum Demiatma', ja: '紫晶のデミアートマ' } },
-    47749: { cat: 'demiatma', img: 'ui/icon/026000/026029.tex', name: { zh: '黄晶半魂晶', en: 'Orpiment Demiatma', ja: '黄晶のデミアートマ' } },
+    47744: { cat: 'demiatma', img: 'ui/icon/026000/026025.tex', name: { zh: '青色半魂晶', en: 'Azurite Demiatma', ja: '青晶のデミアートマ' } },
+    47745: { cat: 'demiatma', img: 'ui/icon/026000/026035.tex', name: { zh: '碧色半魂晶', en: 'Verdigris Demiatma', ja: '碧晶のデミアートマ' } },
+    47746: { cat: 'demiatma', img: 'ui/icon/026000/026034.tex', name: { zh: '绿色半魂晶', en: 'Malachite Demiatma', ja: '緑晶のデミアートマ' } },
+    47747: { cat: 'demiatma', img: 'ui/icon/026000/026026.tex', name: { zh: '橙色半魂晶', en: 'Realgar Demiatma', ja: '橙晶のデミアートマ' } },
+    47748: { cat: 'demiatma', img: 'ui/icon/026000/026027.tex', name: { zh: '紫色半魂晶', en: 'Caput Mortuum Demiatma', ja: '紫晶のデミアートマ' } },
+    47749: { cat: 'demiatma', img: 'ui/icon/026000/026029.tex', name: { zh: '黄色半魂晶', en: 'Orpiment Demiatma', ja: '黄晶のデミアートマ' } },
     // 调查记录 Exploration Notes
     47728: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '探查记录：封印大妖', en: 'Notes on the Cloister Demon', ja: '探査記録:クロイスターデーモン' } },
     47729: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '探查记录：神秘偶像', en: 'Notes on the Mythic Idol', ja: '探査記録:ミシカルアイドル' } },

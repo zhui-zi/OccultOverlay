@@ -35,7 +35,7 @@
       h += '<div id="mapLayer" class="map-layer"></div>';
       h += '<div class="chips">';
       h += '<div id="chip-conn" class="chip chip-conn clickable" title="' + t('collapse') + '"></div>';
-      h += '<div id="chip-pot" class="chip chip-pot clickable" data-open="dcpots"></div>';
+      h += '<div id="chip-pot" class="chip chip-pot clickable" title="' + t('my_island_hint') + '"></div>';
       h += '</div>';
       h += '<div class="rail">' + railHtml() + '</div>';
       h += '<div id="popover" class="popover hidden"></div>';
@@ -46,10 +46,12 @@
       this.updateChips();
       this.updateMapVisible();
 
-      // 胶囊点击：连接胶囊(新月岛)=折叠开关；撒娇罐胶囊=打开总览
+      // 胶囊点击：连接胶囊(新月岛)=折叠开关；撒娇罐胶囊=打开“我所在岛”的详情
       document.getElementById('chip-conn').addEventListener('click', function () { App.toggleCollapse(); });
-      app.querySelectorAll('.chips [data-open]').forEach(function (el) {
-        el.addEventListener('click', function (e) { e.stopPropagation(); App.togglePanel(el.getAttribute('data-open')); });
+      document.getElementById('chip-pot').addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (App.myIslandId) App.showIsland(App.myIslandId);
+        else App.togglePanel('dcpots');
       });
       // 面板关闭按钮：事件委托（避免每秒重绘后失效）
       var pop = document.getElementById('popover');
@@ -77,6 +79,22 @@
       var conn = document.getElementById('chip-conn');
       if (conn) conn.title = t(this.collapsed ? 'expand' : 'collapse');
       this.updateMapVisible();
+    },
+
+    // 通过场上 boss 确认玩家所在的岛（同大区多个岛时消歧）
+    resolveMyIsland: function () {
+      var pdc = OC.Overlay.playerDc;
+      var inDc = (this._dc || []).filter(function (x) { return pdc ? x.dc === pdc : true; });
+      var active = OC.Overlay.activeIds || [];
+      var id = null;
+      if (active.length) {
+        var hit = inDc.filter(function (x) { return active.indexOf(x.ceId) >= 0 || active.indexOf(x.fateId) >= 0; })[0];
+        if (hit) id = hit.id;
+      }
+      if (!id && inDc.length === 1) id = inDc[0].id;             // 该大区只有一个岛
+      if (!id && this.myIslandId && inDc.some(function (x) { return x.id === App.myIslandId; })) id = this.myIslandId; // 保持上次
+      this.myIslandId = id;
+      return id;
     },
 
     // 地图仅在新月岛内且未折叠时显示；折叠/离岛时隐藏地图与右侧按钮，仅留胶囊
@@ -135,11 +153,13 @@
       }
       var pot = document.getElementById('chip-pot');
       if (pot) {
+        this.resolveMyIsland();
         var list = this._dc || [];
         var pdc = OC.Overlay.playerDc;
-        // 优先玩家所在大区；否则国服范围
         var scoped = pdc ? list.filter(function (x) { return x.dc === pdc; }) : list;
-        var pick = scoped.filter(function (x) { return x.alive; })[0] ||
+        // 优先“我所在岛”，否则本大区最近的一只
+        var mine = this.myIslandId ? list.filter(function (x) { return x.id === App.myIslandId; })[0] : null;
+        var pick = mine || scoped.filter(function (x) { return x.alive; })[0] ||
           scoped.filter(function (x) { return !x.alive && x.etaSec > 0; }).sort(function (a, b) { return a.etaSec - b.etaSec; })[0] ||
           scoped[0];
         var body = '<span class="chip-k">' + t('pot') + '</span>';
@@ -147,7 +167,7 @@
           var dc = (OC.DATACENTERS[pick.dc] || {}).name || '';
           if (pick.alive) body += '<span class="s a">' + t('alive') + '</span>';
           else body += '<b>' + OC.UI.fmtDur(Math.max(0, pick.etaSec)) + '</b>';
-          body += ' <span class="s">' + OC.UI.esc(dc) + '</span>';
+          body += ' <span class="s">' + OC.UI.esc(dc) + (mine ? '' : ' ·?') + '</span>';
           pot.classList.toggle('ready', pick.alive || pick.etaSec <= 60);
         } else { body += '<span class="s">' + (this._dcLoaded ? t('no_active_island') : t('loading')) + '</span>'; }
         pot.innerHTML = body;
@@ -158,7 +178,11 @@
       OC.Overlay.on('connected', function () { App.updateChips(); App.updateMapVisible(); });
       OC.Overlay.on('disconnected', function () { App.updateChips(); App.updateMapVisible(); });
       OC.Overlay.on('zone', function () { App.updateChips(); App.updateMapVisible(); });
-      OC.Overlay.on('position', function () { OC.Map.updatePlayer(document.getElementById('mapLayer')); });
+      OC.Overlay.on('position', function () {
+        var m = document.getElementById('mapLayer');
+        OC.Map.updatePlayer(m);
+        OC.Map.updateHighlights(m);
+      });
     },
 
     // 拉取国服四大区活跃岛屿（撒娇罐总览 + 顶部胶囊数据源）

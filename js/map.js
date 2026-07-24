@@ -38,16 +38,10 @@
         if (!layers[L.key]) return;
         (pts[L.src] || []).forEach(function (p) { s += marker(p[0] + 1024, p[1] + 1024, L); });
       });
-      // CE/FATE 高亮（进行中的）
-      (OC.State && OC.State.highlights ? OC.State.highlights : []).forEach(function (h) {
-        var loc = OC.MAP.encounters[h.id]; if (!loc) return;
-        var col = h.type === 'ce' ? '#ff4d4d' : '#5b9bd5';
-        s += '<g class="hi-mark">' +
-          '<circle cx="' + (loc[0] + 1024) + '" cy="' + (loc[1] + 1024) + '" r="40" fill="none" stroke="' + col + '" stroke-width="7"/>' +
-          '<circle cx="' + (loc[0] + 1024) + '" cy="' + (loc[1] + 1024) + '" r="13" fill="' + col + '" stroke="#000" stroke-width="3"/></g>';
-      });
       s += '</g>';
 
+      // 进行中的 CE/FATE 高亮（独立组，便于单独更新）
+      s += '<g class="hi-wrap">' + highlightsSvg() + '</g>';
       // 玩家位置（独立组，便于单独更新）
       s += '<g class="you-wrap">' + youMarker() + '</g>';
 
@@ -55,13 +49,21 @@
       container.innerHTML = s;
     },
 
-    // 仅更新玩家位置（不重绘整图，避免底图闪烁）
     updatePlayer: function (container) {
       container = container || document.getElementById('mapLayer');
       if (!container) return;
       var wrap = container.querySelector('.you-wrap');
-      if (!wrap) { return this.render(container); }
+      if (!wrap) return this.render(container);
       wrap.innerHTML = youMarker();
+    },
+
+    // 更新进行中的 CE/FATE 高亮（不重绘整图）
+    updateHighlights: function (container) {
+      container = container || document.getElementById('mapLayer');
+      if (!container) return;
+      var wrap = container.querySelector('.hi-wrap');
+      if (!wrap) return this.render(container);
+      wrap.innerHTML = highlightsSvg();
     },
 
     toggle: function (key, container) {
@@ -69,6 +71,25 @@
       this.render(container);
     }
   };
+
+  function highlightsSvg() {
+    var ids = (OC.Overlay && OC.Overlay.activeIds) || [];
+    var s = '';
+    ids.forEach(function (id) {
+      var loc = OC.MAP.encounters[id]; if (!loc) return;
+      var isCe = !!OC.CES[id];
+      var col = isCe ? '#ff4d4d' : '#ffd24d';
+      var x = loc[0] + 1024, y = loc[1] + 1024;
+      var label = OC.localName((OC.CES[id] || OC.FATES[id] || {}).name, OC.Settings.get('lang')) || '';
+      s += '<g class="hi-mark">' +
+        '<circle cx="' + x + '" cy="' + y + '" r="42" fill="none" stroke="' + col + '" stroke-width="8"/>' +
+        '<circle cx="' + x + '" cy="' + y + '" r="14" fill="' + col + '" stroke="#000" stroke-width="3"/>' +
+        '<text x="' + x + '" y="' + (y - 54) + '" text-anchor="middle" class="hi-label">' + esc(label) + '</text></g>';
+    });
+    return s;
+  }
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
 
   function youMarker() {
     var pp = OC.Overlay && OC.Overlay.playerPos;

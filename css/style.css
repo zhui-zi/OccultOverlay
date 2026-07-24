@@ -32,6 +32,7 @@ html, body {
 .map-bg { opacity: var(--app-opacity); }   /* 仅底图受不透明度影响 */
 .map-marks { opacity: 1; }                   /* 标记始终清晰 */
 .hi-mark circle:first-child { animation: pulse 1.4s ease-in-out infinite; transform-origin: center; }
+.hi-label { font-size: 30px; font-weight: 800; fill: #fff; paint-order: stroke; stroke: #000; stroke-width: 6px; }
 .you circle { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
 

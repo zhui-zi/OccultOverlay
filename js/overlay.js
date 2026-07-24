@@ -181,6 +181,8 @@
           Overlay.playerWorld = wid;
           if (WORLD2DC[wid]) Overlay.playerDc = WORLD2DC[wid];
         }
+        // 侦测本本内正在场的 FATE/CE boss，用于确认玩家所在的岛
+        Overlay.activeIds = scanBosses(arr);
         Overlay.emit('position', Overlay.playerPos);
       });
     }, 2000);
@@ -268,6 +270,45 @@
       }
     }
   }
+
+  // ---- boss 名称索引：从场上战斗单位判断活跃的 FATE/CE ------------------
+  var _bossIndex = null;
+  function bossTokens(nameObj) {
+    if (!nameObj) return [];
+    var tk = [];
+    if (nameObj.zh) { var z = nameObj.zh, i = z.lastIndexOf('——'); tk.push(i >= 0 ? z.slice(i + 2) : z); }
+    if (nameObj.ja) { var m = /[「『](.+?)[」』]/.exec(nameObj.ja); tk.push(m ? m[1] : nameObj.ja); }
+    if (nameObj.en) tk.push(nameObj.en);
+    return tk.filter(function (x) { return x && x.length >= 2; });
+  }
+  function buildBossIndex() {
+    _bossIndex = [];
+    function add(id, nameObj) { bossTokens(nameObj).forEach(function (t) { _bossIndex.push({ id: id, t: t }); }); }
+    Object.keys(OC.CES).forEach(function (k) { add(Number(k), OC.CES[k].name); });
+    Object.keys(OC.FATES).forEach(function (k) { add(Number(k), OC.FATES[k].name); });
+  }
+  function scanBosses(combatants) {
+    if (!_bossIndex) buildBossIndex();
+    var found = {};
+    (combatants || []).forEach(function (c) {
+      var name = c && c.Name; if (!name || name.length < 2) return;
+      for (var i = 0; i < _bossIndex.length; i++) {
+        var b = _bossIndex[i];
+        if (name === b.t || name.indexOf(b.t) >= 0 || b.t.indexOf(name) >= 0) { found[b.id] = 1; break; }
+      }
+    });
+    return Object.keys(found).map(Number);
+  }
+
+  // ACT 自带 TTS（OverlayPlugin 'say' 处理器），不使用系统 TTS
+  Overlay.say = function (text) {
+    var obj = { call: 'say', text: text };
+    if (global.OverlayPluginApi && global.OverlayPluginApi.ready) {
+      try { global.OverlayPluginApi.callHandler(JSON.stringify(obj), function () {}); return true; } catch (e) {}
+    }
+    if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify(obj)); return true; } catch (e) {} }
+    return false;
+  };
 
   // ---- 启动 -------------------------------------------------------------
   Overlay.start = function () {
