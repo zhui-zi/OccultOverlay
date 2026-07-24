@@ -313,7 +313,6 @@
       });
       h += '</div>';
       h += rowChk('a-tts', t('alert_tts'), g('useTts'));
-      h += rowChk('s-sound', t('set_sound'), g('notifySound'));
       h += '<div class="s-grp">' + t('panel_settings') + '</div>';
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
@@ -334,7 +333,6 @@
       });
       bindChk(pop, 'a-pot', 'alertPot');
       bindChk(pop, 'a-tts', 'useTts');
-      bindChk(pop, 's-sound', 'notifySound');
       pop.querySelectorAll('input[data-color]').forEach(function (cb) {
         cb.addEventListener('change', function () {
           var c = OC.Settings.get('alertColors') || {};
