@@ -73,7 +73,8 @@
   };
 
   function highlightsSvg() {
-    var ids = (OC.Overlay && OC.Overlay.activeIds) || [];
+    // 高亮来自云端“我所在岛”的进行中 CE/FATE（玩家在起始点也能看到）
+    var ids = (OC.State && OC.State.highlights) || [];
     var s = '';
     ids.forEach(function (id) {
       var loc = OC.MAP.encounters[id]; if (!loc) return;

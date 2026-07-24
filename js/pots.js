@@ -14,17 +14,20 @@
   var Pots = OC.Pots = {
     respawnSec: RESPAWN,
 
-    // 单个 tracker 的撒娇罐状态：{ alive, etaSec, nextEpoch } 或 null
+    // 单个 tracker 的撒娇罐状态：{ alive, etaSec, nextEpoch, side } 或 null
+    // side：存活时=当前存活的罐方位；否则=下一只（与上一只交替）的方位
     status: function (potArr, now) {
       now = now || Math.floor(Date.now() / 1000);
       var spawned = (potArr || []).filter(function (p) { return p.spawn_time > 0; });
       if (!spawned.length) return null;
-      var maxSpawn = spawned.reduce(function (m, p) { return Math.max(m, p.spawn_time); }, 0);
+      var maxEntry = spawned.reduce(function (m, p) { return p.spawn_time > m.spawn_time ? p : m; });
+      var lastSide = (OC.POTS[maxEntry.fate_id] || {}).side;
       var alive = spawned.some(function (p) {
         return (p.death_time <= 0 || p.death_time < p.spawn_time) && (now - p.spawn_time) < RESPAWN;
       });
-      var next = maxSpawn + RESPAWN;
-      return { alive: alive, nextEpoch: next, etaSec: next - now };
+      var next = maxEntry.spawn_time + RESPAWN;
+      var side = alive ? lastSide : (lastSide === 'north' ? 'south' : lastSide === 'south' ? 'north' : null);
+      return { alive: alive, nextEpoch: next, etaSec: next - now, side: side };
     },
 
     // 取“当前/最近”的目标 id：按 last_seen / spawn_time 最大者
@@ -53,7 +56,7 @@
           .map(function (p) { return p.spawn_time; }).sort(function (a, b) { return a - b; });
         return {
           id: t.tracker_id, dc: t.datacenter, lastUpdate: t.last_update, ago: now - t.last_update,
-          alive: st.alive, etaSec: st.etaSec, nextEpoch: st.nextEpoch, spawns: spawns,
+          alive: st.alive, etaSec: st.etaSec, nextEpoch: st.nextEpoch, side: st.side, spawns: spawns,
           ceId: Pots.currentId(ces), fateId: Pots.currentId(fates)
         };
       }).filter(Boolean);

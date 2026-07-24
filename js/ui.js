@@ -50,7 +50,8 @@
       h += '<div class="dc-list">';
       list.forEach(function (it) {
         var dc = (OC.DATACENTERS[it.dc] || { name: it.dc }).name;
-        var status = it.alive ? '<span class="dc-alive">' + t('alive') + '</span>' : '<span class="dc-eta">' + UI.fmtDur(Math.max(0, it.etaSec)) + '</span>';
+        var sd = it.side ? '<span class="dc-side side-' + it.side + '">' + (it.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
+        var status = (it.alive ? '<span class="dc-alive">' + t('alive') + '</span>' : '<span class="dc-eta">' + UI.fmtDur(Math.max(0, it.etaSec)) + '</span>') + sd;
         var ce = it.ceId && OC.CES[it.ceId] ? nm(OC.CES[it.ceId].name) : '';
         var ft = it.fateId && OC.FATES[it.fateId] ? nm(OC.FATES[it.fateId].name) : '';
         h += '<div class="dc-row' + (it.alive ? ' alive' : '') + '" data-tid="' + esc(it.id) + '">';
@@ -107,7 +108,8 @@
   }
   function badge(e, n, alive) {
     if (alive) return '<span class="bdg alive">● ' + t('alive') + ' ' + UI.fmtClock(n - e.spawn_time) + '</span>';
-    if (e.death_time > 0) return '<span class="bdg gone">○ ' + t('gone') + '</span>';
+    var seen = e.last_seen > 0 ? e.last_seen : (e.death_time > 0 ? e.death_time : 0);
+    if (seen > 0) return '<span class="bdg gone">' + t('last_seen') + ' ' + UI.fmtClock(n - seen) + '</span>';
     return '<span class="bdg unk">' + t('unknown') + '</span>';
   }
 

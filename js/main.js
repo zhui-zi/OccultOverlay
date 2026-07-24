@@ -119,9 +119,14 @@
 
     renderPanel: function () {
       var pop = document.getElementById('popover');
+      // 保持滚动位置（面板每秒重绘，避免被顶回最上）
+      var oldBody = pop.querySelector('.panel-body');
+      var scroll = oldBody ? oldBody.scrollTop : 0;
       if (this.openPanel === 'dcpots') OC.UI.renderDcPots(pop, this._dc, !this._dcLoaded);
       else if (this.openPanel === 'battle') OC.UI.renderBattlePanel(pop, State.detail, State.detailId);
       else if (this.openPanel === 'settings') this.renderSettings(pop);
+      var newBody = pop.querySelector('.panel-body');
+      if (newBody && scroll) newBody.scrollTop = scroll;
     },
 
     // 点击某岛 -> 拉取详情并显示战斗面板
@@ -155,22 +160,20 @@
       var pot = document.getElementById('chip-pot');
       if (pot) {
         this.resolveMyIsland();
-        var list = this._dc || [];
-        var pdc = OC.Overlay.playerDc;
-        var scoped = pdc ? list.filter(function (x) { return x.dc === pdc; }) : list;
-        // 优先“我所在岛”，否则本大区最近的一只
-        var mine = this.myIslandId ? list.filter(function (x) { return x.id === App.myIslandId; })[0] : null;
-        var pick = mine || scoped.filter(function (x) { return x.alive; })[0] ||
-          scoped.filter(function (x) { return !x.alive && x.etaSec > 0; }).sort(function (a, b) { return a.etaSec - b.etaSec; })[0] ||
-          scoped[0];
+        var mine = this.myIslandId ? (this._dc || []).filter(function (x) { return x.id === App.myIslandId; })[0] : null;
         var body = '<span class="chip-k">' + t('pot') + '</span>';
-        if (pick) {
-          var dc = (OC.DATACENTERS[pick.dc] || {}).name || '';
-          if (pick.alive) body += '<span class="s a">' + t('alive') + '</span>';
-          else body += '<b>' + OC.UI.fmtDur(Math.max(0, pick.etaSec)) + '</b>';
-          body += ' <span class="s">' + OC.UI.esc(dc) + (mine ? '' : ' ·?') + '</span>';
-          pot.classList.toggle('ready', pick.alive || pick.etaSec <= 60);
-        } else { body += '<span class="s">' + (this._dcLoaded ? t('no_active_island') : t('loading')) + '</span>'; }
+        var ready = false;
+        if (!this._dcLoaded) {
+          body += '<span class="s">' + t('loading') + '</span>';
+        } else if (mine) {
+          var side = mine.side ? '<span class="side-' + mine.side + '">' + (mine.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
+          if (mine.alive) { body += '<span class="s a">' + t('alive') + '</span> ' + side; ready = true; }
+          else { body += '<b>' + OC.UI.fmtDur(Math.max(0, mine.etaSec)) + '</b> ' + side; ready = mine.etaSec <= 60; }
+        } else {
+          // 未能确认所在岛：不显示可能错误的倒计时
+          body += '<span class="s">' + t('locating') + '</span>';
+        }
+        pot.classList.toggle('ready', ready);
         pot.innerHTML = body;
       }
     },
@@ -180,10 +183,7 @@
       OC.Overlay.on('disconnected', function () { App.updateChips(); App.updateMapVisible(); });
       OC.Overlay.on('zone', function () { App.updateChips(); App.updateMapVisible(); });
       OC.Overlay.on('position', function () {
-        var m = document.getElementById('mapLayer');
-        OC.Map.updatePlayer(m);
-        OC.Map.updateHighlights(m);
-        App.checkBossAlert();
+        OC.Map.updatePlayer(document.getElementById('mapLayer'));
       });
     },
 
@@ -193,36 +193,50 @@
         App._dc = OC.Pots.dcOverview(rows);
         App._dcLoaded = true;
         App.resolveMyIsland();
-        App.checkPotAlert();
+        App.pollMyIsland();
         App.updateChips();
         if (App.openPanel === 'dcpots') App.renderPanel();
       }).catch(function () { App._dcLoaded = true; });
     },
 
-    // CE/FATE 颜色提示：仅当你副本里“真的出现”了 boss（getCombatants 新增）才提示
-    checkBossAlert: function () {
-      var active = OC.Overlay.activeIds || [];
-      var prev = this._prevActive;
-      var colors = OC.Settings.get('alertColors') || {};
-      if (prev) { // 第一次仅记录基线，不提示
-        active.forEach(function (id) {
-          if (prev.indexOf(id) >= 0) return; // 之前已在场
-          var def = OC.CES[id] || OC.FATES[id]; if (!def) return;
-          var hit = (def.drops || []).filter(function (d) { return colors[d]; })[0];
-          if (hit) App.fireAlert(OC.CES[id] ? 'ce' : 'fate',
-            nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')));
-        });
-      }
-      this._prevActive = active.slice();
+    // 拉取“我所在岛”的完整数据，驱动地图高亮 + 提示（云端，玩家在起始点也有效）
+    pollMyIsland: function () {
+      var id = this.myIslandId;
+      if (!id) { this._island = null; OC.State.highlights = []; OC.Map.updateHighlights(document.getElementById('mapLayer')); return; }
+      OC.Api.fetchTracker(id).then(function (rec) {
+        if (!rec) return;
+        var h = { ce: pj(rec.encounter_history), fate: pj(rec.fate_history), pot: pj(rec.pot_history) };
+        App.checkIslandAlerts(h);
+        App._island = h;
+        // 地图高亮 = 进行中的 CE/FATE
+        var hl = [];
+        h.ce.concat(h.fate).forEach(function (e) { if (isAlive(e)) hl.push(e.fate_id); });
+        OC.State.highlights = hl;
+        OC.Map.updateHighlights(document.getElementById('mapLayer'));
+        if (App.openPanel === 'battle' && State.detailId === id) { State.detail = h; App.renderPanel(); }
+      }).catch(function () {});
     },
 
-    // 撒娇罐提示：仅当“你所在岛”的罐由无到有时提示
-    checkPotAlert: function () {
-      if (!OC.Settings.get('alertPot')) { this._prevPotAlive = null; return; }
-      var mine = this.myIslandId ? (this._dc || []).filter(function (x) { return x.id === App.myIslandId; })[0] : null;
-      var aliveNow = !!(mine && mine.alive);
-      if (this._prevPotAlive != null && aliveNow && !this._prevPotAlive) App.fireAlert('pot', t('alert_pot'));
-      this._prevPotAlive = aliveNow;
+    // 岛上 FATE/CE/罐 刷新（云端 spawn_time 由无到有 / 变新）就提示
+    checkIslandAlerts: function (h) {
+      var prev = this._island;
+      if (!prev) return; // 首次仅建立基线
+      var colors = OC.Settings.get('alertColors') || {};
+      function newlyAlive(e, arr) {
+        var pe = (arr || []).filter(function (x) { return x.fate_id === e.fate_id; })[0];
+        return e.spawn_time > 0 && isAlive(e) && (!pe || e.spawn_time > pe.spawn_time);
+      }
+      ['ce', 'fate'].forEach(function (tp) {
+        h[tp].forEach(function (e) {
+          if (!newlyAlive(e, prev[tp])) return;
+          var def = tp === 'ce' ? OC.CES[e.fate_id] : OC.FATES[e.fate_id]; if (!def) return;
+          var hit = (def.drops || []).filter(function (d) { return colors[d]; })[0];
+          if (hit) App.fireAlert(tp, nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')));
+        });
+      });
+      if (OC.Settings.get('alertPot')) {
+        h.pot.forEach(function (e) { if (newlyAlive(e, prev.pot)) App.fireAlert('pot', nm((OC.POTS[e.fate_id] || {}).name) || t('alert_pot')); });
+      }
     },
 
     fireAlert: function (kind, msg) {
@@ -271,7 +285,6 @@
       h += '<div class="s-grp">' + t('panel_settings') + '</div>';
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
-      h += '<div class="cloud-hint">' + t('auto_hint') + '</div>';
       h += '</div>';
       pop.innerHTML = h;
 
@@ -301,6 +314,7 @@
   };
 
   function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }
+  function isAlive(e) { return e && e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time); }
   function row(l, c) { return '<div class="s-row"><label>' + l + '</label>' + c + '</div>'; }
   function rowChk(id, l, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + l + '</label></div>'; }
   function bindChk(pop, id, key) {
