@@ -142,6 +142,17 @@
       o.start(tt); o.stop(tt + 0.5);
     } catch (e) {}
   }
+  UI.beep = beep;
+  UI.speak = function (text) {
+    if (!OC.Settings.get('useTts') || !global.speechSynthesis) return false;
+    try {
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN'; u.rate = 1.1;
+      global.speechSynthesis.cancel();
+      global.speechSynthesis.speak(u);
+      return true;
+    } catch (e) { return false; }
+  };
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
   }

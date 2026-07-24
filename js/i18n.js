@@ -32,7 +32,9 @@
       panel_dcpots: '撒娇罐总览', dc_pots_title: '撒娇罐总览（国服四大区）',
       no_active_island: '当前四大区暂无活跃岛屿', updated: '更新', loading: '加载中…',
       collapse: '折叠（隐藏地图）', expand: '展开地图',
-      auto_hint: '数据自动来自国服四大区云端，无需任何设置；点击列表中的岛可查看该岛 CE/FATE。'
+      auto_hint: '数据自动来自国服四大区云端，无需任何设置；点击列表中的岛可查看该岛 CE/FATE。',
+      alert_title: '提示', alert_pot_opt: '撒娇罐出现时提示', alert_demiatma: '出现掉落以下半魂晶的 CE/FATE 时提示：',
+      alert_tts: '语音提示（TTS，不可用时用提示音）', alert_pot: '撒娇罐出现'
     },
     en: {
       title: 'Occult Crescent',
@@ -58,7 +60,9 @@
       panel_dcpots: 'Pot Overview', dc_pots_title: 'Pot Overview (CN DCs)',
       no_active_island: 'No active islands right now', updated: 'upd', loading: 'Loading…',
       collapse: 'Collapse (hide map)', expand: 'Expand map',
-      auto_hint: 'Data is loaded automatically from the CN datacenters; click an island to see its CE/FATE.'
+      auto_hint: 'Data is loaded automatically from the CN datacenters; click an island to see its CE/FATE.',
+      alert_title: 'Alerts', alert_pot_opt: 'Alert when a pot spawns', alert_demiatma: 'Alert on CE/FATE dropping these demiatma:',
+      alert_tts: 'Voice (TTS, falls back to sound)', alert_pot: 'Pot spawned'
     },
     ja: {
       title: '南方海域',
@@ -84,7 +88,9 @@
       panel_dcpots: 'ポット一覧', dc_pots_title: 'ポット一覧（中国4DC）',
       no_active_island: '現在アクティブな島はありません', updated: '更新', loading: '読込中…',
       collapse: '折りたたむ（マップ非表示）', expand: 'マップ展開',
-      auto_hint: 'データは中国4DCから自動取得。設定不要。島をクリックでCE/FATE表示。'
+      auto_hint: 'データは中国4DCから自動取得。設定不要。島をクリックでCE/FATE表示。',
+      alert_title: '通知', alert_pot_opt: 'ポット出現で通知', alert_demiatma: '以下のデミアートマをドロップするCE/FATE出現で通知：',
+      alert_tts: '音声通知（TTS、不可なら効果音）', alert_pot: 'ポット出現'
     }
   };
 

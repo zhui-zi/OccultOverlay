@@ -22,6 +22,10 @@
     autoReport: true,           // 侦测到 CE/FATE/罐 时自动提交到云端（无人工上报）
     opacity: 0.9,
     collapsed: false,
+    useTts: true,               // 语音提示（不可用时退回提示音）
+    alertPot: false,            // 撒娇罐出现时提示
+    alertColors: {},            // 半魂晶颜色提示：{ itemId: true }
+    _alertScope: 'dc',          // 提示范围：dc=仅本大区
     mapLayers: { bronze: false, silver: false, potN: false, potS: false, reroll: false, bunny: false }
   };
 

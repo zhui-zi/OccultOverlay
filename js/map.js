@@ -75,14 +75,18 @@
     if (!pp) return '';
     var x = pp.x + 1024, y = pp.z + 1024;
     var g = '<g class="you">';
-    g += '<circle cx="' + x + '" cy="' + y + '" r="26" fill="rgba(225,29,72,0.25)"/>';
-    g += '<circle cx="' + x + '" cy="' + y + '" r="13" fill="#fff" stroke="#e11d48" stroke-width="6"/>';
-    // 朝向箭头（Heading，0=南，逆时针）
+    // 面向：柔和的锥形视野扇（heading 弧度，0=朝南=向下）
     if (pp.h != null) {
-      var ang = -pp.h; // 转到屏幕角度
-      var tipx = x + Math.sin(pp.h) * 40, tipy = y + Math.cos(pp.h) * 40;
-      g += '<line x1="' + x + '" y1="' + y + '" x2="' + tipx.toFixed(1) + '" y2="' + tipy.toFixed(1) + '" stroke="#e11d48" stroke-width="6"/>';
+      var d = { x: Math.sin(pp.h), y: Math.cos(pp.h) };
+      var pr = { x: Math.cos(pp.h), y: -Math.sin(pp.h) };
+      var tip = [x + d.x * 46, y + d.y * 46];
+      var bl = [x + d.x * 10 + pr.x * 15, y + d.y * 10 + pr.y * 15];
+      var br = [x + d.x * 10 - pr.x * 15, y + d.y * 10 - pr.y * 15];
+      g += '<path d="M' + bl[0].toFixed(1) + ' ' + bl[1].toFixed(1) + ' L' + tip[0].toFixed(1) + ' ' + tip[1].toFixed(1) +
+        ' L' + br[0].toFixed(1) + ' ' + br[1].toFixed(1) + ' Z" fill="rgba(255,255,255,0.55)"/>';
     }
+    g += '<circle cx="' + x + '" cy="' + y + '" r="22" fill="rgba(225,29,72,0.2)"/>';
+    g += '<circle cx="' + x + '" cy="' + y + '" r="11" fill="#fff" stroke="#e11d48" stroke-width="5"/>';
     g += '</g>';
     return g;
   }

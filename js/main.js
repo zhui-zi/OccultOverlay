@@ -34,22 +34,22 @@
       var h = '';
       h += '<div id="mapLayer" class="map-layer"></div>';
       h += '<div class="chips">';
-      h += '<div id="chip-conn" class="chip chip-conn"></div>';
+      h += '<div id="chip-conn" class="chip chip-conn clickable" title="' + t('collapse') + '"></div>';
       h += '<div id="chip-pot" class="chip chip-pot clickable" data-open="dcpots"></div>';
       h += '</div>';
-      h += '<div class="rail">' + railHtml(this.collapsed) + '</div>';
+      h += '<div class="rail">' + railHtml() + '</div>';
       h += '<div id="popover" class="popover hidden"></div>';
       app.innerHTML = h;
-      app.classList.toggle('collapsed', this.collapsed);
 
       OC.Map.render(document.getElementById('mapLayer'));
       this.bindRail();
       this.updateChips();
-      this.updateVisibility();
+      this.updateMapVisible();
 
-      // 胶囊点击打开对应面板
+      // 胶囊点击：连接胶囊(新月岛)=折叠开关；撒娇罐胶囊=打开总览
+      document.getElementById('chip-conn').addEventListener('click', function () { App.toggleCollapse(); });
       app.querySelectorAll('.chips [data-open]').forEach(function (el) {
-        el.addEventListener('click', function () { App.togglePanel(el.getAttribute('data-open')); });
+        el.addEventListener('click', function (e) { e.stopPropagation(); App.togglePanel(el.getAttribute('data-open')); });
       });
       // 面板关闭按钮：事件委托（避免每秒重绘后失效）
       var pop = document.getElementById('popover');
@@ -69,17 +69,21 @@
       app.querySelectorAll('.rbtn[data-panel]').forEach(function (b) {
         b.addEventListener('click', function () { App.togglePanel(b.getAttribute('data-panel')); });
       });
-      var col = app.querySelector('.rbtn[data-collapse]');
-      if (col) col.addEventListener('click', function () { App.toggleCollapse(); });
     },
 
     toggleCollapse: function () {
       this.collapsed = !this.collapsed;
       OC.Settings.set('collapsed', this.collapsed);
-      var app = document.getElementById('app');
-      app.classList.toggle('collapsed', this.collapsed);
-      var btn = app.querySelector('.rbtn[data-collapse]');
-      if (btn) { btn.textContent = this.collapsed ? '▢' : '▣'; btn.title = t(this.collapsed ? 'expand' : 'collapse'); }
+      var conn = document.getElementById('chip-conn');
+      if (conn) conn.title = t(this.collapsed ? 'expand' : 'collapse');
+      this.updateMapVisible();
+    },
+
+    // 地图仅在新月岛内且未折叠时显示；折叠/离岛时隐藏地图与右侧按钮，仅留胶囊
+    updateMapVisible: function () {
+      var app = document.getElementById('app'); if (!app) return;
+      var noMap = this.collapsed || (OC.Overlay.connected && !OC.Overlay.inOccult);
+      app.classList.toggle('no-map', noMap);
     },
 
     togglePanel: function (which) {
@@ -131,23 +135,29 @@
       }
       var pot = document.getElementById('chip-pot');
       if (pot) {
-        var soonest = this._dc && this._dc[0];
+        var list = this._dc || [];
+        var pdc = OC.Overlay.playerDc;
+        // 优先玩家所在大区；否则国服范围
+        var scoped = pdc ? list.filter(function (x) { return x.dc === pdc; }) : list;
+        var pick = scoped.filter(function (x) { return x.alive; })[0] ||
+          scoped.filter(function (x) { return !x.alive && x.etaSec > 0; }).sort(function (a, b) { return a.etaSec - b.etaSec; })[0] ||
+          scoped[0];
         var body = '<span class="chip-k">' + t('pot') + '</span>';
-        if (soonest) {
-          var dc = (OC.DATACENTERS[soonest.dc] || {}).name || '';
-          if (soonest.alive) body += '<span class="s a">' + t('alive') + '</span>';
-          else body += '<b>' + OC.UI.fmtDur(Math.max(0, soonest.etaSec)) + '</b>';
+        if (pick) {
+          var dc = (OC.DATACENTERS[pick.dc] || {}).name || '';
+          if (pick.alive) body += '<span class="s a">' + t('alive') + '</span>';
+          else body += '<b>' + OC.UI.fmtDur(Math.max(0, pick.etaSec)) + '</b>';
           body += ' <span class="s">' + OC.UI.esc(dc) + '</span>';
-          pot.classList.toggle('ready', soonest.alive || soonest.etaSec <= 60);
-        } else { body += '<span class="s">' + t('loading') + '</span>'; }
+          pot.classList.toggle('ready', pick.alive || pick.etaSec <= 60);
+        } else { body += '<span class="s">' + (this._dcLoaded ? t('no_active_island') : t('loading')) + '</span>'; }
         pot.innerHTML = body;
       }
     },
 
     wireOverlay: function () {
-      OC.Overlay.on('connected', function () { App.updateChips(); App.updateVisibility(); });
-      OC.Overlay.on('disconnected', function () { App.updateChips(); App.updateVisibility(); });
-      OC.Overlay.on('zone', function () { App.updateChips(); App.updateVisibility(); });
+      OC.Overlay.on('connected', function () { App.updateChips(); App.updateMapVisible(); });
+      OC.Overlay.on('disconnected', function () { App.updateChips(); App.updateMapVisible(); });
+      OC.Overlay.on('zone', function () { App.updateChips(); App.updateMapVisible(); });
       OC.Overlay.on('position', function () { OC.Map.updatePlayer(document.getElementById('mapLayer')); });
     },
 
@@ -156,9 +166,43 @@
       OC.Api.fetchDcPots(CN_DCS, 900).then(function (rows) {
         App._dc = OC.Pots.dcOverview(rows);
         App._dcLoaded = true;
+        App.checkAlerts();
         App.updateChips();
         if (App.openPanel === 'dcpots') App.renderPanel();
       }).catch(function () { App._dcLoaded = true; });
+    },
+
+    // 提示：撒娇罐出现 / 掉落所选颜色半魂晶的 CE·FATE 出现（仅本大区，避免刷屏）
+    checkAlerts: function () {
+      var pdc = OC.Overlay.playerDc;
+      var list = (this._dc || []).filter(function (x) { return !pdc || x.dc === pdc; });
+      var st = this._alertState = this._alertState || {};
+      var ready = this._alertReady;
+      var colors = OC.Settings.get('alertColors') || {};
+      var wantPot = OC.Settings.get('alertPot');
+      list.forEach(function (it) {
+        var prev = st[it.id] || {};
+        if (ready) {
+          if (wantPot && it.alive && !prev.alive) App.fireAlert('pot', t('alert_pot'));
+          [['ce', it.ceId, OC.CES], ['fate', it.fateId, OC.FATES]].forEach(function (p) {
+            var def = p[2][p[1]];
+            if (def && p[1] && p[1] !== prev[p[0]]) {
+              var hitColor = (def.drops || []).filter(function (d) { return colors[d]; })[0];
+              if (hitColor) {
+                var cname = OC.localName(OC.ITEMS[hitColor].name, OC.Settings.get('lang'));
+                App.fireAlert(p[0], nm(def.name) + ' · ' + cname);
+              }
+            }
+          });
+        }
+        st[it.id] = { alive: it.alive, ce: it.ceId, fate: it.fateId };
+      });
+      this._alertReady = true;
+    },
+
+    fireAlert: function (kind, msg) {
+      OC.UI.toast(kind, msg, '');
+      if (!OC.UI.speak(msg)) OC.UI.beep(kind);
     },
 
     startLoops: function () {
@@ -178,28 +222,44 @@
 
     renderSettings: function (pop) {
       var g = OC.Settings.get.bind(OC.Settings);
-      var lg = ['zh', 'en', 'ja'].map(function (l) {
-        return '<option value="' + l + '"' + (g('lang') === l ? ' selected' : '') + '>' + l.toUpperCase() + '</option>';
-      }).join('');
+      var colors = g('alertColors') || {};
+      var swatch = { 47744: '#4aa3ff', 47745: '#2ec4b6', 47746: '#3ddb63', 47747: '#ff8a3c', 47748: '#b061ff', 47749: '#ffce4d' };
       var h = '<div class="panel-head">' + t('panel_settings') + '<button class="pclose" data-close>' + t('close') + '</button></div>';
       h += '<div class="panel-body settings">';
-      h += row(t('set_lang'), '<select id="s-lang">' + lg + '</select>');
+      h += '<div class="s-grp">' + t('alert_title') + '</div>';
+      h += rowChk('a-pot', t('alert_pot_opt'), g('alertPot'));
+      h += '<div class="s-sub">' + t('alert_demiatma') + '</div><div class="color-grid">';
+      [47744, 47745, 47746, 47747, 47748, 47749].forEach(function (id) {
+        var it = OC.ITEMS[id], on = !!colors[id];
+        h += '<label class="color-chk' + (on ? ' on' : '') + '" data-cid="' + id + '" style="--sc:' + swatch[id] + '">' +
+          '<input type="checkbox" data-color="' + id + '"' + (on ? ' checked' : '') + '>' +
+          '<span class="sw"></span>' + esc(OC.localName(it.name, g('lang'))) + '</label>';
+      });
+      h += '</div>';
+      h += rowChk('a-tts', t('alert_tts'), g('useTts'));
       h += rowChk('s-sound', t('set_sound'), g('notifySound'));
+      h += '<div class="s-grp">' + t('panel_settings') + '</div>';
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
-      h += '<div class="s-row s-btns"><button id="s-save" class="save">' + t('saved') + '</button></div>';
       h += '<div class="cloud-hint">' + t('auto_hint') + '</div>';
       h += '</div>';
       pop.innerHTML = h;
+
       var op = pop.querySelector('#s-op');
-      op.addEventListener('input', function () { document.documentElement.style.setProperty('--app-opacity', op.value); });
-      pop.querySelector('#s-save').addEventListener('click', function () {
-        OC.Settings.setMany({
-          lang: pop.querySelector('#s-lang').value,
-          notifySound: pop.querySelector('#s-sound').checked,
-          opacity: Number(pop.querySelector('#s-op').value)
+      op.addEventListener('input', function () {
+        OC.Settings.set('opacity', Number(op.value));
+        document.documentElement.style.setProperty('--app-opacity', op.value);
+      });
+      bindChk(pop, 'a-pot', 'alertPot');
+      bindChk(pop, 'a-tts', 'useTts');
+      bindChk(pop, 's-sound', 'notifySound');
+      pop.querySelectorAll('input[data-color]').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          var c = OC.Settings.get('alertColors') || {};
+          c[cb.getAttribute('data-color')] = cb.checked;
+          OC.Settings.set('alertColors', c);
+          cb.closest('.color-chk').classList.toggle('on', cb.checked);
+          if (cb.checked) OC.UI.speak(OC.localName(OC.ITEMS[cb.getAttribute('data-color')].name, g('lang'))); // 试听
         });
-        App.renderShell();
-        OC.UI.toast('pot', t('saved') + ' ✓', '');
       });
     }
   };
@@ -207,8 +267,13 @@
   function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }
   function row(l, c) { return '<div class="s-row"><label>' + l + '</label>' + c + '</div>'; }
   function rowChk(id, l, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + l + '</label></div>'; }
+  function bindChk(pop, id, key) {
+    var el = pop.querySelector('#' + id);
+    if (el) el.addEventListener('change', function () { OC.Settings.set(key, el.checked); });
+  }
+  function esc(s) { return OC.UI.esc(s); }
 
-  function railHtml(collapsed) {
+  function railHtml() {
     var L = OC.MAP_LAYERS, layers = OC.Settings.get('mapLayers');
     var labels = { bronze: '铜', silver: '银', potN: '北', potS: '南', reroll: '续', bunny: '萝' };
     var h = '';
@@ -217,7 +282,6 @@
     });
     h += '<div class="rail-div"></div>';
     h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + OC.i18n.t('panel_dcpots') + '">罐</button>';
-    h += '<button class="rbtn" data-collapse title="' + OC.i18n.t(collapsed ? 'expand' : 'collapse') + '">' + (collapsed ? '▢' : '▣') + '</button>';
     h += '<button class="rbtn panel" data-panel="settings" title="' + OC.i18n.t('panel_settings') + '">⚙</button>';
     return h;
   }

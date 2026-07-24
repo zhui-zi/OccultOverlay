@@ -36,6 +36,10 @@
     });
   };
 
+  // 国服 WorldID -> 大区(tracker dc id 101-104)，用于判断玩家所在大区
+  var WORLD2DC = { 160: 101, 161: 101, 165: 101, 166: 101, 168: 102, 170: 101, 171: 101, 186: 102, 187: 102, 190: 102, 1042: 101, 1043: 103, 1044: 101, 1045: 103, 1060: 101, 1076: 102, 1081: 101, 1106: 103, 1113: 102, 1121: 102, 1166: 102, 1167: 101, 1169: 103, 1170: 102, 1171: 102, 1172: 102, 1173: 101, 1174: 101, 1175: 101, 1176: 102, 1177: 103, 1178: 103, 1179: 103, 1180: 104, 1183: 104, 1186: 104, 1192: 104, 1200: 104, 1201: 104 };
+  OC.WORLD2DC = WORLD2DC;
+
   var Overlay = OC.Overlay = new EventBus();
   Overlay.connected = false;
   Overlay.territoryId = null;
@@ -171,7 +175,10 @@
         if (!me || me.PosX == null) return;
         // Dalamud(x,z) 水平 == OverlayPlugin(PosX, PosY)
         Overlay.playerPos = { x: me.PosX, z: me.PosY, h: me.Heading };
-        if (me.WorldID) Overlay.playerWorld = me.WorldID;
+        if (me.WorldID) {
+          Overlay.playerWorld = me.WorldID;
+          if (WORLD2DC[me.WorldID]) Overlay.playerDc = WORLD2DC[me.WorldID];
+        }
         Overlay.emit('position', Overlay.playerPos);
       });
     }, 2000);
