@@ -292,9 +292,12 @@
     var found = {};
     (combatants || []).forEach(function (c) {
       var name = c && c.Name; if (!name || name.length < 2) return;
+      // 仅 BNpc/敌方单位（type 2）才可能是 FATE/CE boss；排除玩家等
+      if (c.type != null && c.type !== 2) return;
       for (var i = 0; i < _bossIndex.length; i++) {
         var b = _bossIndex[i];
-        if (name === b.t || name.indexOf(b.t) >= 0 || b.t.indexOf(name) >= 0) { found[b.id] = 1; break; }
+        // 精确匹配，或战斗单位名包含完整 boss 名（不做反向包含，避免误报）
+        if (name === b.t || name.indexOf(b.t) >= 0) { found[b.id] = 1; break; }
       }
     });
     return Object.keys(found).map(Number);

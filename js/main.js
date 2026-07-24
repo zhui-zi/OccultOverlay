@@ -22,6 +22,7 @@
     init: function () {
       this.collapsed = !!OC.Settings.get('collapsed');
       document.documentElement.style.setProperty('--app-opacity', OC.Settings.get('opacity'));
+      document.documentElement.style.setProperty('--ui-scale', OC.Settings.get('uiScale') || 1);
       this.renderShell();
       this.wireOverlay();
       OC.Overlay.start();
@@ -182,6 +183,7 @@
         var m = document.getElementById('mapLayer');
         OC.Map.updatePlayer(m);
         OC.Map.updateHighlights(m);
+        App.checkBossAlert();
       });
     },
 
@@ -190,41 +192,45 @@
       OC.Api.fetchDcPots(CN_DCS, 900).then(function (rows) {
         App._dc = OC.Pots.dcOverview(rows);
         App._dcLoaded = true;
-        App.checkAlerts();
+        App.resolveMyIsland();
+        App.checkPotAlert();
         App.updateChips();
         if (App.openPanel === 'dcpots') App.renderPanel();
       }).catch(function () { App._dcLoaded = true; });
     },
 
-    // 提示：撒娇罐出现 / 掉落所选颜色半魂晶的 CE·FATE 出现（仅本大区，避免刷屏）
-    checkAlerts: function () {
-      var pdc = OC.Overlay.playerDc;
-      var list = (this._dc || []).filter(function (x) { return !pdc || x.dc === pdc; });
-      var st = this._alertState = this._alertState || {};
-      var ready = this._alertReady;
+    // CE/FATE 颜色提示：仅当你副本里“真的出现”了 boss（getCombatants 新增）才提示
+    checkBossAlert: function () {
+      var active = OC.Overlay.activeIds || [];
+      var prev = this._prevActive;
       var colors = OC.Settings.get('alertColors') || {};
-      var wantPot = OC.Settings.get('alertPot');
-      list.forEach(function (it) {
-        var prev = st[it.id] || {};
-        if (ready) {
-          if (wantPot && it.alive && !prev.alive) App.fireAlert('pot', t('alert_pot'));
-          [['ce', it.ceId, OC.CES], ['fate', it.fateId, OC.FATES]].forEach(function (p) {
-            var def = p[2][p[1]];
-            if (def && p[1] && p[1] !== prev[p[0]]) {
-              var hitColor = (def.drops || []).filter(function (d) { return colors[d]; })[0];
-              if (hitColor) {
-                var cname = OC.localName(OC.ITEMS[hitColor].name, OC.Settings.get('lang'));
-                App.fireAlert(p[0], nm(def.name) + ' · ' + cname);
-              }
-            }
-          });
-        }
-        st[it.id] = { alive: it.alive, ce: it.ceId, fate: it.fateId };
-      });
-      this._alertReady = true;
+      if (prev) { // 第一次仅记录基线，不提示
+        active.forEach(function (id) {
+          if (prev.indexOf(id) >= 0) return; // 之前已在场
+          var def = OC.CES[id] || OC.FATES[id]; if (!def) return;
+          var hit = (def.drops || []).filter(function (d) { return colors[d]; })[0];
+          if (hit) App.fireAlert(OC.CES[id] ? 'ce' : 'fate',
+            nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')));
+        });
+      }
+      this._prevActive = active.slice();
+    },
+
+    // 撒娇罐提示：仅当“你所在岛”的罐由无到有时提示
+    checkPotAlert: function () {
+      if (!OC.Settings.get('alertPot')) { this._prevPotAlive = null; return; }
+      var mine = this.myIslandId ? (this._dc || []).filter(function (x) { return x.id === App.myIslandId; })[0] : null;
+      var aliveNow = !!(mine && mine.alive);
+      if (this._prevPotAlive != null && aliveNow && !this._prevPotAlive) App.fireAlert('pot', t('alert_pot'));
+      this._prevPotAlive = aliveNow;
     },
 
     fireAlert: function (kind, msg) {
+      // 去抖：同一提示 60 秒内只触发一次（避免 boss 进出视野反复提示）
+      var now = Date.now();
+      this._alertLast = this._alertLast || {};
+      if (this._alertLast[msg] && now - this._alertLast[msg] < 60000) return;
+      this._alertLast[msg] = now;
       OC.UI.toast(kind, msg, '');
       if (!OC.UI.speak(msg)) OC.UI.beep(kind);
     },
@@ -264,6 +270,7 @@
       h += rowChk('s-sound', t('set_sound'), g('notifySound'));
       h += '<div class="s-grp">' + t('panel_settings') + '</div>';
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
+      h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
       h += '<div class="cloud-hint">' + t('auto_hint') + '</div>';
       h += '</div>';
       pop.innerHTML = h;
@@ -272,6 +279,11 @@
       op.addEventListener('input', function () {
         OC.Settings.set('opacity', Number(op.value));
         document.documentElement.style.setProperty('--app-opacity', op.value);
+      });
+      var sc = pop.querySelector('#s-scale');
+      sc.addEventListener('input', function () {
+        OC.Settings.set('uiScale', Number(sc.value));
+        document.documentElement.style.setProperty('--ui-scale', sc.value);
       });
       bindChk(pop, 'a-pot', 'alertPot');
       bindChk(pop, 'a-tts', 'useTts');

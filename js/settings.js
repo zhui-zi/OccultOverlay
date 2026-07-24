@@ -21,6 +21,7 @@
     notifyOnlyInZone: true,
     autoReport: true,           // 侦测到 CE/FATE/罐 时自动提交到云端（无人工上报）
     opacity: 0.9,
+    uiScale: 1,                 // 界面缩放（放大胶囊/按钮/面板）
     collapsed: false,
     useTts: true,               // 语音提示（不可用时退回提示音）
     alertPot: false,            // 撒娇罐出现时提示
