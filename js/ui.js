@@ -1,97 +1,86 @@
 /* =========================================================================
- * ui.js — 信息胶囊(chips)、战斗面板(CE/FATE/罐 只读展示)、掉落图标、通知
- * 无人工上报按钮；数据均来自云端。
+ * ui.js — 撒娇罐总览、岛屿详情(CE/FATE/罐)、掉落图标、通知
  * ========================================================================= */
 (function (global) {
   'use strict';
   var OC = global.OC = global.OC || {};
   var t = function (k) { return OC.i18n.t(k); };
-  function lang() { return OC.Settings.get('lang'); }
-  function nm(o) { return OC.localName(o, lang()); }
+  function nm(o) { return OC.localName(o, OC.Settings.get('lang')); }
   function now() { return Math.floor(Date.now() / 1000); }
 
   var UI = OC.UI = {};
 
   UI.fmtDur = function (sec) {
     sec = Math.max(0, Math.round(sec));
-    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-    if (h > 0) return h + ':' + pad(m) + ':' + pad(s);
-    return m + ':' + pad(s);
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + 'm ' + (s < 10 ? '0' : '') + s + 's';
   };
-  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  UI.fmtClock = function (sec) {
+    sec = Math.max(0, Math.round(sec));
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return h > 0 ? h + ':' + p(m) + ':' + p(s) : m + ':' + p(s);
+  };
+  function ago(sec) { sec = Math.max(0, Math.round(sec)); return sec < 60 ? sec + 's' : Math.floor(sec / 60) + 'm'; }
 
-  // ---- 掉落图标 ----
-  UI.dropIcons = function (dropIds) {
-    if (!dropIds || !dropIds.length) return '';
+  UI.dropIcons = function (ids) {
+    if (!ids || !ids.length) return '';
     var h = '<span class="drops">';
-    dropIds.forEach(function (id) {
+    ids.forEach(function (id) {
       var it = OC.ITEMS[id]; if (!it) return;
       var cat = OC.DROP_CAT[it.cat] || {};
-      h += '<img class="drop-ic" src="' + OC.iconUrl(it.img) + '" title="' + esc(nm(it.name)) + '" ' +
-        'onerror="this.classList.add(\'noimg\')" style="--c:' + (cat.color || '#888') + '">';
+      h += '<img class="drop-ic" src="' + OC.iconUrl(it.img) + '" title="' + esc(nm(it.name)) + '" onerror="this.classList.add(\'noimg\')" style="--c:' + (cat.color || '#888') + '">';
     });
     return h + '</span>';
   };
-
-  UI.dropTags = function (dropIds) {
+  UI.dropTags = function (ids) {
     var cats = {};
-    (dropIds || []).forEach(function (id) { var it = OC.ITEMS[id]; if (it) cats[it.cat] = true; });
+    (ids || []).forEach(function (id) { var it = OC.ITEMS[id]; if (it) cats[it.cat] = true; });
     return ['demiatma', 'notes', 'soulshard', 'accessory', 'misc'].filter(function (c) { return cats[c]; })
-      .map(function (c) {
-        return '<span class="cat-tag" style="--c:' + (OC.DROP_CAT[c].color) + '">' + t(c) + '</span>';
-      }).join('');
+      .map(function (c) { return '<span class="cat-tag" style="--c:' + OC.DROP_CAT[c].color + '">' + t(c) + '</span>'; }).join('');
   };
 
-  // ---- 信息胶囊（顶部常驻）----
-  UI.ceChipHtml = function () {
-    var st = OC.State, n = now();
-    var g = OC.CE.globalState(st.history.ce, n);
-    var body, cls = 'chip chip-ce';
-    if (g.activeId) {
-      body = '<b>' + esc(nm(OC.CES[g.activeId].name)) + '</b> <span class="s a">' + t('ce_active') + '</span>';
-      cls += ' on';
-    } else if (g.canTriggerNow) {
-      body = '<span class="s r">' + t('ce_can_trigger') + '</span>';
-      cls += ' ready';
-    } else if (g.nextAvailSec != null) {
-      body = '<span class="s c">' + t('ce_cooldown') + ' ' + UI.fmtDur(g.nextAvailSec) + '</span>';
-    } else {
-      body = '<span class="s">' + t('no_ce') + '</span>';
+  // ---- 撒娇罐总览（国服四大区）----
+  UI.renderDcPots = function (host, list, loading) {
+    var h = '<div class="panel-head">' + t('dc_pots_title') + '<button class="pclose" data-close>' + t('close') + '</button></div>';
+    h += '<div class="panel-body">';
+    if (loading && (!list || !list.length)) h += '<div class="dc-empty">' + t('loading') + '</div>';
+    else if (!list || !list.length) h += '<div class="dc-empty">' + t('no_active_island') + '</div>';
+    else {
+      h += '<div class="dc-list">';
+      list.forEach(function (it) {
+        var dc = (OC.DATACENTERS[it.dc] || { name: it.dc }).name;
+        var status = it.alive ? '<span class="dc-alive">' + t('alive') + '</span>' : '<span class="dc-eta">' + UI.fmtDur(Math.max(0, it.etaSec)) + '</span>';
+        var ce = it.ceId && OC.CES[it.ceId] ? nm(OC.CES[it.ceId].name) : '';
+        var ft = it.fateId && OC.FATES[it.fateId] ? nm(OC.FATES[it.fateId].name) : '';
+        h += '<div class="dc-row' + (it.alive ? ' alive' : '') + '" data-tid="' + esc(it.id) + '">';
+        h += '<div class="dc-r1"><span class="dc-name">' + esc(dc) + '</span>' + status +
+          '<span class="dc-ago">' + ago(it.ago) + '</span></div>';
+        if (ce || ft) h += '<div class="dc-r2">' + (ce ? '<span class="dc-ce">' + esc(ce) + '</span>' : '') +
+          (ft ? '<span class="dc-fate">' + esc(ft) + '</span>' : '') + '</div>';
+        h += '</div>';
+      });
+      h += '</div>';
     }
-    return { cls: cls, html: '<span class="chip-k">' + t('ce') + '</span>' + body };
+    h += '</div>';
+    host.innerHTML = h;
+    host.querySelectorAll('.dc-row').forEach(function (r) {
+      r.addEventListener('click', function () { OC.App.showIsland(r.getAttribute('data-tid')); });
+    });
   };
 
-  UI.potChipHtml = function () {
-    var st = OC.State, n = now();
-    var p = OC.Pots.fromHistory(st.history.pot, n);
-    var body, cls = 'chip chip-pot';
-    if (p.active) {
-      body = '<span class="s a">' + t('pot_active') + '</span> <b>' + sideLabel(p.active.side) + '</b>';
-      cls += ' on';
-    } else if (p.next) {
-      var eta = p.next.etaSec;
-      body = (eta <= 0 ? '<span class="s r">' + t('pot_soon') + '</span>' : '<b>' + UI.fmtDur(eta) + '</b>') +
-        ' <span class="side-' + p.next.side + '">' + sideLabel(p.next.side) + '</span>';
-      if (eta <= 0) cls += ' ready';
-    } else {
-      body = '<span class="s">' + t('unknown') + '</span>';
-    }
-    return { cls: cls, html: '<span class="chip-k">' + t('pot') + '</span>' + body };
-  };
-
-  function sideLabel(side) { return side === 'north' ? t('pot_north') : t('pot_south'); }
-
-  // ---- 战斗面板（CE / FATE / 罐 只读）----
-  UI.renderBattlePanel = function (host) {
-    var st = OC.State, n = now();
-    var h = '<div class="panel-head">' + t('panel_battle') +
+  // ---- 岛屿详情：CE / FATE / 罐 ----
+  UI.renderBattlePanel = function (host, hist, id) {
+    var n = now();
+    var h = '<div class="panel-head">' + t('panel_battle') + (id ? ' · ' + esc(id) : '') +
       '<button class="pclose" data-close>' + t('close') + '</button></div>';
     h += '<div class="panel-body">';
-    if (!OC.Settings.get('trackerId')) h += '<div class="warn">' + t('no_tracker') + '</div>';
-
-    h += section(t('ce'), st.history.ce, 'ce', n);
-    h += section(t('fate'), st.history.fate, 'fate', n);
-    h += section(t('pot'), st.history.pot, 'pot', n);
+    if (!hist) h += '<div class="dc-empty">' + t('loading') + '</div>';
+    else {
+      h += section(t('ce'), hist.ce, 'ce', n);
+      h += section(t('fate'), hist.fate, 'fate', n);
+      h += section(t('pot'), hist.pot, 'pot', n);
+    }
     h += '</div>';
     host.innerHTML = h;
   };
@@ -100,104 +89,46 @@
     var h = '<div class="p-sec"><div class="p-sec-h">' + title + '</div>';
     (arr || []).forEach(function (e) {
       var def = type === 'ce' ? OC.CES[e.fate_id] : type === 'pot' ? OC.POTS[e.fate_id] : OC.FATES[e.fate_id];
-      if (!def) return;
-      h += row(e, def, type, n);
+      if (def) h += rowHtml(e, def, type, n);
     });
     return h + '</div>';
   }
-
-  function row(e, def, type, n) {
+  function rowHtml(e, def, type, n) {
     var alive = e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time);
     var cls = 'p-row ' + type + (alive ? ' alive' : '') + (def.type === 'tower' ? ' tower' : '');
-    var h = '<div class="' + cls + '">';
-    h += '<div class="p-row-top"><span class="p-name">' + esc(nm(def.name)) + '</span>' + badge(e, n, alive) + '</div>';
+    var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + esc(nm(def.name)) + '</span>' + badge(e, n, alive) + '</div>';
     var tags = '';
     if (def.type === 'tower') tags += '<span class="tag tw">' + t('tower') + '</span>';
     if (def.spawn_type && def.monster) tags += '<span class="tag mob">▸ ' + esc(nm(def.monster)) + '</span>';
     if (def.side) tags += '<span class="tag side-' + def.side + '">' + (def.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>';
     tags += UI.dropTags(def.drops);
-    h += '<div class="p-row-mid">' + tags + '</div>';
-    h += '<div class="p-row-bot">' + UI.dropIcons(def.drops) + '</div>';
-    return h + '</div>';
+    h += '<div class="p-row-mid">' + tags + '</div><div class="p-row-bot">' + UI.dropIcons(def.drops) + '</div></div>';
+    return h;
   }
-
   function badge(e, n, alive) {
-    if (alive) return '<span class="bdg alive">● ' + t('alive') + ' ' + UI.fmtDur(n - e.spawn_time) + '</span>';
+    if (alive) return '<span class="bdg alive">● ' + t('alive') + ' ' + UI.fmtClock(n - e.spawn_time) + '</span>';
     if (e.death_time > 0) return '<span class="bdg gone">○ ' + t('gone') + '</span>';
     return '<span class="bdg unk">' + t('unknown') + '</span>';
   }
 
-  // ---- 国服撒娇罐总览 ----
-  UI.renderDcPots = function (host, list, loading) {
-    var n = now();
-    var h = '<div class="panel-head">' + t('dc_pots_title') +
-      '<button class="pclose" data-close>' + t('close') + '</button></div>';
-    h += '<div class="panel-body">';
-    h += '<div class="dc-hint">' + t('dc_pots_hint') + '</div>';
-    if (loading && (!list || !list.length)) {
-      h += '<div class="dc-loading">' + t('loading') + '</div>';
-    } else if (!list || !list.length) {
-      h += '<div class="dc-empty">' + t('no_active_island') + '</div>';
-    } else {
-      h += '<div class="dc-list">';
-      list.forEach(function (it) {
-        var dc = OC.DATACENTERS[it.dc] || { name: it.dc };
-        var eta = it.etaSec;
-        var etaTxt = eta <= 0 ? t('pot_soon') : UI.fmtDur(eta);
-        var soon = eta <= 60;
-        h += '<div class="dc-row side-' + it.side + (soon ? ' soon' : '') + '" data-tid="' + esc(it.id) + '">';
-        h += '<span class="dc-name">' + esc(dc.name) + '</span>';
-        h += '<span class="dc-side side-' + it.side + '">' + (it.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>';
-        h += '<span class="dc-eta">' + etaTxt + '</span>';
-        h += '<span class="dc-ago">' + t('updated') + ' ' + agoTxt(it.ago) + '</span>';
-        if (it.sources > 1) h += '<span class="dc-src" title="' + t('dc_sources') + '">×' + it.sources + '</span>';
-        h += '</div>';
-      });
-      h += '</div>';
-    }
-    h += '</div>';
-    host.innerHTML = h;
-    host.querySelectorAll('.dc-row').forEach(function (row) {
-      row.addEventListener('click', function () {
-        window.open('https://tracker.xivstats.com/' + row.getAttribute('data-tid'), '_blank');
-      });
-    });
-    host.querySelectorAll('[data-close]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        OC.App.openPanel = null;
-        document.getElementById('popover').classList.add('hidden');
-      });
-    });
-  };
-
-  function agoTxt(sec) {
-    sec = Math.max(0, Math.round(sec));
-    if (sec < 60) return sec + 's';
-    var m = Math.floor(sec / 60);
-    return m + 'm';
-  }
-
   // ---- 通知 ----
-  var lastNotify = {};
+  var last = {};
   UI.notify = function (kind, title, body, key) {
     var k = key || (kind + ':' + title), tn = Date.now();
-    if (lastNotify[k] && tn - lastNotify[k] < 30000) return;
-    lastNotify[k] = tn;
+    if (last[k] && tn - last[k] < 30000) return; last[k] = tn;
     if (OC.Settings.get('notifyOnlyInZone') && OC.Overlay && OC.Overlay.connected && !OC.Overlay.inOccult) return;
     UI.toast(kind, title, body);
     if (OC.Settings.get('notifySound')) beep(kind);
   };
-
   UI.toast = function (kind, title, body) {
-    var wrap = document.getElementById('toasts'); if (!wrap) return;
+    var w = document.getElementById('toasts'); if (!w) return;
     var el = document.createElement('div');
     el.className = 'toast toast-' + kind;
     el.innerHTML = '<div class="toast-title">' + esc(title) + '</div>' + (body ? '<div class="toast-body">' + esc(body) + '</div>' : '');
-    wrap.appendChild(el);
+    w.appendChild(el);
     setTimeout(function () { el.classList.add('show'); }, 20);
     setTimeout(function () { el.classList.remove('show'); setTimeout(function () { el.remove(); }, 400); }, 8000);
   };
-
   var actx = null;
   function beep(kind) {
     try {
@@ -211,11 +142,8 @@
       o.start(tt); o.stop(tt + 0.5);
     } catch (e) {}
   }
-
   function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
-    });
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
   }
   UI.esc = esc;
 })(typeof window !== 'undefined' ? window : this);

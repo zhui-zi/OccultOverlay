@@ -21,6 +21,7 @@
     notifyOnlyInZone: true,
     autoReport: true,           // 侦测到 CE/FATE/罐 时自动提交到云端（无人工上报）
     opacity: 0.9,
+    collapsed: false,
     mapLayers: { bronze: false, silver: false, potN: false, potS: false, reroll: false, bunny: false }
   };
 

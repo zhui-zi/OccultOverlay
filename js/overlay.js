@@ -53,8 +53,12 @@
   var reconnectTimer = null;
 
   function getWsUrl() {
+    // OverlayPlugin 会以 OVERLAY_WS 或 HOST_PORT 传入 ws 地址（HOST_PORT 常为 faker 地址，
+    // 必须原样连接以便注入的 WebSocket faker 桥接到游戏内存）。
     var m = /[?&]OVERLAY_WS=([^&]+)/.exec(location.search);
     if (m) return decodeURIComponent(m[1]);
+    var hp = /[?&]HOST_PORT=([^&]+)/.exec(location.search);
+    if (hp) return decodeURIComponent(hp[1]);
     if (OC.Settings && OC.Settings.get('wsUrl')) return OC.Settings.get('wsUrl');
     return 'ws://127.0.0.1:10501/ws';
   }
@@ -153,14 +157,18 @@
       Overlay.callHandler({ call: 'getCombatants' }).then(function (data) {
         if (!data || !data.combatants) return;
         var arr = data.combatants;
-        // 自己：type===1（PC）且与主角名匹配，否则取第一个 PC
-        var me = null;
-        for (var i = 0; i < arr.length; i++) {
-          var c = arr[i];
-          if (c.type === 1 && (!Overlay.playerName || c.Name === Overlay.playerName)) { me = c; break; }
+        var me = null, i, c;
+        // 1) 按主角 ID 精确匹配
+        if (Overlay.playerId != null) {
+          for (i = 0; i < arr.length; i++) { c = arr[i]; if (c.ID == Overlay.playerId) { me = c; break; } }
         }
-        if (!me) for (var j = 0; j < arr.length; j++) if (arr[j].type === 1) { me = arr[j]; break; }
-        if (!me) return;
+        // 2) 按主角名匹配（type/Type 兼容大小写，1 = PC）
+        if (!me && Overlay.playerName) {
+          for (i = 0; i < arr.length; i++) { c = arr[i]; if (c.Name === Overlay.playerName) { me = c; break; } }
+        }
+        // 3) 兜底：第一个 PC
+        if (!me) for (i = 0; i < arr.length; i++) { c = arr[i]; if ((c.type === 1 || c.Type === 1) && c.Name) { me = c; break; } }
+        if (!me || me.PosX == null) return;
         // Dalamud(x,z) 水平 == OverlayPlugin(PosX, PosY)
         Overlay.playerPos = { x: me.PosX, z: me.PosY, h: me.Heading };
         if (me.WorldID) Overlay.playerWorld = me.WorldID;
@@ -179,6 +187,7 @@
         break;
       case 'ChangePrimaryPlayer':
         Overlay.playerName = d.charName || d.name || '';
+        if (d.charID != null) Overlay.playerId = d.charID;
         break;
       case 'LogLine':
         handleLogLine(d);

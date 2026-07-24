@@ -29,10 +29,10 @@
       saved: '已保存', no_tracker: '未设置 Tracker ID：仅显示本地演示，无法同步云端',
       notify_ce: '紧急遭遇战', notify_fate: '危命任务', notify_pot: '撒娇罐',
       cloud_hint: '数据来自共享云端，请配合游戏内工具自动上报',
-      panel_dcpots: '国服撒娇罐总览', dc_pots_title: '国服撒娇罐总览',
-      dc_pots_hint: '四大区当前活跃岛屿，按下一只撒娇罐剩余时间升序（点击可打开对应岛）',
+      panel_dcpots: '撒娇罐总览', dc_pots_title: '撒娇罐总览（国服四大区）',
       no_active_island: '当前四大区暂无活跃岛屿', updated: '更新', loading: '加载中…',
-      dc_sources: '重复上报的岛屿数量（已合并）'
+      collapse: '折叠（隐藏地图）', expand: '展开地图',
+      auto_hint: '数据自动来自国服四大区云端，无需任何设置；点击列表中的岛可查看该岛 CE/FATE。'
     },
     en: {
       title: 'Occult Crescent',
@@ -55,10 +55,10 @@
       saved: 'Saved', no_tracker: 'No Tracker ID: local demo only, no cloud sync',
       notify_ce: 'CE', notify_fate: 'FATE', notify_pot: 'Pot',
       cloud_hint: 'Data comes from the shared cloud; pair with an in-game reporter',
-      panel_dcpots: 'CN DC Pots', dc_pots_title: 'CN Datacenter Pot Overview',
-      dc_pots_hint: 'Active islands across the 4 CN DCs, sorted by next pot ETA (click to open)',
+      panel_dcpots: 'Pot Overview', dc_pots_title: 'Pot Overview (CN DCs)',
       no_active_island: 'No active islands right now', updated: 'upd', loading: 'Loading…',
-      dc_sources: 'Duplicate islands merged'
+      collapse: 'Collapse (hide map)', expand: 'Expand map',
+      auto_hint: 'Data is loaded automatically from the CN datacenters; click an island to see its CE/FATE.'
     },
     ja: {
       title: '南方海域',
@@ -81,10 +81,10 @@
       saved: '保存しました', no_tracker: 'トラッカーID未設定：ローカルデモのみ',
       notify_ce: '危機的遭遇', notify_fate: 'FATE', notify_pot: 'ポット',
       cloud_hint: 'データは共有クラウド由来。ゲーム内ツールと併用してください',
-      panel_dcpots: '中国DCポット', dc_pots_title: '中国DC ポット一覧',
-      dc_pots_hint: '中国4DCのアクティブ島を次ポット残り時間の昇順で表示（クリックで開く）',
+      panel_dcpots: 'ポット一覧', dc_pots_title: 'ポット一覧（中国4DC）',
       no_active_island: '現在アクティブな島はありません', updated: '更新', loading: '読込中…',
-      dc_sources: '重複した島を統合'
+      collapse: '折りたたむ（マップ非表示）', expand: 'マップ展開',
+      auto_hint: 'データは中国4DCから自動取得。設定不要。島をクリックでCE/FATE表示。'
     }
   };
 

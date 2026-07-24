@@ -141,27 +141,26 @@ html, body {
 .save { background: rgba(201,162,39,0.25); border-color: var(--accent); font-weight: 700; }
 .cloud-hint { color: var(--fg-dim); font-size: 11px; margin-top: 10px; line-height: 1.5; }
 
-/* ---- 国服撒娇罐总览 ---- */
-.rbtn.dc { font-size: 14px; }
-.dc-hint { color: var(--fg-dim); font-size: 11px; line-height: 1.5; margin-bottom: 8px; }
-.dc-loading, .dc-empty { color: var(--fg-dim); text-align: center; padding: 20px 0; }
+/* ---- 折叠模式（隐藏地图）---- */
+#app.collapsed .map-layer { display: none; }
+
+/* ---- 撒娇罐总览 ---- */
+.dc-empty { color: var(--fg-dim); text-align: center; padding: 20px 0; }
 .dc-list { display: flex; flex-direction: column; gap: 5px; }
 .dc-row {
-  display: grid; grid-template-columns: 1fr auto auto auto auto; align-items: center; gap: 8px;
-  padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,0.04);
-  border: 1px solid var(--line); cursor: pointer;
+  padding: 7px 10px; border-radius: 8px; background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line); border-left: 3px solid var(--pot); cursor: pointer;
 }
-.dc-row:hover { background: rgba(255,255,255,0.08); }
-.dc-row.side-north { border-left: 3px solid var(--fate); }
-.dc-row.side-south { border-left: 3px solid var(--ce); }
-.dc-row.soon { animation: pulse 1s ease-in-out infinite; border-color: var(--accent); }
-.dc-name { font-weight: 600; font-size: 12.5px; }
-.dc-side { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 8px; }
-.dc-side.side-north { background: rgba(74,144,255,0.22); color: #9cc3ff; }
-.dc-side.side-south { background: rgba(255,138,60,0.22); color: #ffbd8a; }
-.dc-eta { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
-.dc-ago { font-size: 10px; color: var(--fg-dim); }
-.dc-src { font-size: 10px; color: var(--fg-dim); background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 6px; }
+.dc-row:hover { background: rgba(255,255,255,0.09); }
+.dc-row.alive { border-left-color: var(--alive); box-shadow: 0 0 0 1px rgba(255,207,77,0.35) inset; }
+.dc-r1 { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; }
+.dc-name { font-weight: 700; font-size: 13px; }
+.dc-eta { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dc-alive { font-size: 13px; font-weight: 700; color: var(--alive); }
+.dc-ago { font-size: 10px; color: var(--fg-dim); min-width: 30px; text-align: right; }
+.dc-r2 { display: flex; gap: 10px; margin-top: 3px; font-size: 11px; color: var(--fg-dim); }
+.dc-ce::before { content: "CE "; opacity: .6; }
+.dc-fate::before { content: "FATE "; opacity: .6; }
 
 /* ---- 通知 ---- */
 #toasts { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 999; pointer-events: none; align-items: center; }

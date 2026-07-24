@@ -1,6 +1,7 @@
 /* =========================================================================
- * main.js — 主控：以地图为主体的外壳、圆形按钮、云端轮询、自动上报
- * 设计要点：数据只从云端获取/提交；无人工上报、无本地推算。
+ * main.js — 主控（自动模式）
+ * 地图为主体；顶部胶囊；右侧圆形按钮；撒娇罐总览为主要数据来源。
+ * 数据全部来自云端，无需手动填 Tracker：自动展示国服四大区所有活跃岛屿。
  * ========================================================================= */
 (function (global) {
   'use strict';
@@ -8,64 +9,52 @@
   var t = function (k) { return OC.i18n.t(k); };
   function nm(o) { return OC.localName(o, OC.Settings.get('lang')); }
   function now() { return Math.floor(Date.now() / 1000); }
+  var CN_DCS = [101, 102, 103, 104];
 
-  var State = OC.State = {
-    record: null,
-    history: { ce: [], fate: [], pot: [] },
-    lastUpdate: null,
-    prevSpawns: {},
-    highlights: [] // [{id, type}] 供地图高亮
-  };
-
-  function blankHistories() {
-    return {
-      ce: Object.keys(OC.CES).map(function (k) { return OC.Api.blankEntry(Number(k)); }),
-      fate: Object.keys(OC.FATES).map(function (k) { return OC.Api.blankEntry(Number(k)); }),
-      pot: Object.keys(OC.POTS).map(function (k) { return OC.Api.blankEntry(Number(k)); })
-    };
-  }
-  function parseRecord(rec) {
-    function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }
-    return { ce: pj(rec.encounter_history), fate: pj(rec.fate_history), pot: pj(rec.pot_history) };
-  }
+  var State = OC.State = { highlights: [], detail: null, detailId: null };
 
   var App = OC.App = {
     openPanel: null,
+    collapsed: false,
+    _dc: [],        // 撒娇罐总览数据（去重排序后）
+    _dcTick: 0,
 
     init: function () {
-      State.history = blankHistories();
+      this.collapsed = !!OC.Settings.get('collapsed');
       document.documentElement.style.setProperty('--app-opacity', OC.Settings.get('opacity'));
       this.renderShell();
       this.wireOverlay();
       OC.Overlay.start();
-      this.loadTracker();
+      this.fetchDc();
       this.startLoops();
     },
 
-    // -------- 外壳 --------
     renderShell: function () {
       var app = document.getElementById('app');
       var h = '';
       h += '<div id="mapLayer" class="map-layer"></div>';
-      // 顶部信息胶囊
       h += '<div class="chips">';
       h += '<div id="chip-conn" class="chip chip-conn"></div>';
-      h += '<div id="chip-ce" class="chip chip-ce" data-open="battle"></div>';
-      h += '<div id="chip-pot" class="chip chip-pot" data-open="battle"></div>';
+      h += '<div id="chip-pot" class="chip chip-pot clickable" data-open="dcpots"></div>';
       h += '</div>';
-      // 右侧圆形按钮
-      h += '<div class="rail">' + railHtml() + '</div>';
-      // 面板层
+      h += '<div class="rail">' + railHtml(this.collapsed) + '</div>';
       h += '<div id="popover" class="popover hidden"></div>';
       app.innerHTML = h;
+      app.classList.toggle('collapsed', this.collapsed);
 
       OC.Map.render(document.getElementById('mapLayer'));
       this.bindRail();
       this.updateChips();
       this.updateVisibility();
-      // 胶囊点击打开战斗面板
-      app.querySelectorAll('[data-open]').forEach(function (el) {
+
+      // 胶囊点击打开对应面板
+      app.querySelectorAll('.chips [data-open]').forEach(function (el) {
         el.addEventListener('click', function () { App.togglePanel(el.getAttribute('data-open')); });
+      });
+      // 面板关闭按钮：事件委托（避免每秒重绘后失效）
+      var pop = document.getElementById('popover');
+      pop.addEventListener('click', function (e) {
+        if (e.target.closest('[data-close]')) App.closePanel();
       });
     },
 
@@ -80,46 +69,57 @@
       app.querySelectorAll('.rbtn[data-panel]').forEach(function (b) {
         b.addEventListener('click', function () { App.togglePanel(b.getAttribute('data-panel')); });
       });
+      var col = app.querySelector('.rbtn[data-collapse]');
+      if (col) col.addEventListener('click', function () { App.toggleCollapse(); });
+    },
+
+    toggleCollapse: function () {
+      this.collapsed = !this.collapsed;
+      OC.Settings.set('collapsed', this.collapsed);
+      var app = document.getElementById('app');
+      app.classList.toggle('collapsed', this.collapsed);
+      var btn = app.querySelector('.rbtn[data-collapse]');
+      if (btn) { btn.textContent = this.collapsed ? '▢' : '▣'; btn.title = t(this.collapsed ? 'expand' : 'collapse'); }
     },
 
     togglePanel: function (which) {
-      var pop = document.getElementById('popover');
-      if (this.openPanel === which) { this.openPanel = null; pop.classList.add('hidden'); return; }
+      if (this.openPanel === which) return this.closePanel();
       this.openPanel = which;
-      pop.classList.remove('hidden');
-      if (which === 'dcpots') { this._dcLoaded = false; this._dcTick = 0; this.fetchDcPots(); }
+      document.getElementById('popover').classList.remove('hidden');
+      if (which === 'dcpots') this.fetchDc();
       this.renderPanel();
-      pop.querySelectorAll('[data-close]').forEach(function (b) {
-        b.addEventListener('click', function () { App.openPanel = null; pop.classList.add('hidden'); });
-      });
+    },
+    closePanel: function () {
+      this.openPanel = null; this.detailId = null; this.detail = null;
+      document.getElementById('popover').classList.add('hidden');
     },
 
     renderPanel: function () {
       var pop = document.getElementById('popover');
-      if (this.openPanel === 'battle') OC.UI.renderBattlePanel(pop);
+      if (this.openPanel === 'dcpots') OC.UI.renderDcPots(pop, this._dc, !this._dcLoaded);
+      else if (this.openPanel === 'battle') OC.UI.renderBattlePanel(pop, State.detail, State.detailId);
       else if (this.openPanel === 'settings') this.renderSettings(pop);
-      else if (this.openPanel === 'dcpots') OC.UI.renderDcPots(pop, this._dcData || [], !this._dcLoaded);
     },
 
-    fetchDcPots: function () {
-      OC.Api.fetchDcPots([101, 102, 103, 104], 3 * 3600).then(function (rows) {
-        App._dcData = OC.Pots.dcOverview(rows);
-        App._dcLoaded = true;
-        if (App.openPanel === 'dcpots') App.renderPanel();
-      }).catch(function () {
-        App._dcLoaded = true;
-        if (App.openPanel === 'dcpots') App.renderPanel();
-      });
+    // 点击某岛 -> 拉取详情并显示战斗面板
+    showIsland: function (id) {
+      State.detailId = id;
+      this.openPanel = 'battle';
+      document.getElementById('popover').classList.remove('hidden');
+      OC.UI.renderBattlePanel(document.getElementById('popover'), null, id); // loading
+      OC.Api.fetchTracker(id).then(function (rec) {
+        if (!rec) return;
+        State.detail = { ce: pj(rec.encounter_history), fate: pj(rec.fate_history), pot: pj(rec.pot_history) };
+        if (App.openPanel === 'battle') App.renderPanel();
+      }).catch(function () {});
     },
 
-    // 仅在新月岛内显示悬浮窗（未连接游戏时=独立/浏览器模式，仍显示以便调试）
     updateVisibility: function () {
-      var app = document.getElementById('app');
-      if (!app) return;
+      var app = document.getElementById('app'); if (!app) return;
       var show = OC.Overlay.inOccult || !OC.Overlay.connected;
-      app.style.display = show ? '' : 'none';
+      app.style.visibility = show ? '' : 'hidden';
       var toasts = document.getElementById('toasts');
-      if (toasts) toasts.style.display = show ? '' : 'none';
+      if (toasts) toasts.style.visibility = show ? '' : 'hidden';
     },
 
     updateChips: function () {
@@ -129,202 +129,95 @@
         var zone = c ? (OC.Overlay.inOccult ? t('in_occult') : (OC.Overlay.zoneName || t('not_in_occult'))) : t('disconnected');
         conn.innerHTML = '<span class="dot ' + (c ? 'ok' : 'off') + '"></span>' + OC.UI.esc(zone);
       }
-      var ce = document.getElementById('chip-ce');
-      if (ce) { var d = OC.UI.ceChipHtml(); ce.className = d.cls + ' clickable'; ce.setAttribute('data-open', 'battle'); ce.innerHTML = d.html; }
       var pot = document.getElementById('chip-pot');
-      if (pot) { var p = OC.UI.potChipHtml(); pot.className = p.cls + ' clickable'; pot.setAttribute('data-open', 'battle'); pot.innerHTML = p.html; }
+      if (pot) {
+        var soonest = this._dc && this._dc[0];
+        var body = '<span class="chip-k">' + t('pot') + '</span>';
+        if (soonest) {
+          var dc = (OC.DATACENTERS[soonest.dc] || {}).name || '';
+          if (soonest.alive) body += '<span class="s a">' + t('alive') + '</span>';
+          else body += '<b>' + OC.UI.fmtDur(Math.max(0, soonest.etaSec)) + '</b>';
+          body += ' <span class="s">' + OC.UI.esc(dc) + '</span>';
+          pot.classList.toggle('ready', soonest.alive || soonest.etaSec <= 60);
+        } else { body += '<span class="s">' + t('loading') + '</span>'; }
+        pot.innerHTML = body;
+      }
     },
 
-    // -------- Overlay 事件 --------
     wireOverlay: function () {
       OC.Overlay.on('connected', function () { App.updateChips(); App.updateVisibility(); });
       OC.Overlay.on('disconnected', function () { App.updateChips(); App.updateVisibility(); });
       OC.Overlay.on('zone', function () { App.updateChips(); App.updateVisibility(); });
       OC.Overlay.on('position', function () { OC.Map.updatePlayer(document.getElementById('mapLayer')); });
-      OC.Overlay.on('ce', function (d) { App.onDetected('ce', d.encounterId, d.name); });
-      OC.Overlay.on('fate', function (d) {
-        App.onDetected(OC.POTS[d.fateId] ? 'pot' : 'fate', d.fateId, d.name);
-      });
     },
 
-    onDetected: function (type, id, nameObj) {
-      var kind = type === 'ce' ? 'ce' : type === 'pot' ? 'pot' : 'fate';
-      var title = t('notify_' + kind) + '：' + (nameObj ? nm(nameObj) : ('#' + id));
-      OC.UI.notify(kind, title, '', kind + ':' + id);
-      // 自动提交云端（无人工上报）
-      if (OC.Settings.get('autoReport') && OC.Settings.get('trackerId')) App.autoReport(type, id);
-    },
-
-    autoReport: function (type, id) {
-      if (!State.record) return;
-      OC.Api.report(OC.Settings.get('trackerId'), State.record, type, id, 'spawned')
-        .then(function (arr) {
-          var f = type === 'ce' ? 'encounter_history' : type === 'fate' ? 'fate_history' : 'pot_history';
-          State.record[f] = JSON.stringify(arr); State.history[type] = arr;
-          App.afterData(false);
-        }).catch(function () {});
-    },
-
-    // -------- 云端加载 / 轮询 --------
-    loadTracker: function () {
-      var id = OC.Settings.get('trackerId');
-      if (!id) { State.record = null; State.history = blankHistories(); App.afterData(true); return; }
-      OC.Api.fetchTracker(id).then(function (rec) {
-        if (rec) App.applyRecord(rec, true);
-      }).catch(function () {});
-    },
-
-    applyRecord: function (rec, silent) {
-      State.record = rec;
-      State.lastUpdate = rec.last_update;
-      var h = parseRecord(rec);
-      if (!silent) App.detectChanges(h);
-      State.history = h;
-      App.afterData(silent);
-    },
-
-    afterData: function (silent) {
-      // 更新地图高亮（正在进行的 CE / FATE）
-      var hl = [];
-      State.history.ce.forEach(function (e) {
-        if (e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time)) hl.push({ id: e.fate_id, type: 'ce' });
-      });
-      State.history.fate.forEach(function (e) {
-        if (e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time)) hl.push({ id: e.fate_id, type: 'fate' });
-      });
-      State.highlights = hl;
-      App.captureSpawns();
-      OC.Map.render(document.getElementById('mapLayer'));
-      App.updateChips();
-      if (App.openPanel === 'battle') App.renderPanel();
-    },
-
-    captureSpawns: function () {
-      var m = {};
-      ['ce', 'fate', 'pot'].forEach(function (tp) {
-        State.history[tp].forEach(function (e) { m[tp + ':' + e.fate_id] = e.spawn_time; });
-      });
-      State.prevSpawns = m;
-    },
-
-    detectChanges: function (h) {
-      ['ce', 'fate', 'pot'].forEach(function (tp) {
-        h[tp].forEach(function (e) {
-          var key = tp + ':' + e.fate_id, prev = State.prevSpawns[key];
-          var alive = e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time);
-          if (alive && prev != null && e.spawn_time > prev) {
-            var def = tp === 'ce' ? OC.CES[e.fate_id] : tp === 'pot' ? OC.POTS[e.fate_id] : OC.FATES[e.fate_id];
-            if (def) OC.UI.notify(tp, t('notify_' + tp) + '：' + nm(def.name), '', key + ':' + e.spawn_time);
-          }
-        });
-      });
+    // 拉取国服四大区活跃岛屿（撒娇罐总览 + 顶部胶囊数据源）
+    fetchDc: function () {
+      OC.Api.fetchDcPots(CN_DCS, 900).then(function (rows) {
+        App._dc = OC.Pots.dcOverview(rows);
+        App._dcLoaded = true;
+        App.updateChips();
+        if (App.openPanel === 'dcpots') App.renderPanel();
+      }).catch(function () { App._dcLoaded = true; });
     },
 
     startLoops: function () {
-      setInterval(function () {
-        var id = OC.Settings.get('trackerId');
-        if (!id) return;
-        OC.Api.fetchLastUpdate(id).then(function (lu) {
-          if (lu != null && lu !== State.lastUpdate) {
-            OC.Api.fetchTracker(id).then(function (rec) { if (rec) App.applyRecord(rec, false); });
-          }
-        }).catch(function () {});
-      }, 1000);
-
-      // 胶囊每秒刷新倒计时（轻量，不重绘地图）
+      // 每 5 秒刷新国服总览（顶部胶囊 + 面板）
+      setInterval(function () { App.fetchDc(); }, 5000);
+      // 每秒刷新倒计时
       setInterval(function () {
         App.updateChips();
-        if (App.openPanel === 'battle') {
-          App.renderPanel();
-        } else if (App.openPanel === 'dcpots') {
-          App._dcTick = (App._dcTick || 0) + 1;
-          if (App._dcTick % 5 === 0) App.fetchDcPots(); // 每 5 秒重新拉取
-          else App.renderPanel();                        // 其余秒仅刷新倒计时
+        if (App.openPanel === 'dcpots') App.renderPanel();
+        else if (App.openPanel === 'battle' && State.detail) {
+          App._dcTick++;
+          if (State.detailId && App._dcTick % 5 === 0) App.showIsland(State.detailId);
+          else App.renderPanel();
         }
       }, 1000);
     },
 
-    // -------- 设置面板 --------
     renderSettings: function (pop) {
       var g = OC.Settings.get.bind(OC.Settings);
-      var dc = '<option value="0">—</option>';
-      Object.keys(OC.DATACENTERS).forEach(function (k) {
-        dc += '<option value="' + k + '"' + (Number(g('datacenter')) === Number(k) ? ' selected' : '') + '>' +
-          OC.DATACENTERS[k].name + ' (' + OC.DATACENTERS[k].region + ')</option>';
-      });
       var lg = ['zh', 'en', 'ja'].map(function (l) {
         return '<option value="' + l + '"' + (g('lang') === l ? ' selected' : '') + '>' + l.toUpperCase() + '</option>';
       }).join('');
       var h = '<div class="panel-head">' + t('panel_settings') + '<button class="pclose" data-close>' + t('close') + '</button></div>';
       h += '<div class="panel-body settings">';
-      h += r(t('set_lang'), '<select id="s-lang">' + lg + '</select>');
-      h += grp(t('set_tracker'));
-      h += r(t('set_tracker_id'), '<input id="s-tid" value="' + OC.UI.esc(g('trackerId')) + '" placeholder="GUtJVkB4">');
-      h += r(t('set_password'), '<input id="s-pw" value="' + OC.UI.esc(g('trackerPassword')) + '">');
-      h += r(t('set_dc'), '<select id="s-dc">' + dc + '</select>');
-      h += '<div class="s-row s-btns"><button id="s-create" class="mini">' + t('set_create') + '</button>' +
-        '<button id="s-open" class="mini">' + t('set_open') + '</button></div>';
-      h += grp(t('panel_settings'));
-      h += chk('s-sound', t('set_sound'), g('notifySound'));
-      h += chk('s-auto', t('set_auto'), g('autoReport'));
-      h += r(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
+      h += row(t('set_lang'), '<select id="s-lang">' + lg + '</select>');
+      h += rowChk('s-sound', t('set_sound'), g('notifySound'));
+      h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += '<div class="s-row s-btns"><button id="s-save" class="save">' + t('saved') + '</button></div>';
-      h += '<div class="cloud-hint">' + t('cloud_hint') + '</div>';
+      h += '<div class="cloud-hint">' + t('auto_hint') + '</div>';
       h += '</div>';
       pop.innerHTML = h;
-
       var op = pop.querySelector('#s-op');
       op.addEventListener('input', function () { document.documentElement.style.setProperty('--app-opacity', op.value); });
       pop.querySelector('#s-save').addEventListener('click', function () {
         OC.Settings.setMany({
           lang: pop.querySelector('#s-lang').value,
-          trackerId: pop.querySelector('#s-tid').value.trim(),
-          trackerPassword: pop.querySelector('#s-pw').value,
-          datacenter: Number(pop.querySelector('#s-dc').value) || 0,
           notifySound: pop.querySelector('#s-sound').checked,
-          autoReport: pop.querySelector('#s-auto').checked,
           opacity: Number(pop.querySelector('#s-op').value)
         });
         App.renderShell();
-        App.loadTracker();
         OC.UI.toast('pot', t('saved') + ' ✓', '');
-      });
-      pop.querySelector('#s-open').addEventListener('click', function () {
-        var id = pop.querySelector('#s-tid').value.trim();
-        window.open('https://tracker.xivstats.com/' + (id || 'new'), '_blank');
-      });
-      pop.querySelector('#s-create').addEventListener('click', function () {
-        var pw = pop.querySelector('#s-pw').value || Math.random().toString(36).slice(2, 8);
-        var d = Number(pop.querySelector('#s-dc').value) || 0;
-        OC.Api.create(pw, d).then(function (id) {
-          if (!id) throw new Error('no id');
-          OC.Settings.setMany({ trackerId: id, trackerPassword: pw, datacenter: d });
-          App.renderShell(); App.loadTracker();
-          OC.UI.toast('pot', 'Tracker ✓ ' + id, '');
-        }).catch(function (e) { OC.UI.toast('ce', String(e), ''); });
-      });
-      pop.querySelectorAll('[data-close]').forEach(function (b) {
-        b.addEventListener('click', function () { App.openPanel = null; document.getElementById('popover').classList.add('hidden'); });
       });
     }
   };
 
-  function r(label, ctrl) { return '<div class="s-row"><label>' + label + '</label>' + ctrl + '</div>'; }
-  function grp(x) { return '<div class="s-grp">' + x + '</div>'; }
-  function chk(id, label, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + label + '</label></div>'; }
+  function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }
+  function row(l, c) { return '<div class="s-row"><label>' + l + '</label>' + c + '</div>'; }
+  function rowChk(id, l, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + l + '</label></div>'; }
 
-  function railHtml() {
+  function railHtml(collapsed) {
     var L = OC.MAP_LAYERS, layers = OC.Settings.get('mapLayers');
     var labels = { bronze: '铜', silver: '银', potN: '北', potS: '南', reroll: '续', bunny: '萝' };
     var h = '';
     L.forEach(function (l) {
-      var on = layers[l.key];
-      h += '<button class="rbtn' + (on ? ' on' : '') + '" data-layer="' + l.key + '" title="' + OC.i18n.t('layer_' + l.key) + '" ' +
-        'style="--rc:' + l.color + '">' + labels[l.key] + '</button>';
+      h += '<button class="rbtn' + (layers[l.key] ? ' on' : '') + '" data-layer="' + l.key + '" title="' + OC.i18n.t('layer_' + l.key) + '" style="--rc:' + l.color + '">' + labels[l.key] + '</button>';
     });
     h += '<div class="rail-div"></div>';
-    h += '<button class="rbtn panel" data-panel="battle" title="' + OC.i18n.t('panel_battle') + '">⚔</button>';
-    h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + OC.i18n.t('panel_dcpots') + '">国</button>';
+    h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + OC.i18n.t('panel_dcpots') + '">罐</button>';
+    h += '<button class="rbtn" data-collapse title="' + OC.i18n.t(collapsed ? 'expand' : 'collapse') + '">' + (collapsed ? '▢' : '▣') + '</button>';
     h += '<button class="rbtn panel" data-panel="settings" title="' + OC.i18n.t('panel_settings') + '">⚙</button>';
     return h;
   }

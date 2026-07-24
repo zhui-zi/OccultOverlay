@@ -120,7 +120,7 @@
       var url = OC.BACKEND.url +
         '?datacenter=in.(' + dcList.join(',') + ')' +
         '&last_update=gt.' + (now - sinceSec) +
-        '&select=tracker_id,datacenter,last_update,pot_history';
+        '&select=tracker_id,datacenter,last_update,pot_history,encounter_history,fate_history';
       return fetch(url, { headers: headers() }).then(function (r) {
         return r.ok ? r.json() : [];
       });
