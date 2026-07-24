@@ -150,6 +150,7 @@ html, body {
 .mini:hover, .save:hover { background: rgba(201,162,39,0.2); border-color: var(--accent); }
 .save { background: rgba(201,162,39,0.25); border-color: var(--accent); font-weight: 700; }
 .cloud-hint { color: var(--fg-dim); font-size: 11px; margin-top: 10px; line-height: 1.5; }
+.made-with { text-align: center; color: var(--fg-dim); font-size: 11px; margin-top: 16px; opacity: 0.75; }
 .s-sub { color: var(--fg-dim); font-size: 11.5px; margin: 6px 0 4px; }
 .color-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 6px; }
 .color-chk { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 7px; cursor: pointer;
