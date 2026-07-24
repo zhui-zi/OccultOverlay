@@ -230,6 +230,11 @@
       return;
     }
 
+    // 258 FateDirector / 259 CEDirector：由 ACT 读取内存产生，
+    // 与距离无关且即时，是获取全岛 FATE/CE 状态的最佳来源。
+    if (type === 258) { handleFateDirector(line); return; }
+    if (type === 259) { handleCeDirector(line); return; }
+
     // 系统消息 / 战斗日志：尝试从文本匹配 CE/FATE 名称触发通知。
     // ACT 环境无法稳定拿到内存态 FATE 列表，这里做“文本兜底”，
     // 主上报仍以数据面板按钮 + 共享 tracker 数据为准。
@@ -269,6 +274,35 @@
         return; // 每行只匹配一次
       }
     }
+  }
+
+  // ---- 内存态 FATE/CE（258/259 director 行）----------------------------
+  // Overlay.memActive: { id: true } 当前岛上正在进行的 FATE/CE（与距离无关）
+  Overlay.memActive = {};
+
+  function memChanged(id, active) {
+    id = Number(id);
+    if (!id) return;
+    var was = !!Overlay.memActive[id];
+    if (active) Overlay.memActive[id] = true; else delete Overlay.memActive[id];
+    if (was !== !!active) Overlay.emit('memActive', id, !!active);
+  }
+
+  // 258|ts|category(Add/Update/Remove)|padding|fateId(hex)|progress(hex)|...
+  function handleFateDirector(line) {
+    var cat = String(line[2] || '');
+    var fateId = parseInt(line[4], 16);
+    if (!fateId) return;
+    if (cat === 'Remove') memChanged(fateId, false);
+    else memChanged(fateId, true); // Add / Update
+  }
+
+  // 259|ts|popTime|timeRemaining|unk|ceKey(hex)|numPlayers|status|unk|progress|...
+  function handleCeDirector(line) {
+    var ceKey = parseInt(line[5], 16);
+    var status = parseInt(line[7], 16);
+    if (isNaN(ceKey)) return;
+    memChanged(ceKey, status !== 0); // status 0 = 已结束
   }
 
   // ---- boss 名称索引：从场上战斗单位判断活跃的 FATE/CE ------------------

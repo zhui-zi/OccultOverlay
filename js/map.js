@@ -77,9 +77,8 @@
     var ids = (OC.State && OC.State.highlights) || [];
     var s = '';
     ids.forEach(function (id) {
-      // 优先使用侦测到的 boss 实际坐标（静态表可能不准），否则用固定刷新点
-      var live = OC.Overlay && OC.Overlay.bossPos && OC.Overlay.bossPos[id];
-      var loc = live || OC.MAP.encounters[id]; if (!loc) return;
+      // 使用固定刷新点（静态表，来自 BOCCHI/EurekaTrackerAutoPopper）
+      var loc = OC.MAP.encounters[id]; if (!loc) return;
       var isCe = !!OC.CES[id];
       var col = isCe ? '#ff4d4d' : (OC.POTS[id] ? '#b061ff' : '#ffd24d');
       var x = loc[0] + 1024, y = loc[1] + 1024;

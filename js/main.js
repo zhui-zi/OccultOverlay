@@ -221,6 +221,11 @@
         OC.Map.updatePlayer(document.getElementById('mapLayer'));
         App.refreshHighlights();   // 视野内的 boss 也纳入高亮
       });
+      // 内存态 FATE/CE 变化：即时提示（不受距离与云端上报延迟影响）
+      OC.Overlay.on('memActive', function (id, active) {
+        App.refreshHighlights();
+        if (active) App.alertEncounter(id);
+      });
     },
 
     // 拉取国服四大区活跃岛屿（撒娇罐总览 + 顶部胶囊数据源）
@@ -250,15 +255,33 @@
       }).catch(function () {});
     },
 
-    // 地图高亮 = 云端本岛进行中的 CE/FATE ∪ 视野内侦测到的 boss（可同时显示多个）
+    // 地图高亮 = 内存态(258/259，全岛且即时) ∪ 云端本岛 ∪ 视野内 boss
     refreshHighlights: function () {
       var ids = [];
+      Object.keys(OC.Overlay.memActive || {}).forEach(function (k) {
+        var id = Number(k); if (ids.indexOf(id) < 0) ids.push(id);
+      });
       var isl = this._island;
       if (isl) isl.ce.concat(isl.fate).concat(isl.pot).forEach(function (e) { if (isAlive(e) && ids.indexOf(e.fate_id) < 0) ids.push(e.fate_id); });
       (OC.Overlay.activeIds || []).forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
       OC.State.highlights = ids;
       OC.Map.updateHighlights(document.getElementById('mapLayer'));
       this.updateActive();
+    },
+
+    // 按 id 提示（内存态与云端共用；存活期间只提示一次）
+    alertEncounter: function (id) {
+      var isCe = !!OC.CES[id], isPot = !!OC.POTS[id];
+      var def = isCe ? OC.CES[id] : isPot ? OC.POTS[id] : OC.FATES[id];
+      if (!def) return;
+      var key = (isCe ? 'ce' : isPot ? 'pot' : 'fate') + ':' + id;
+      this._alerted = this._alerted || {};
+      if (this._alerted[key]) return;
+      this._alerted[key] = 1;
+      if (isPot) { if (OC.Settings.get('alertPot')) this.fireAlert('pot', nm(def.name)); return; }
+      var colors = OC.Settings.get('alertColors') || {};
+      var hit = (def.drops || []).filter(function (d) { return colors[d]; })[0];
+      if (hit) this.fireAlert(isCe ? 'ce' : 'fate', nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')));
     },
 
     // 岛上 FATE/CE 刷新时提示：同一目标在“存活期间”只提示一次
