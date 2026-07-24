@@ -17,10 +17,9 @@
     ceCooldownSec: '',
     notifySound: true,
     notifyOnlyInZone: true,
-    autoReport: false,          // 侦测到 CE/FATE 时自动上报到共享 tracker
-    opacity: 0.92,
-    activeTab: 'board',
-    mapLayers: { bronze: true, silver: true, potN: true, potS: true, potC: true, carrot: true }
+    autoReport: true,           // 侦测到 CE/FATE/罐 时自动提交到云端（无人工上报）
+    opacity: 0.9,
+    mapLayers: { bronze: true, silver: true, potN: true, potS: true, reroll: false, bunny: false }
   };
 
   var data = load();
