@@ -41,6 +41,24 @@
     },
 
     /**
+     * 全部活跃岛列表（不依赖撒娇罐数据），用于识别玩家所在岛。
+     * 返回 [{ id, dc, lastUpdate, aliveIds:[], ceId, fateId }]
+     */
+    islandList: function (rows, now) {
+      now = now || Math.floor(Date.now() / 1000);
+      function alive(e) { return e && e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time); }
+      return (rows || []).map(function (t) {
+        var ces = parse(t.encounter_history), fates = parse(t.fate_history);
+        var ids = [];
+        ces.concat(fates).forEach(function (e) { if (alive(e)) ids.push(e.fate_id); });
+        return {
+          id: t.tracker_id, dc: t.datacenter, lastUpdate: t.last_update, ago: now - t.last_update,
+          aliveIds: ids, ceId: Pots.currentId(ces), fateId: Pots.currentId(fates)
+        };
+      });
+    },
+
+    /**
      * 大区总览：每个岛算“下一只撒娇罐”，去重后按剩余升序（存活置顶）。
      * 去重：同一大区 + 相同(取整到分钟)的罐出现时间视为同一岛，保留最新的。
      */

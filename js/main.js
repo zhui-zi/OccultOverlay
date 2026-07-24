@@ -87,11 +87,17 @@
     // 不因为它暂时掉出撒娇罐总览列表而丢失（否则 CE 没打完就消失）。
     resolveMyIsland: function () {
       var pdc = OC.Overlay.playerDc;
-      var inDc = (this._dc || []).filter(function (x) { return pdc ? x.dc === pdc : true; });
+      // 用“全部活跃岛”识别（不依赖撒娇罐数据，否则无罐数据的岛会被漏掉）
+      var inDc = (this._islands || []).filter(function (x) { return pdc ? x.dc === pdc : true; });
       var active = OC.Overlay.activeIds || [];
       if (active.length) {
-        var hit = inDc.filter(function (x) { return active.indexOf(x.ceId) >= 0 || active.indexOf(x.fateId) >= 0; })[0];
-        if (hit) { this.myIslandId = hit.id; return hit.id; }
+        // 与本岛正在进行的 CE/FATE 匹配（命中最多者优先）
+        var best = null, bestN = 0;
+        inDc.forEach(function (x) {
+          var n = (x.aliveIds || []).filter(function (id) { return active.indexOf(id) >= 0; }).length;
+          if (n > bestN) { bestN = n; best = x; }
+        });
+        if (best) { this.myIslandId = best.id; return best.id; }
       }
       if (this.myIslandId) return this.myIslandId;               // 已锁定则保持
       if (inDc.length === 1) { this.myIslandId = inDc[0].id; return this.myIslandId; } // 该大区仅一个岛
@@ -219,7 +225,8 @@
     // 拉取国服四大区活跃岛屿（撒娇罐总览 + 顶部胶囊数据源）
     fetchDc: function () {
       OC.Api.fetchDcPots(CN_DCS, 900).then(function (rows) {
-        App._dc = OC.Pots.dcOverview(rows);
+        App._dc = OC.Pots.dcOverview(rows);       // 撒娇罐总览（会过滤掉无罐数据的岛）
+        App._islands = OC.Pots.islandList(rows);  // 全部活跃岛（用于识别所在岛，不依赖罐数据）
         App._dcLoaded = true;
         App.resolveMyIsland();
         App.pollMyIsland();
