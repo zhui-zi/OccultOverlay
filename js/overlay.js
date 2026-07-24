@@ -175,9 +175,11 @@
         if (!me || me.PosX == null) return;
         // Dalamud(x,z) 水平 == OverlayPlugin(PosX, PosY)
         Overlay.playerPos = { x: me.PosX, z: me.PosY, h: me.Heading };
-        if (me.WorldID) {
-          Overlay.playerWorld = me.WorldID;
-          if (WORLD2DC[me.WorldID]) Overlay.playerDc = WORLD2DC[me.WorldID];
+        // 跨区旅行时以“当前世界”为准（CurrentWorldID），而非home世界(WorldID)
+        var wid = me.CurrentWorldID || me.CurrentWorld || me.WorldID;
+        if (wid) {
+          Overlay.playerWorld = wid;
+          if (WORLD2DC[wid]) Overlay.playerDc = WORLD2DC[wid];
         }
         Overlay.emit('position', Overlay.playerPos);
       });
