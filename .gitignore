@@ -1,0 +1,12 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+*.log
+
+# 本地地图贴图（可选，自行放置）
+assets/map.png
+
+# 临时
+*.tmp
