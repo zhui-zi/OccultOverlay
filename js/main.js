@@ -55,6 +55,13 @@
         if (App.myIslandId) App.showIsland(App.myIslandId);
         else App.togglePanel('dcpots');
       });
+      // 右键“当前 FATE/CE”胶囊即可隐藏（可在设置里重新打开）
+      document.getElementById('chips-active').addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        OC.Settings.set('showActiveChips', false);
+        App.updateActive();
+        OC.UI.toast('fate', t('chips_hidden'), '');
+      });
       // 面板关闭按钮：事件委托（避免每秒重绘后失效）
       var pop = document.getElementById('popover');
       pop.addEventListener('click', function (e) {
@@ -96,19 +103,25 @@
       (OC.Overlay.activeIds || []).forEach(function (id) { if (signals.indexOf(id) < 0) signals.push(id); });
 
       if (signals.length) {
-        var best = null, bestN = 0;
-        inDc.forEach(function (x) {
-          var n = (x.aliveIds || []).filter(function (id) { return signals.indexOf(id) >= 0; }).length;
-          if (n > bestN) { bestN = n; best = x; }
-        });
-        // 大区内匹配不到时，放宽到全部岛（大区判断可能不可用/有误）
-        if (!best && pdc) {
-          all.forEach(function (x) {
-            var n = (x.aliveIds || []).filter(function (id) { return signals.indexOf(id) >= 0; }).length;
-            if (n > bestN) { bestN = n; best = x; }
-          });
+        function score(list) {
+          return list.map(function (x) {
+            return { x: x, n: (x.aliveIds || []).filter(function (id) { return signals.indexOf(id) >= 0; }).length };
+          }).filter(function (s) { return s.n > 0; }).sort(function (a, b) { return b.n - a.n; });
         }
-        if (best) { this.myIslandId = best.id; return best.id; }
+        var scored = score(inDc);
+        // 大区内匹配不到时，放宽到全部岛（大区判断可能不可用/有误）
+        if (!scored.length && pdc) scored = score(all);
+
+        // 已锁定的岛只要仍有匹配就保持，避免被“碰巧同名 CE/FATE”的其它岛抢走
+        var cur = this.myIslandId;
+        if (cur && scored.some(function (s) { return s.x.id === cur; })) return cur;
+
+        // 仅在“最高分唯一”时才锁定；多个岛同分说明信息不足，宁可不定位
+        if (scored.length && (scored.length === 1 || scored[0].n > scored[1].n)) {
+          this.myIslandId = scored[0].x.id;
+          return this.myIslandId;
+        }
+        if (cur) return cur;
       }
       if (this.myIslandId) return this.myIslandId;               // 已锁定则保持
       if (inDc.length === 1) { this.myIslandId = inDc[0].id; return this.myIslandId; } // 该大区仅一个岛
@@ -215,6 +228,7 @@
     updateActive: function () {
       var box = document.getElementById('chips-active');
       if (!box) return;
+      if (!OC.Settings.get('showActiveChips')) { box.innerHTML = ''; return; }
       var ids = OC.State.highlights || [];
       box.innerHTML = ids.map(function (id) {
         var isCe = !!OC.CES[id], isPot = !!OC.POTS[id];
@@ -240,14 +254,18 @@
       OC.Overlay.on('memActive', function (id, active) {
         App.refreshHighlights();
         if (active) App.alertEncounter(id);
-        // 有了新信号立刻重新识别所在岛；尚未识别时马上拉一次云端
-        if (!App.resolveMyIsland() ) App.fetchDc();
-        else App.pollMyIsland();
+        // 有了新信号立刻重新识别所在岛；尚未识别时再拉云端（有节流，避免频繁请求）
+        if (!App.resolveMyIsland()) App.fetchDc(true);
+        else App.pollMyIsland(true);
       });
     },
 
     // 拉取国服四大区活跃岛屿（撒娇罐总览 + 顶部胶囊数据源）
-    fetchDc: function () {
+    fetchDc: function (throttled) {
+      // 节流：事件驱动的请求最快 3 秒一次，避免频繁拉取导致卡顿
+      var tn = Date.now();
+      if (throttled && this._lastDcFetch && tn - this._lastDcFetch < 3000) return;
+      this._lastDcFetch = tn;
       // 30 分钟窗口：岛屿上报间隔可能较长，窗口太窄会导致识别不到所在岛
       OC.Api.fetchDcPots(CN_DCS, 1800).then(function (rows) {
         App._dc = OC.Pots.dcOverview(rows);       // 撒娇罐总览（会过滤掉无罐数据的岛）
@@ -261,9 +279,12 @@
     },
 
     // 拉取“我所在岛”的完整数据，驱动地图高亮 + 提示（云端，玩家在起始点也有效）
-    pollMyIsland: function () {
+    pollMyIsland: function (throttled) {
       // 不在新月岛时不拉取本岛数据（避免残留数据触发提示）
       if (OC.Overlay.connected && !OC.Overlay.inOccult) { this._island = null; return; }
+      var tn = Date.now();
+      if (throttled && this._lastIslandFetch && tn - this._lastIslandFetch < 3000) return;
+      this._lastIslandFetch = tn;
       var id = this.myIslandId;
       if (!id) { this._island = null; OC.State.highlights = []; OC.Map.updateHighlights(document.getElementById('mapLayer')); return; }
       OC.Api.fetchTracker(id).then(function (rec) {
@@ -409,6 +430,7 @@
       h += '</div>';
       h += rowChk('a-tts', t('alert_tts'), g('useTts'));
       h += '<div class="s-grp">' + t('panel_settings') + '</div>';
+      h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'));
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
       h += '<div class="repo-link"><a id="s-repo" href="#">github.com/zhui-zi/OccultOverlay</a></div>';
@@ -429,6 +451,11 @@
       });
       bindChk(pop, 'a-pot', 'alertPot');
       bindChk(pop, 'a-tts', 'useTts');
+      var chipsChk = pop.querySelector('#s-chips');
+      if (chipsChk) chipsChk.addEventListener('change', function () {
+        OC.Settings.set('showActiveChips', chipsChk.checked);
+        App.updateActive();
+      });
       var repo = pop.querySelector('#s-repo');
       if (repo) repo.addEventListener('click', function (e) {
         e.preventDefault();
