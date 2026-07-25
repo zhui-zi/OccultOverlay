@@ -42,6 +42,11 @@
     });
     return out;
   };
+  // 仅当玩家开启了该颜色的提示时才显示颜色后缀
+  UI.demiatmaSuffixIfWanted = function (drops) {
+    var want = OC.Settings.get('alertColors') || {};
+    return UI.demiatmaSuffix((drops || []).filter(function (id) { return want[id]; }));
+  };
 
   UI.dropTags = function (ids) {
     var cats = {};
@@ -61,9 +66,6 @@
       list.forEach(function (it) {
         var dc = (OC.DATACENTERS[it.dc] || { name: it.dc }).name;
         var sd = it.side ? '<span class="dc-side side-' + it.side + '">' + (it.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
-        // 魔法罐掉落的半魂晶（北=黄 / 南=碧）
-        var pd = OC.POTS[it.side === 'north' ? 1976 : it.side === 'south' ? 1977 : 0];
-        if (pd) sd += UI.demiatmaSuffix(pd.drops);
         var status = (it.alive ? '<span class="dc-alive">' + t('alive') + '</span>' : '<span class="dc-eta" data-tk="eta" data-tv="' + it.nextEpoch + '">' + UI.fmtDur(Math.max(0, it.etaSec)) + '</span>') + sd;
         h += '<div class="dc-row' + (it.alive ? ' alive' : '') + '" data-tid="' + esc(it.id) + '">';
         h += '<span class="dc-name">' + esc(dc) + '</span>' + status +

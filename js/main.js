@@ -185,9 +185,9 @@
           body += '<span class="s">' + t('loading') + '</span>';
         } else if (mine) {
           var side = mine.side ? '<span class="side-' + mine.side + '">' + (mine.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
-          // 魔法罐也掉半魂晶：北(1976)=黄，南(1977)=碧
+          // 魔法罐掉落的半魂晶（北=黄/南=碧）：仅在玩家开启了该颜色提示时显示
           var pdef = OC.POTS[mine.side === 'north' ? 1976 : mine.side === 'south' ? 1977 : 0];
-          if (pdef) side += demiatmaSuffix(pdef.drops);
+          if (pdef) side += OC.UI.demiatmaSuffixIfWanted(pdef.drops);
           if (mine.alive) { body += '<span class="s a">' + t('alive') + '</span> ' + side; ready = true; }
           else { body += '<b>' + OC.UI.fmtDur(Math.max(0, mine.etaSec)) + '</b> ' + side; ready = mine.etaSec <= 60; }
         } else {
