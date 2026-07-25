@@ -49,7 +49,9 @@
   Overlay.playerPos = null; // {x, y} 若数据源提供，否则 null
 
   // ---- 事件订阅列表 -----------------------------------------------------
-  var SUBSCRIBE = ['ChangeZone', 'ChangePrimaryPlayer', 'LogLine'];
+  // onFateEvent 由网络包解析产生（cactbot/IINACT FateWatcher），全岛可见、即时，
+  // 与玩家距离无关，是识别所在岛最快的信号（进岛即有，无需走到 FATE 面前）。
+  var SUBSCRIBE = ['ChangeZone', 'ChangePrimaryPlayer', 'LogLine', 'onFateEvent'];
 
   // ---- 现代 WebSocket 接入 ----------------------------------------------
   var ws = null;
@@ -158,12 +160,15 @@
     return Promise.resolve(null);
   };
 
-  // 定时读取自己坐标（内存），供地图显示玩家位置
+  // 定时读取自己坐标（内存），供地图显示玩家位置；
+  // 同时通过 getFates 读取全图 FATE 状态（距离无关），用于即时识别所在岛。
   var posTimer = null;
   function startPositionPolling() {
     if (posTimer) return;
     posTimer = setInterval(function () {
       if (!Overlay.connected) return;
+
+      // --- getCombatants：玩家坐标 + 大区检测 + 近距离 boss 扫描 ---
       Overlay.callHandler({ call: 'getCombatants' }).then(function (data) {
         if (!data || !data.combatants) return;
         var arr = data.combatants;
@@ -181,16 +186,17 @@
         if (!me || me.PosX == null) return;
         // Dalamud(x,z) 水平 == OverlayPlugin(PosX, PosY)
         Overlay.playerPos = { x: me.PosX, z: me.PosY, h: me.Heading };
-        // 跨区旅行时以“当前世界”为准（CurrentWorldID），而非home世界(WorldID)
+        // 跨区旅行时以”当前世界”为准（CurrentWorldID），而非home世界(WorldID)
         var wid = me.CurrentWorldID || me.CurrentWorld || me.WorldID;
         if (wid) {
           Overlay.playerWorld = wid;
           if (WORLD2DC[wid]) Overlay.playerDc = WORLD2DC[wid];
         }
-        // 侦测本本内正在场的 FATE/CE boss，用于确认玩家所在的岛
+        // 侦测本本内正在场的 FATE/CE boss，用于确认玩家所在的岛（近距离兜底）
         Overlay.activeIds = scanBosses(arr);
         Overlay.emit('position', Overlay.playerPos);
       });
+
     }, 2000);
   }
 
@@ -209,7 +215,19 @@
       case 'LogLine':
         handleLogLine(d);
         break;
+      case 'onFateEvent':
+        handleFateEvent(d);
+        break;
     }
+  }
+
+  // onFateEvent: { type, eventType:'add'|'remove'|'update', fateID:Number, progress:Number }
+  // 由网络包解析（FateWatcher）产生，全岛可见且即时，与玩家距离无关。
+  // 撒娇罐(1976/1977)也是 FATE，会一并从这里得到，进岛立即用于识别所在岛。
+  function handleFateEvent(d) {
+    var id = d.fateID != null ? Number(d.fateID) : (d.fateId != null ? Number(d.fateId) : 0);
+    if (!id) return;
+    memChanged(id, d.eventType !== 'remove'); // add / update = 存在；remove = 结束
   }
 
   function setZone(id, name) {
@@ -282,7 +300,7 @@
     }
   }
 
-  // ---- 内存态 FATE/CE（258/259 director 行）----------------------------
+  // ---- 内存态 FATE/CE（258/259 director 行 + getFates 主动轮询）--------
   // Overlay.memActive: { id: true } 当前岛上正在进行的 FATE/CE（与距离无关）
   Overlay.memActive = {};
 

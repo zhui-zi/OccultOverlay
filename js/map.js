@@ -73,12 +73,14 @@
   };
 
   function highlightsSvg() {
-    // 高亮来自云端“我所在岛”的进行中 CE/FATE（玩家在起始点也能看到）
+    // 高亮来自云端”我所在岛”的进行中 CE/FATE（玩家在起始点也能看到）
     var ids = (OC.State && OC.State.highlights) || [];
+    // 实时坐标优先：bossPos 来自 getCombatants（走近 boss 时更新），否则用静态表
+    var bossPos = (OC.Overlay && OC.Overlay.bossPos) || {};
     var s = '';
     ids.forEach(function (id) {
-      // 使用固定刷新点（静态表，来自 BOCCHI/EurekaTrackerAutoPopper）
-      var loc = OC.MAP.encounters[id]; if (!loc) return;
+      // 优先使用实时 boss 坐标，回退到静态刷新点（BOCCHI/EurekaTrackerAutoPopper）
+      var loc = bossPos[id] || OC.MAP.encounters[id]; if (!loc) return;
       var isCe = !!OC.CES[id];
       var col = isCe ? '#ff4d4d' : (OC.POTS[id] ? '#b061ff' : '#ffd24d');
       var x = loc[0] + 1024, y = loc[1] + 1024;
