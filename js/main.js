@@ -314,7 +314,11 @@
       ['ce', 'fate', 'pot'].forEach(function (tp) {
         h[tp].forEach(function (e) {
           var key = tp + ':' + e.fate_id;
-          if (!isAlive(e)) { delete alerted[key]; return; }   // 已结束 -> 允许下次再提示
+          if (!isAlive(e)) {
+            // 云端可能滞后/抖动：内存仍显示进行中时不要解除提示锁，否则会重复播报
+            if (!(OC.Overlay.memActive || {})[e.fate_id]) delete alerted[key];
+            return;
+          }
           if (alerted[key]) return;                            // 存活期间已提示过
           alerted[key] = 1;
           if (first) return;                                   // 基线不提示
@@ -349,10 +353,11 @@
       // 不在新月岛时不提示（避免播报其它岛/无关数据）
       if (OC.Overlay.connected && !OC.Overlay.inOccult) return;
       var now = Date.now();
-      // 去抖：按 key（默认用文本）60 秒内只触发一次
       var key = dedupKey || msg;
+      // 出现类提示用长窗口（10 分钟）：同一次出现持续数分钟，短窗口会重复播报
+      var ttl = /^spawn:/.test(key) ? 600000 : 60000;
       this._alertLast = this._alertLast || {};
-      if (this._alertLast[key] && now - this._alertLast[key] < 60000) return;
+      if (this._alertLast[key] && now - this._alertLast[key] < ttl) return;
       this._alertLast[key] = now;
       // 排队播报：同一时刻多个提示时依次播放，避免 TTS 叠在一起
       this._alertQueue = this._alertQueue || [];
