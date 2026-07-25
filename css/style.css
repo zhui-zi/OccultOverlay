@@ -53,11 +53,11 @@ html, body {
 .chip {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--glass); border: 1px solid var(--line); border-radius: 20px;
-  padding: 5px 12px; font-size: 12.5px; backdrop-filter: blur(4px);
+  padding: 5px 12px; font-size: 13px; font-weight: 600; backdrop-filter: blur(4px);
   box-shadow: 0 2px 10px rgba(0,0,0,0.35); white-space: nowrap;
 }
 .chip.clickable { cursor: pointer; }
-.chip .chip-k { color: var(--fg-dim); font-size: 11px; }
+.chip .chip-k { color: var(--fg-dim); font-size: inherit; font-weight: inherit; }
 .chip b { font-weight: 700; }
 .chip .s { color: var(--fg-dim); }
 .chip .s.a { color: var(--alive); font-weight: 700; }
