@@ -331,11 +331,21 @@
   // 259|ts|popTime|timeRemaining|unk|ceKey(hex)|numPlayers|status|unk|progress|...
   function handleCeDirector(line) {
     var ceKey = parseInt(line[5], 16);
-    var status = parseInt(line[7], 16);
     if (isNaN(ceKey)) return;
     var id = ceKeyToId(ceKey);
     if (!id) return;
-    memChanged(id, status !== 0); // status 0 = 已结束
+    var status = parseInt(line[7], 16) || 0;   // 0=未激活 1=招募人手 2=准备开始 3=战斗中
+    var remain = parseInt(line[3], 16) || 0;
+    var players = parseInt(line[6], 16) || 0;
+    var active;
+    if (Overlay.memActive[id]) {
+      active = status !== 0;                   // 已在进行中：status 0 才算结束
+    } else {
+      // 首次出现（含“招募人手”阶段）：有倒计时或已有人报名也算已出现，
+      // 同时过滤掉进本时那种全空的占位记录。
+      active = status !== 0 || remain > 0 || players > 0;
+    }
+    memChanged(id, active);
   }
 
   // ---- boss 名称索引：从场上战斗单位判断活跃的 FATE/CE ------------------
