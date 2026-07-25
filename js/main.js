@@ -142,6 +142,7 @@
       if (this.openPanel === 'dcpots') OC.UI.renderDcPots(pop, this._dc, !this._dcLoaded);
       else if (this.openPanel === 'battle') OC.UI.renderBattlePanel(pop, State.detail, State.detailId);
       else if (this.openPanel === 'settings') this.renderSettings(pop);
+      pop.classList.toggle('compact', this.openPanel === 'dcpots'); // 魔法罐总览用紧凑样式
       var newBody = pop.querySelector('.panel-body');
       if (newBody && scroll) newBody.scrollTop = scroll;
     },

@@ -170,19 +170,26 @@ html, body {
 .dc-empty { color: var(--fg-dim); text-align: center; padding: 20px 0; }
 .dc-list { display: flex; flex-direction: column; gap: 5px; }
 .dc-row {
-  padding: 7px 10px; border-radius: 8px; background: rgba(255,255,255,0.04);
+  display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; white-space: nowrap;
+  padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.04);
   border: 1px solid var(--line); border-left: 3px solid var(--pot); cursor: pointer;
 }
+.dc-row .dc-name { flex: 1; }
+.dc-row .dm-c { font-size: 10px; }
 .dc-row:hover { background: rgba(255,255,255,0.09); }
 .dc-row.alive { border-left-color: var(--alive); box-shadow: 0 0 0 1px rgba(255,207,77,0.35) inset; }
-.dc-r1 { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; }
-.dc-name { font-weight: 700; font-size: 13px; }
-.dc-eta { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.dc-alive { font-size: 13px; font-weight: 700; color: var(--alive); }
-.dc-ago { font-size: 10px; color: var(--fg-dim); min-width: 30px; text-align: right; }
-.dc-r2 { display: flex; gap: 10px; margin-top: 3px; font-size: 11px; color: var(--fg-dim); }
-.dc-ce::before { content: "CE "; opacity: .6; }
-.dc-fate::before { content: "FATE "; opacity: .6; }
+.dc-name { font-weight: 700; font-size: 12px; white-space: nowrap; }
+.dc-eta { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.dc-alive { font-size: 12px; font-weight: 700; color: var(--alive); text-align: right; }
+.dc-side { font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 7px; }
+.dc-side.side-north { background: rgba(74,144,255,0.22); color: #9cc3ff; }
+.dc-side.side-south { background: rgba(255,138,60,0.22); color: #ffbd8a; }
+.dc-ago { font-size: 9.5px; color: var(--fg-dim); text-align: right; }
+
+/* 魔法罐总览面板：紧凑、自适应高度 */
+.popover.compact { bottom: auto; max-height: calc(100vh - 70px); width: min(250px, 70vw); }
+.popover.compact .panel-body { padding: 6px; }
+.popover.compact .dc-list { gap: 3px; }
 
 /* ---- 通知 ---- */
 #toasts { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column-reverse; gap: 6px; z-index: 999; pointer-events: none; align-items: center; }

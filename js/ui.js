@@ -65,13 +65,9 @@
         var pd = OC.POTS[it.side === 'north' ? 1976 : it.side === 'south' ? 1977 : 0];
         if (pd) sd += UI.demiatmaSuffix(pd.drops);
         var status = (it.alive ? '<span class="dc-alive">' + t('alive') + '</span>' : '<span class="dc-eta" data-tk="eta" data-tv="' + it.nextEpoch + '">' + UI.fmtDur(Math.max(0, it.etaSec)) + '</span>') + sd;
-        var ce = it.ceId && OC.CES[it.ceId] ? nm(OC.CES[it.ceId].name) : '';
-        var ft = it.fateId && OC.FATES[it.fateId] ? nm(OC.FATES[it.fateId].name) : '';
         h += '<div class="dc-row' + (it.alive ? ' alive' : '') + '" data-tid="' + esc(it.id) + '">';
-        h += '<div class="dc-r1"><span class="dc-name">' + esc(dc) + '</span>' + status +
-          '<span class="dc-ago">' + ago(it.ago) + '</span></div>';
-        if (ce || ft) h += '<div class="dc-r2">' + (ce ? '<span class="dc-ce">' + esc(ce) + '</span>' : '') +
-          (ft ? '<span class="dc-fate">' + esc(ft) + '</span>' : '') + '</div>';
+        h += '<span class="dc-name">' + esc(dc) + '</span>' + status +
+          '<span class="dc-ago">' + ago(it.ago) + '</span>';
         h += '</div>';
       });
       h += '</div>';
