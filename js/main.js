@@ -358,6 +358,8 @@
       var ttl = /^spawn:/.test(key) ? 600000 : 60000;
       this._alertLast = this._alertLast || {};
       if (this._alertLast[key] && now - this._alertLast[key] < ttl) return;
+      // 跨实例去重：同一浏览器/悬浮窗开了多个实例时，只让第一个播报
+      if (!claimAlert(key, ttl, now)) { this._alertLast[key] = now; return; }
       this._alertLast[key] = now;
       // 排队播报：同一时刻多个提示时依次播放，避免 TTS 叠在一起
       this._alertQueue = this._alertQueue || [];
@@ -445,6 +447,21 @@
       });
     }
   };
+
+  // 跨实例提示去重：用 localStorage 记录已播报的 key（同源共享）。
+  // 多个悬浮窗实例/标签页同时运行时，避免同一条提示被读好几遍。
+  var ALERT_LS = 'occultOverlay.alerts';
+  function claimAlert(key, ttl, now) {
+    try {
+      var map = JSON.parse(localStorage.getItem(ALERT_LS) || '{}');
+      if (map[key] && now - map[key] < ttl) return false; // 已有实例播报过
+      map[key] = now;
+      // 清理过期项，避免无限增长
+      Object.keys(map).forEach(function (k) { if (now - map[k] > 1800000) delete map[k]; });
+      localStorage.setItem(ALERT_LS, JSON.stringify(map));
+      return true;
+    } catch (e) { return true; } // localStorage 不可用时不阻断提示
+  }
 
   function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }
   function isAlive(e) { return e && e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time); }
