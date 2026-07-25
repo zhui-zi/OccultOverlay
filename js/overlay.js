@@ -104,21 +104,27 @@
   }
 
   // ---- 旧版 OverlayPluginApi 接入（IINACT / 内置浏览器） ----------------
+  // 内置浏览器模式：无需开启 WS 服务，直接用注入的 OverlayPluginApi。
+  // API 可能在脚本之后才注入，这里轮询等待其就绪再订阅。
+  var legacyTimer = null;
   function connectLegacy() {
-    // 旧版通过全局回调派发事件
-    document.addEventListener('onOverlayDataUpdate', function () {});
-    if (global.OverlayPluginApi && global.OverlayPluginApi.ready) {
-      SUBSCRIBE.forEach(function (ev) {
-        global.OverlayPluginApi.callHandler(
-          JSON.stringify({ call: 'subscribe', events: [ev] }), function () {}
-        );
-      });
-    }
-    // 事件派发：OverlayPlugin 会调用 document.dispatchOverlayEvent
     global.__OverlayCallback = handleMessage;
-    document.addEventListener('onOverlayStateUpdate', function () {});
-    Overlay.connected = true;
-    Overlay.emit('connected');
+    if (legacyTimer) return;
+    var tries = 0;
+    legacyTimer = setInterval(function () {
+      tries++;
+      var api = global.OverlayPluginApi;
+      if (api && api.ready) {
+        clearInterval(legacyTimer); legacyTimer = null;
+        SUBSCRIBE.forEach(function (ev) {
+          try { api.callHandler(JSON.stringify({ call: 'subscribe', events: [ev] }), function () {}); } catch (e) {}
+        });
+        Overlay.connected = true;
+        Overlay.emit('connected');
+      } else if (tries > 60) { // ~30 秒后放弃，交给 WS 路径
+        clearInterval(legacyTimer); legacyTimer = null;
+      }
+    }, 500);
   }
 
   // OverlayPlugin 通用回调（common.js 兼容）
@@ -365,10 +371,9 @@
 
   // ---- 启动 -------------------------------------------------------------
   Overlay.start = function () {
-    if (global.OverlayPluginApi) {
-      connectLegacy();
-      // 同时尝试 WS（部分 IINACT 也开放 ws 端口）
-    }
+    // 两种接入方式并行：内置浏览器注入的 OverlayPluginApi（无需 WS 服务），
+    // 以及 WebSocket（OVERLAY_WS / HOST_PORT）。哪个先就绪就用哪个。
+    connectLegacy();
     connectWs();
     startPositionPolling();
   };
