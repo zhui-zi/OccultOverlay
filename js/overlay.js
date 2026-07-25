@@ -343,6 +343,16 @@
     return Object.keys(found).map(Number);
   }
 
+  // 用系统浏览器打开链接（OverlayPlugin 'openWebsiteWithWS' 会调用 Process.Start）
+  Overlay.openUrl = function (url) {
+    var obj = { call: 'openWebsiteWithWS', url: url };
+    if (global.OverlayPluginApi && global.OverlayPluginApi.ready) {
+      try { global.OverlayPluginApi.callHandler(JSON.stringify(obj), function () {}); return true; } catch (e) {}
+    }
+    if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify(obj)); return true; } catch (e) {} }
+    return false; // 未连接 ACT：由调用方回退到 window.open
+  };
+
   // ACT 自带 TTS（OverlayPlugin 'say' 处理器），不使用系统 TTS
   Overlay.say = function (text) {
     var obj = { call: 'say', text: text };
