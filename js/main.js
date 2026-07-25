@@ -86,17 +86,28 @@
     // 确认玩家所在的岛：boss 命中最强；一旦锁定就保持（sticky），
     // 不因为它暂时掉出撒娇罐总览列表而丢失（否则 CE 没打完就消失）。
     resolveMyIsland: function () {
+      var all = this._islands || [];
       var pdc = OC.Overlay.playerDc;
-      // 用“全部活跃岛”识别（不依赖撒娇罐数据，否则无罐数据的岛会被漏掉）
-      var inDc = (this._islands || []).filter(function (x) { return pdc ? x.dc === pdc : true; });
-      var active = OC.Overlay.activeIds || [];
-      if (active.length) {
-        // 与本岛正在进行的 CE/FATE 匹配（命中最多者优先）
+      // 大区已知则限定；未知（读不到 WorldID）时在全部岛中匹配
+      var inDc = pdc ? all.filter(function (x) { return x.dc === pdc; }) : all;
+
+      // 本地信号：内存态 FATE/CE（258/259，全岛可见）优先，其次视野内 boss
+      var signals = Object.keys(OC.Overlay.memActive || {}).map(Number);
+      (OC.Overlay.activeIds || []).forEach(function (id) { if (signals.indexOf(id) < 0) signals.push(id); });
+
+      if (signals.length) {
         var best = null, bestN = 0;
         inDc.forEach(function (x) {
-          var n = (x.aliveIds || []).filter(function (id) { return active.indexOf(id) >= 0; }).length;
+          var n = (x.aliveIds || []).filter(function (id) { return signals.indexOf(id) >= 0; }).length;
           if (n > bestN) { bestN = n; best = x; }
         });
+        // 大区内匹配不到时，放宽到全部岛（大区判断可能不可用/有误）
+        if (!best && pdc) {
+          all.forEach(function (x) {
+            var n = (x.aliveIds || []).filter(function (id) { return signals.indexOf(id) >= 0; }).length;
+            if (n > bestN) { bestN = n; best = x; }
+          });
+        }
         if (best) { this.myIslandId = best.id; return best.id; }
       }
       if (this.myIslandId) return this.myIslandId;               // 已锁定则保持

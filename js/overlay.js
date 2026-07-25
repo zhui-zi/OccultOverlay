@@ -289,6 +289,8 @@
   function memChanged(id, active) {
     id = Number(id);
     if (!id) return;
+    // 只接受新月岛已知的 CE/FATE/魔法罐，过滤其它区域或无关的 director 数据
+    if (!OC.CES[id] && !OC.FATES[id] && !OC.POTS[id]) return;
     var was = !!Overlay.memActive[id];
     if (active) Overlay.memActive[id] = true; else delete Overlay.memActive[id];
     if (was !== !!active) Overlay.emit('memActive', id, !!active);
