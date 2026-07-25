@@ -323,12 +323,19 @@
     else memChanged(fateId, true); // Add / Update
   }
 
+  // CEDirector 的 ceKey 是 0-15 的序号，并非 DynamicEvent 行号(33-48)。
+  // 对应关系（与 cactbot zone_south_horn 一致）：0=两歧塔(48)，1-15 => 32+ceKey。
+  function ceKeyToId(k) { return k === 0 ? 48 : (k >= 1 && k <= 15) ? 32 + k : 0; }
+  OC.ceKeyToId = ceKeyToId;
+
   // 259|ts|popTime|timeRemaining|unk|ceKey(hex)|numPlayers|status|unk|progress|...
   function handleCeDirector(line) {
     var ceKey = parseInt(line[5], 16);
     var status = parseInt(line[7], 16);
     if (isNaN(ceKey)) return;
-    memChanged(ceKey, status !== 0); // status 0 = 已结束
+    var id = ceKeyToId(ceKey);
+    if (!id) return;
+    memChanged(id, status !== 0); // status 0 = 已结束
   }
 
   // ---- boss 名称索引：从场上战斗单位判断活跃的 FATE/CE ------------------

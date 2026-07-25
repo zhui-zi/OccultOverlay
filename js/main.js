@@ -240,12 +240,16 @@
       OC.Overlay.on('memActive', function (id, active) {
         App.refreshHighlights();
         if (active) App.alertEncounter(id);
+        // 有了新信号立刻重新识别所在岛；尚未识别时马上拉一次云端
+        if (!App.resolveMyIsland() ) App.fetchDc();
+        else App.pollMyIsland();
       });
     },
 
     // 拉取国服四大区活跃岛屿（撒娇罐总览 + 顶部胶囊数据源）
     fetchDc: function () {
-      OC.Api.fetchDcPots(CN_DCS, 900).then(function (rows) {
+      // 30 分钟窗口：岛屿上报间隔可能较长，窗口太窄会导致识别不到所在岛
+      OC.Api.fetchDcPots(CN_DCS, 1800).then(function (rows) {
         App._dc = OC.Pots.dcOverview(rows);       // 撒娇罐总览（会过滤掉无罐数据的岛）
         App._islands = OC.Pots.islandList(rows);  // 全部活跃岛（用于识别所在岛，不依赖罐数据）
         App._dcLoaded = true;
@@ -295,10 +299,10 @@
       this._alerted = this._alerted || {};
       if (this._alerted[key]) return;
       this._alerted[key] = 1;
-      if (isPot) { if (OC.Settings.get('alertPot')) this.fireAlert('pot', nm(def.name)); return; }
+      if (isPot) { if (OC.Settings.get('alertPot')) this.fireAlert('pot', nm(def.name), 'spawn:' + id); return; }
       var colors = OC.Settings.get('alertColors') || {};
       var hit = (def.drops || []).filter(function (d) { return colors[d]; })[0];
-      if (hit) this.fireAlert(isCe ? 'ce' : 'fate', nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')));
+      if (hit) this.fireAlert(isCe ? 'ce' : 'fate', nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')), 'spawn:' + id);
     },
 
     // 岛上 FATE/CE 刷新时提示：同一目标在“存活期间”只提示一次
@@ -317,11 +321,11 @@
           var def = tp === 'ce' ? OC.CES[e.fate_id] : tp === 'pot' ? OC.POTS[e.fate_id] : OC.FATES[e.fate_id];
           if (!def) return;
           if (tp === 'pot') {                                  // 撒娇罐出现即提示
-            if (OC.Settings.get('alertPot')) App.fireAlert('pot', nm(def.name));
+            if (OC.Settings.get('alertPot')) App.fireAlert('pot', nm(def.name), 'spawn:' + e.fate_id);
             return;
           }
           var hit = (def.drops || []).filter(function (d) { return colors[d]; })[0];
-          if (hit) App.fireAlert(tp, nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')));
+          if (hit) App.fireAlert(tp, nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')), 'spawn:' + e.fate_id);
         });
       });
     },
@@ -332,23 +336,41 @@
       var mine = this.myIslandId ? (this._dc || []).filter(function (x) { return x.id === App.myIslandId; })[0] : null;
       if (!mine || mine.alive || !mine.nextEpoch) return;
       var eta = mine.nextEpoch - Math.floor(Date.now() / 1000);
-      if (eta > 0 && eta <= 180 && this._potAlertedFor !== mine.nextEpoch) {
-        this._potAlertedFor = mine.nextEpoch;
+      // 用“取整到 5 分钟”的窗口做标记，避免各上报者时间戳抖动导致重复提示
+      var slot = Math.round(mine.nextEpoch / 300);
+      if (eta > 0 && eta <= 180 && this._potAlertedFor !== slot) {
+        this._potAlertedFor = slot;
         var side = mine.side === 'north' ? t('pot_north') : mine.side === 'south' ? t('pot_south') : '';
-        App.fireAlert('pot', t('pot_pre_alert') + (side ? ' · ' + side : ''));
+        App.fireAlert('pot', t('pot_pre_alert') + (side ? ' · ' + side : ''), 'potpre');
       }
     },
 
-    fireAlert: function (kind, msg) {
+    fireAlert: function (kind, msg, dedupKey) {
       // 不在新月岛时不提示（避免播报其它岛/无关数据）
       if (OC.Overlay.connected && !OC.Overlay.inOccult) return;
-      // 去抖：同一提示 60 秒内只触发一次（避免 boss 进出视野反复提示）
       var now = Date.now();
+      // 去抖：按 key（默认用文本）60 秒内只触发一次
+      var key = dedupKey || msg;
       this._alertLast = this._alertLast || {};
-      if (this._alertLast[msg] && now - this._alertLast[msg] < 60000) return;
-      this._alertLast[msg] = now;
-      OC.UI.toast(kind, msg, '');
-      if (!OC.UI.speak(msg)) OC.UI.beep(kind);
+      if (this._alertLast[key] && now - this._alertLast[key] < 60000) return;
+      this._alertLast[key] = now;
+      // 排队播报：同一时刻多个提示时依次播放，避免 TTS 叠在一起
+      this._alertQueue = this._alertQueue || [];
+      this._alertQueue.push({ kind: kind, msg: msg });
+      this._drainAlerts();
+    },
+
+    _drainAlerts: function () {
+      if (this._alertPlaying || !this._alertQueue || !this._alertQueue.length) return;
+      var item = this._alertQueue.shift();
+      this._alertPlaying = true;
+      OC.UI.toast(item.kind, item.msg, '');
+      if (!OC.UI.speak(item.msg)) OC.UI.beep(item.kind);
+      // 每条提示之间留出间隔，让 TTS 有时间念完
+      setTimeout(function () {
+        App._alertPlaying = false;
+        App._drainAlerts();
+      }, 3500);
     },
 
     startLoops: function () {
