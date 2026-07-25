@@ -247,6 +247,8 @@
 
     // 拉取“我所在岛”的完整数据，驱动地图高亮 + 提示（云端，玩家在起始点也有效）
     pollMyIsland: function () {
+      // 不在新月岛时不拉取本岛数据（避免残留数据触发提示）
+      if (OC.Overlay.connected && !OC.Overlay.inOccult) { this._island = null; return; }
       var id = this.myIslandId;
       if (!id) { this._island = null; OC.State.highlights = []; OC.Map.updateHighlights(document.getElementById('mapLayer')); return; }
       OC.Api.fetchTracker(id).then(function (rec) {
@@ -327,6 +329,8 @@
     },
 
     fireAlert: function (kind, msg) {
+      // 不在新月岛时不提示（避免播报其它岛/无关数据）
+      if (OC.Overlay.connected && !OC.Overlay.inOccult) return;
       // 去抖：同一提示 60 秒内只触发一次（避免 boss 进出视野反复提示）
       var now = Date.now();
       this._alertLast = this._alertLast || {};
@@ -367,6 +371,7 @@
       h += '<div class="s-grp">' + t('panel_settings') + '</div>';
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
+      h += '<div class="repo-link"><a href="https://github.com/zhui-zi/OccultOverlay" target="_blank" rel="noopener">github.com/zhui-zi/OccultOverlay</a></div>';
       var names = ['可畏', '三角初华', '柳墨琉', '茫lan', '皇帝驾到', '羽山凌', '魂魄妖妖梦', '正在烧烤中', '沧璃'];
       h += '<div class="made-with">made with 💗 for ' + esc(names[Math.floor(Math.random() * names.length)]) + '</div>';
       h += '</div>';
