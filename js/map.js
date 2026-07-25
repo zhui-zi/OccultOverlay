@@ -86,7 +86,7 @@
       s += '<g class="hi-mark">' +
         '<circle cx="' + x + '" cy="' + y + '" r="42" fill="none" stroke="' + col + '" stroke-width="8"/>' +
         '<circle cx="' + x + '" cy="' + y + '" r="14" fill="' + col + '" stroke="#000" stroke-width="3"/>' +
-        '<text x="' + x + '" y="' + (y - 54) + '" text-anchor="middle" class="hi-label">' + esc(label) + '</text></g>';
+        '<text x="' + x + '" y="' + (y - 62) + '" text-anchor="middle" class="hi-label">' + esc(label) + '</text></g>';
     });
     return s;
   }

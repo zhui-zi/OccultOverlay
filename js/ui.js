@@ -33,6 +33,16 @@
     });
     return h + '</span>';
   };
+  // 半魂晶颜色后缀：如“（黄）”并用对应颜色字体
+  var DEMIATMA = { 47744: ['青', '#4aa3ff'], 47745: ['碧', '#2ec4b6'], 47746: ['绿', '#3ddb63'], 47747: ['橙', '#ff8a3c'], 47748: ['紫', '#b061ff'], 47749: ['黄', '#ffce4d'] };
+  UI.demiatmaSuffix = function (drops) {
+    var out = '';
+    (drops || []).forEach(function (id) {
+      if (DEMIATMA[id]) out += '<span class="dm-c" style="color:' + DEMIATMA[id][1] + '">（' + DEMIATMA[id][0] + '）</span>';
+    });
+    return out;
+  };
+
   UI.dropTags = function (ids) {
     var cats = {};
     (ids || []).forEach(function (id) { var it = OC.ITEMS[id]; if (it) cats[it.cat] = true; });
@@ -51,6 +61,9 @@
       list.forEach(function (it) {
         var dc = (OC.DATACENTERS[it.dc] || { name: it.dc }).name;
         var sd = it.side ? '<span class="dc-side side-' + it.side + '">' + (it.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
+        // 魔法罐掉落的半魂晶（北=黄 / 南=碧）
+        var pd = OC.POTS[it.side === 'north' ? 1976 : it.side === 'south' ? 1977 : 0];
+        if (pd) sd += UI.demiatmaSuffix(pd.drops);
         var status = (it.alive ? '<span class="dc-alive">' + t('alive') + '</span>' : '<span class="dc-eta" data-tk="eta" data-tv="' + it.nextEpoch + '">' + UI.fmtDur(Math.max(0, it.etaSec)) + '</span>') + sd;
         var ce = it.ceId && OC.CES[it.ceId] ? nm(OC.CES[it.ceId].name) : '';
         var ft = it.fateId && OC.FATES[it.fateId] ? nm(OC.FATES[it.fateId].name) : '';

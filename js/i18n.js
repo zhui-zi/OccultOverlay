@@ -1,7 +1,7 @@
 /* =========================================================================
  * i18n.js — 界面文案（zh / en / ja）
  * 中文术语对齐 EurekaTrackerAutoPopper：紧急遭遇战(CE) / 危命任务(FATE) /
- * 两歧塔 / 撒娇罐 / 铜宝箱·银宝箱 / 胡萝卜 / 额外机会。
+ * 两歧塔 / 魔法罐 / 铜宝箱·银宝箱 / 胡萝卜 / 额外机会。
  * ========================================================================= */
 (function (global) {
   'use strict';
@@ -12,7 +12,7 @@
       title: '新月岛',
       connected: '已连接', disconnected: '未连接',
       in_occult: '新月岛', not_in_occult: '不在新月岛',
-      ce: '紧急遭遇战', fate: '危命任务', pot: '撒娇罐', tower: '两歧塔',
+      ce: '紧急遭遇战', fate: '危命任务', pot: '魔法罐', tower: '两歧塔',
       ce_active: '进行中', ce_can_trigger: '可触发', ce_cooldown: '冷却',
       no_ce: '暂无', next: '下一个', respawn: '重生',
       pot_active: '进行中', pot_next: '下一罐', pot_north: '北', pot_south: '南', pot_soon: '即将出现',
@@ -27,14 +27,14 @@
       set_ce_cd: 'CE 冷却(秒)', set_create: '新建', set_open: '网页版',
       set_sound: '声音提醒', set_auto: '自动上报（侦测到即提交云端）', set_opacity: '不透明度', set_scale: '界面缩放',
       saved: '已保存', no_tracker: '未设置 Tracker ID：仅显示本地演示，无法同步云端',
-      notify_ce: '紧急遭遇战', notify_fate: '危命任务', notify_pot: '撒娇罐',
+      notify_ce: '紧急遭遇战', notify_fate: '危命任务', notify_pot: '魔法罐',
       cloud_hint: '数据来自共享云端，请配合游戏内工具自动上报',
-      panel_dcpots: '撒娇罐总览', dc_pots_title: '撒娇罐总览（国服四大区）',
+      panel_dcpots: '魔法罐总览', dc_pots_title: '魔法罐总览（国服四大区）',
       no_active_island: '当前四大区暂无活跃岛屿', updated: '更新', loading: '加载中…',
       collapse: '折叠（隐藏地图）', expand: '展开地图', locating: '定位所在岛…',
       auto_hint: '数据自动来自国服四大区云端，无需任何设置；点击列表中的岛可查看该岛 CE/FATE。',
-      alert_title: '提示', alert_pot_opt: '撒娇罐出现前3分钟提示', alert_demiatma: '出现掉落以下半魂晶的 CE/FATE 时提示：',
-      alert_tts: '语音提示', alert_pot: '撒娇罐出现', pot_pre_alert: '撒娇罐即将出现（约3分钟）',
+      alert_title: '提示', alert_pot_opt: '魔法罐出现前3分钟提示', alert_demiatma: '出现掉落以下半魂晶的 CE/FATE 时提示：',
+      alert_tts: '语音提示', alert_pot: '魔法罐出现', pot_pre_alert: '魔法罐即将出现（约3分钟）',
       my_island_hint: '点击查看你所在岛的 CE/FATE（?=同大区多岛未能确认）'
     },
     en: {

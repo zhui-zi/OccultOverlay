@@ -184,6 +184,9 @@
           body += '<span class="s">' + t('loading') + '</span>';
         } else if (mine) {
           var side = mine.side ? '<span class="side-' + mine.side + '">' + (mine.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
+          // 魔法罐也掉半魂晶：北(1976)=黄，南(1977)=碧
+          var pdef = OC.POTS[mine.side === 'north' ? 1976 : mine.side === 'south' ? 1977 : 0];
+          if (pdef) side += demiatmaSuffix(pdef.drops);
           if (mine.alive) { body += '<span class="s a">' + t('alive') + '</span> ' + side; ready = true; }
           else { body += '<b>' + OC.UI.fmtDur(Math.max(0, mine.etaSec)) + '</b> ' + side; ready = mine.etaSec <= 60; }
         } else {
@@ -395,15 +398,7 @@
   function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }
   function isAlive(e) { return e && e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time); }
 
-  // 半魂晶颜色后缀：如“（黄）”并用对应颜色字体
-  var DEMIATMA = { 47744: ['青', '#4aa3ff'], 47745: ['碧', '#2ec4b6'], 47746: ['绿', '#3ddb63'], 47747: ['橙', '#ff8a3c'], 47748: ['紫', '#b061ff'], 47749: ['黄', '#ffce4d'] };
-  function demiatmaSuffix(drops) {
-    var out = '';
-    (drops || []).forEach(function (id) {
-      if (DEMIATMA[id]) out += '<span class="dm-c" style="color:' + DEMIATMA[id][1] + '">（' + DEMIATMA[id][0] + '）</span>';
-    });
-    return out;
-  }
+  function demiatmaSuffix(drops) { return OC.UI.demiatmaSuffix(drops); }
   function row(l, c) { return '<div class="s-row"><label>' + l + '</label>' + c + '</div>'; }
   function rowChk(id, l, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + l + '</label></div>'; }
   function bindChk(pop, id, key) {
