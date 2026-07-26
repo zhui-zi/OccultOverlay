@@ -51,7 +51,8 @@
   var Api = OC.Api = {
     /** 读取整条 tracker 记录，返回对象或 null */
     fetchTracker: function (id) {
-      var url = OC.BACKEND.url + '?tracker_id=eq.' + encodeURIComponent(id);
+      var url = OC.BACKEND.url + '?tracker_id=eq.' + encodeURIComponent(id) +
+        '&order=last_update.desc,id.desc&limit=1';
       return fetch(url, { headers: headers() }).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
@@ -62,7 +63,8 @@
 
     /** 只取 last_update（用于每秒轮询变化） */
     fetchLastUpdate: function (id) {
-      var url = OC.BACKEND.url + '?tracker_id=eq.' + encodeURIComponent(id) + '&select=last_update';
+      var url = OC.BACKEND.url + '?tracker_id=eq.' + encodeURIComponent(id) +
+        '&select=last_update&order=last_update.desc,id.desc&limit=1';
       return fetch(url, { headers: headers() }).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
@@ -120,7 +122,7 @@
       var url = OC.BACKEND.url +
         '?datacenter=in.(' + dcList.join(',') + ')' +
         '&last_update=gt.' + (now - sinceSec) +
-        '&select=tracker_id,datacenter,last_update,pot_history,encounter_history,fate_history';
+        '&select=id,tracker_id,datacenter,last_fate,last_update,pot_history,encounter_history,fate_history';
       return fetch(url, { headers: headers() }).then(function (r) {
         return r.ok ? r.json() : [];
       });

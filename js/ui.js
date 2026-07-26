@@ -91,24 +91,26 @@
     else {
       h += section(t('ce'), hist.ce, 'ce', n);
       h += section(t('fate'), hist.fate, 'fate', n);
-      h += section(t('pot'), hist.pot, 'pot', n);
+      h += section(t('pot'), hist.pot, 'pot', n, OC.Pots.status(hist.pot, n));
     }
     h += '</div>';
     host.innerHTML = h;
   };
 
-  function section(title, arr, type, n) {
+  function section(title, arr, type, n, potStatus) {
     var h = '<div class="p-sec"><div class="p-sec-h">' + title + '</div>';
     (arr || []).forEach(function (e) {
       var def = type === 'ce' ? OC.CES[e.fate_id] : type === 'pot' ? OC.POTS[e.fate_id] : OC.FATES[e.fate_id];
-      if (def) h += rowHtml(e, def, type, n);
+      if (def) h += rowHtml(e, def, type, n, potStatus);
     });
     return h + '</div>';
   }
-  function rowHtml(e, def, type, n) {
-    var alive = e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time);
+  function rowHtml(e, def, type, n, potStatus) {
+    var alive = type === 'pot'
+      ? !!(potStatus && potStatus.alive && potStatus.side === def.side)
+      : e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time);
     var cls = 'p-row ' + type + (alive ? ' alive' : '') + (def.type === 'tower' ? ' tower' : '');
-    var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + esc(nm(def.name)) + '</span>' + badge(e, n, alive, type) + '</div>';
+    var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + esc(nm(def.name)) + '</span>' + badge(e, def, n, alive, type, potStatus) + '</div>';
     var tags = '';
     if (def.type === 'tower') tags += '<span class="tag tw">' + t('tower') + '</span>';
     if (def.spawn_type && def.monster) tags += '<span class="tag mob">▸ ' + esc(nm(def.monster)) + '</span>';
@@ -125,7 +127,7 @@
   function span(cls, kind, val) {
     return '<span class="' + cls + '" data-tk="' + kind + '" data-tv="' + val + '">' + UI.timerText(kind, val) + '</span>';
   }
-  function badge(e, n, alive, type) {
+  function badge(e, def, n, alive, type, potStatus) {
     if (alive) return span('bdg alive', 'alive', e.spawn_time);
     if (type === 'ce') {
       var base = e.last_seen > 0 ? e.last_seen : (e.death_time > 0 ? e.death_time : 0);
@@ -133,7 +135,10 @@
       return span('bdg canpop', 'canpop', 0); // 从未出现视为可触发
     }
     if (type === 'pot') {
-      if (e.spawn_time > 0) return span('bdg gone', 'eta', e.spawn_time + 1800);
+      if (potStatus && !potStatus.alive && potStatus.side === def.side)
+        return span('bdg gone', 'eta', potStatus.nextEpoch);
+      var last = e.last_seen > 0 ? e.last_seen : (e.death_time > 0 ? e.death_time : 0);
+      if (last > 0) return span('bdg gone', 'last', last);
       return '<span class="bdg unk">' + t('unknown') + '</span>';
     }
     var seen = e.last_seen > 0 ? e.last_seen : (e.death_time > 0 ? e.death_time : 0);
@@ -156,11 +161,15 @@
   // 每秒只更新计时文本，不重绘整个面板（避免滚动被顶回 / 闪烁）
   UI.tickPanel = function () {
     var now = Math.floor(Date.now() / 1000);
+    var expiredPot = false;
     document.querySelectorAll('#popover [data-tk]').forEach(function (el) {
       var kind = el.getAttribute('data-tk');
-      el.textContent = UI.timerText(kind, Number(el.getAttribute('data-tv')) || 0, now);
-      if (kind === 'cd') el.className = 'bdg ' + (now >= Number(el.getAttribute('data-tv')) ? 'canpop' : 'gone');
+      var target = Number(el.getAttribute('data-tv')) || 0;
+      el.textContent = UI.timerText(kind, target, now);
+      if (kind === 'cd') el.className = 'bdg ' + (now >= target ? 'canpop' : 'gone');
+      if (kind === 'eta' && now >= target) expiredPot = true;
     });
+    return expiredPot;
   };
 
   // ---- 通知 ----

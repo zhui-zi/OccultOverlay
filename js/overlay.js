@@ -227,7 +227,12 @@
   function handleFateEvent(d) {
     var id = d.fateID != null ? Number(d.fateID) : (d.fateId != null ? Number(d.fateId) : 0);
     if (!id) return;
-    memChanged(id, d.eventType !== 'remove'); // add / update = 存在；remove = 结束
+    var eventType = String(d.eventType || '').toLowerCase();
+    memChanged(id, eventType !== 'remove', {
+      eventType: eventType,
+      observedAt: Math.floor(Date.now() / 1000),
+      source: 'onFateEvent'
+    }); // add / update = 存在；remove = 结束
   }
 
   function setZone(id, name) {
@@ -307,14 +312,14 @@
   // Overlay.memActive: { id: true } 当前岛上正在进行的 FATE/CE（与距离无关）
   Overlay.memActive = {};
 
-  function memChanged(id, active) {
+  function memChanged(id, active, detail) {
     id = Number(id);
     if (!id) return;
     // 只接受新月岛已知的 CE/FATE/魔法罐，过滤其它区域或无关的 director 数据
     if (!OC.CES[id] && !OC.FATES[id] && !OC.POTS[id]) return;
     var was = !!Overlay.memActive[id];
     if (active) Overlay.memActive[id] = true; else delete Overlay.memActive[id];
-    if (was !== !!active) Overlay.emit('memActive', id, !!active);
+    if (was !== !!active) Overlay.emit('memActive', id, !!active, detail || {});
   }
 
   // 258|ts|category(Add/Update/Remove)|padding|fateId(hex)|progress(hex)|...
@@ -322,8 +327,12 @@
     var cat = String(line[2] || '');
     var fateId = parseInt(line[4], 16);
     if (!fateId) return;
-    if (cat === 'Remove') memChanged(fateId, false);
-    else memChanged(fateId, true); // Add / Update
+    var eventType = cat.toLowerCase();
+    var observedAt = Date.parse(line[1] || '') / 1000;
+    if (!isFinite(observedAt)) observedAt = Math.floor(Date.now() / 1000);
+    var detail = { eventType: eventType, observedAt: Math.floor(observedAt), source: 'FateDirector' };
+    if (cat === 'Remove') memChanged(fateId, false, detail);
+    else memChanged(fateId, true, detail); // Add / Update
   }
 
   // CEDirector 的 ceKey 是 0-15 的序号，并非 DynamicEvent 行号(33-48)。

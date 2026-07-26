@@ -132,7 +132,7 @@
     // 离开新月岛时清空锁定，重进本会重新识别
     resetIsland: function () {
       this.myIslandId = null; this._island = null; this._potAlertedFor = null; this._alerted = {};
-      this._localPot = null;                 // 换本后本机观测的罐时间作废
+      this._localPot = null;                 // 换本后本机观测的罐状态作废
       OC.Overlay.memActive = {};             // 清掉上一个副本残留的 FATE/CE
       OC.State.highlights = [];
       OC.Map.updateHighlights(document.getElementById('mapLayer'));
@@ -196,6 +196,9 @@
     },
 
     updateChips: function () {
+      // 网络数据每 5 秒刷新一次；两次请求之间仍需按当前时间推进 30 分钟轮次，
+      // 否则倒计时到 0 后会停在“即将出现”。
+      if (this._dcRows) this._dc = OC.Pots.dcOverview(this._dcRows, now());
       var conn = document.getElementById('chip-conn');
       if (conn) {
         var c = OC.Overlay.connected;
@@ -205,10 +208,7 @@
       var pot = document.getElementById('chip-pot');
       if (pot) {
         this.resolveMyIsland();
-        // 优先用本机观测到的魔法罐时间（自己副本的内存事件，最准确）；
-        // 没有本机观测时才退回云端数据。
         var mine = this.localPotInfo();
-        if (!mine) mine = this.myIslandId ? (this._dc || []).filter(function (x) { return x.id === App.myIslandId; })[0] : null;
         var body = '<span class="chip-k">' + t('pot') + '</span>';
         var ready = false;
         if (!mine && !this._dcLoaded) {
@@ -230,23 +230,59 @@
       this.updateActive();
     },
 
-    // 本机观测到的魔法罐信息（最准：直接来自自己副本的内存事件）
-    // 下一只 = 本机看到的最近一次出现 + 30 分钟；南北交替。
+    // 合并本机事件与云端 pot_history。本机 add/remove 决定实际存活状态；
+    // 云端用于补足悬浮窗重载前的准确 spawn_time。
     localPotInfo: function () {
-      var lp = this._localPot;
-      if (!lp) return null;
-      var latest = 0, latestId = 0, aliveId = 0;
-      Object.keys(lp).forEach(function (k) {
-        var id = Number(k);
-        if ((OC.Overlay.memActive || {})[id]) aliveId = id;
-        if (lp[k] > latest) { latest = lp[k]; latestId = id; }
+      var cloud = this._island && this._island.pot;
+      if ((!cloud || !cloud.length) && this.myIslandId) {
+        var overview = (this._dc || []).filter(function (item) {
+          return item.id === App.myIslandId;
+        })[0];
+        if (overview) cloud = overview.potHistory;
+      }
+
+      var local = this._localPot || {};
+      var localHistory = [];
+      var activeId = 0, activeSeen = -1;
+      var cloudById = {};
+      (cloud || []).forEach(function (entry) {
+        cloudById[Number(entry.fate_id)] = entry;
       });
-      if (!latest) return null;
-      var lastSide = (OC.POTS[latestId] || {}).side;
-      var side = aliveId ? (OC.POTS[aliveId] || {}).side
-        : (lastSide === 'north' ? 'south' : lastSide === 'south' ? 'north' : null);
-      var nextEpoch = latest + OC.Pots.respawnSec;
-      return { alive: !!aliveId, nextEpoch: nextEpoch, etaSec: nextEpoch - now(), side: side, local: true };
+      Object.keys(local).forEach(function (key) {
+        var id = Number(key), observation = local[key];
+        if (observation.active && observation.lastSeen > activeSeen) {
+          activeId = id;
+          activeSeen = observation.lastSeen;
+        }
+        var shared = cloudById[id];
+        var spawnEpoch = observation.spawnEpoch ||
+          (shared && Number(shared.spawn_time) > 0 ? Number(shared.spawn_time) : 0);
+        if (!spawnEpoch) return;
+        var lastSeen = observation.active ? now() :
+          (observation.deathEpoch || observation.lastSeen || spawnEpoch);
+        localHistory.push({
+          fate_id: id,
+          spawn_time: spawnEpoch,
+          death_time: observation.active ? -1 : (observation.deathEpoch || lastSeen),
+          last_seen: lastSeen
+        });
+      });
+
+      var merged = OC.Pots.merge(cloud || [], localHistory);
+      var status = OC.Pots.status(merged, now());
+
+      // update 事件可能是悬浮窗重载后才收到的首个信号，没有可靠 spawn_time。
+      // 此时只确认“正在进行”和方位，不伪造下一轮的精确时间。
+      if (activeId) {
+        var side = (OC.POTS[activeId] || {}).side || null;
+        if (!status) return {
+          alive: true, nextEpoch: null, etaSec: null, side: side, local: true
+        };
+        status.alive = true;
+        status.side = side;
+        status.local = true;
+      }
+      return status;
     },
 
     // 当前岛正在进行的 FATE/CE 胶囊（随界面缩放；带掉落颜色后缀）
@@ -276,11 +312,21 @@
         App.refreshHighlights();   // 视野内的 boss 也纳入高亮
       });
       // 内存态 FATE/CE 变化：即时提示（不受距离与云端上报延迟影响）
-      OC.Overlay.on('memActive', function (id, active) {
-        // 魔法罐出现：记录本机观测到的出现时间，用于精确推算下一只
-        if (active && OC.POTS[id]) {
+      OC.Overlay.on('memActive', function (id, active, detail) {
+        if (OC.POTS[id]) {
+          detail = detail || {};
+          var observedAt = Number(detail.observedAt) || now();
           App._localPot = App._localPot || {};
-          App._localPot[id] = now();
+          var observation = App._localPot[id] = App._localPot[id] || {};
+          observation.active = active;
+          observation.lastSeen = observedAt;
+          if (active) {
+            observation.deathEpoch = null;
+            // FateWatcher 的 add 是实际刷新包；update 只证明当前仍存在。
+            if (detail.eventType === 'add') observation.spawnEpoch = observedAt;
+          } else {
+            observation.deathEpoch = observedAt;
+          }
         }
         App.refreshHighlights();
         if (active) App.alertEncounter(id);
@@ -298,6 +344,7 @@
       this._lastDcFetch = tn;
       // 30 分钟窗口：岛屿上报间隔可能较长，窗口太窄会导致识别不到所在岛
       OC.Api.fetchDcPots(CN_DCS, 1800).then(function (rows) {
+        App._dcRows = rows;
         App._dc = OC.Pots.dcOverview(rows);       // 撒娇罐总览（会过滤掉无罐数据的岛）
         App._islands = OC.Pots.islandList(rows);  // 全部活跃岛（用于识别所在岛，不依赖罐数据）
         App._dcLoaded = true;
@@ -399,7 +446,6 @@
     checkPotPreAlert: function () {
       if (!OC.Settings.get('alertPot')) return;
       var mine = this.localPotInfo();
-      if (!mine) mine = this.myIslandId ? (this._dc || []).filter(function (x) { return x.id === App.myIslandId; })[0] : null;
       if (!mine || mine.alive || !mine.nextEpoch) return;
       var eta = mine.nextEpoch - Math.floor(Date.now() / 1000);
       // 用“取整到 5 分钟”的窗口做标记，避免各上报者时间戳抖动导致重复提示
@@ -449,7 +495,10 @@
       setInterval(function () {
         App.updateChips();
         App.checkPotPreAlert();
-        if (App.openPanel === 'dcpots' || App.openPanel === 'battle') OC.UI.tickPanel();
+        if (App.openPanel === 'dcpots' || App.openPanel === 'battle') {
+          var expiredPot = OC.UI.tickPanel();
+          if (expiredPot) App.renderPanel();
+        }
       }, 1000);
     },
 
