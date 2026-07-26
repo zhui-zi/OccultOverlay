@@ -98,9 +98,8 @@
       // 大区已知则限定；未知（读不到 WorldID）时在全部岛中匹配
       var inDc = pdc ? all.filter(function (x) { return x.dc === pdc; }) : all;
 
-      // 本地信号：内存态 FATE/CE（258/259，全岛可见）优先，其次视野内 boss
+      // 只用内存态 FATE/CE（258/259）作为匹配信号，名字模糊匹配会导致误判
       var signals = Object.keys(OC.Overlay.memActive || {}).map(Number);
-      (OC.Overlay.activeIds || []).forEach(function (id) { if (signals.indexOf(id) < 0) signals.push(id); });
       // 两歧塔(48)是定时开启、多个岛会同时进行的事件，用它匹配会定位到别的岛
       signals = signals.filter(function (id) { return id !== 48; });
 
@@ -301,13 +300,20 @@
 
     // 地图高亮 = 内存态(258/259，全岛且即时) ∪ 云端本岛 ∪ 视野内 boss
     refreshHighlights: function () {
+      // 只用 258/259 内存态：它直接来自本机游戏内存，必定是自己这个岛的实际状态。
+      // 不再用“场上单位名字匹配”（模糊匹配会误判成别的 FATE/CE），
+      // 也不用云端数据（可能来自被误判的岛或已过期）。
       var ids = [];
       Object.keys(OC.Overlay.memActive || {}).forEach(function (k) {
         var id = Number(k); if (ids.indexOf(id) < 0) ids.push(id);
       });
+      var trustLocalOnly = OC.Overlay.connected && OC.Overlay.inOccult;
       var isl = this._island;
-      if (isl) isl.ce.concat(isl.fate).concat(isl.pot).forEach(function (e) { if (isAlive(e) && ids.indexOf(e.fate_id) < 0) ids.push(e.fate_id); });
-      (OC.Overlay.activeIds || []).forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
+      if (!trustLocalOnly && isl) {
+        isl.ce.concat(isl.fate).concat(isl.pot).forEach(function (e) {
+          if (isAlive(e) && ids.indexOf(e.fate_id) < 0) ids.push(e.fate_id);
+        });
+      }
       OC.State.highlights = ids;
       OC.Map.updateHighlights(document.getElementById('mapLayer'));
       this.updateActive();
@@ -331,6 +337,9 @@
     // 岛上 FATE/CE 刷新时提示：同一目标在“存活期间”只提示一次
     // （云端 spawn_time 会被不同上报者反复更新，不能用它判断“新出现”）
     checkIslandAlerts: function (h) {
+      // 在岛内时提示以本机内存为准（见 refreshHighlights），云端仅用于面板展示，
+      // 否则会因岛屿误判/数据过期播报本岛并不存在的 FATE/CE。
+      if (OC.Overlay.connected && OC.Overlay.inOccult) return;
       var first = !this._island;                 // 首次拉取该岛：只建立基线，不提示
       var alerted = this._alerted = this._alerted || {};
       var colors = OC.Settings.get('alertColors') || {};

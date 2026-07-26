@@ -192,8 +192,8 @@
           Overlay.playerWorld = wid;
           if (WORLD2DC[wid]) Overlay.playerDc = WORLD2DC[wid];
         }
-        // 侦测本本内正在场的 FATE/CE boss，用于确认玩家所在的岛（近距离兜底）
-        Overlay.activeIds = scanBosses(arr);
+        // FATE/CE 状态一律以 258/259 内存数据为准；
+        // 战斗单位名字是模糊匹配，会把普通怪误判成 FATE/CE，故不再使用。
         Overlay.emit('position', Overlay.playerPos);
       });
 
