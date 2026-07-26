@@ -254,6 +254,9 @@
       return;
     }
 
+    // 调试钩子：设置 OC.Overlay.debugRaw = fn 可捕获原始日志行
+    if (Overlay.debugRaw) { try { Overlay.debugRaw(line); } catch (e) {} }
+
     // 258 FateDirector / 259 CEDirector：由 ACT 读取内存产生，
     // 与距离无关且即时，是获取全岛 FATE/CE 状态的最佳来源。
     if (type === 258) { handleFateDirector(line); return; }
