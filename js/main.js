@@ -132,6 +132,8 @@
     // 离开新月岛时清空锁定，重进本会重新识别
     resetIsland: function () {
       this.myIslandId = null; this._island = null; this._potAlertedFor = null; this._alerted = {};
+      this._localPot = null;                 // 换本后本机观测的罐时间作废
+      OC.Overlay.memActive = {};             // 清掉上一个副本残留的 FATE/CE
       OC.State.highlights = [];
       OC.Map.updateHighlights(document.getElementById('mapLayer'));
     },
@@ -203,10 +205,13 @@
       var pot = document.getElementById('chip-pot');
       if (pot) {
         this.resolveMyIsland();
-        var mine = this.myIslandId ? (this._dc || []).filter(function (x) { return x.id === App.myIslandId; })[0] : null;
+        // 优先用本机观测到的魔法罐时间（自己副本的内存事件，最准确）；
+        // 没有本机观测时才退回云端数据。
+        var mine = this.localPotInfo();
+        if (!mine) mine = this.myIslandId ? (this._dc || []).filter(function (x) { return x.id === App.myIslandId; })[0] : null;
         var body = '<span class="chip-k">' + t('pot') + '</span>';
         var ready = false;
-        if (!this._dcLoaded) {
+        if (!mine && !this._dcLoaded) {
           body += '<span class="s">' + t('loading') + '</span>';
         } else if (mine) {
           var side = mine.side ? '<span class="side-' + mine.side + '">' + (mine.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
@@ -223,6 +228,25 @@
         pot.innerHTML = body;
       }
       this.updateActive();
+    },
+
+    // 本机观测到的魔法罐信息（最准：直接来自自己副本的内存事件）
+    // 下一只 = 本机看到的最近一次出现 + 30 分钟；南北交替。
+    localPotInfo: function () {
+      var lp = this._localPot;
+      if (!lp) return null;
+      var latest = 0, latestId = 0, aliveId = 0;
+      Object.keys(lp).forEach(function (k) {
+        var id = Number(k);
+        if ((OC.Overlay.memActive || {})[id]) aliveId = id;
+        if (lp[k] > latest) { latest = lp[k]; latestId = id; }
+      });
+      if (!latest) return null;
+      var lastSide = (OC.POTS[latestId] || {}).side;
+      var side = aliveId ? (OC.POTS[aliveId] || {}).side
+        : (lastSide === 'north' ? 'south' : lastSide === 'south' ? 'north' : null);
+      var nextEpoch = latest + OC.Pots.respawnSec;
+      return { alive: !!aliveId, nextEpoch: nextEpoch, etaSec: nextEpoch - now(), side: side, local: true };
     },
 
     // 当前岛正在进行的 FATE/CE 胶囊（随界面缩放；带掉落颜色后缀）
@@ -253,6 +277,11 @@
       });
       // 内存态 FATE/CE 变化：即时提示（不受距离与云端上报延迟影响）
       OC.Overlay.on('memActive', function (id, active) {
+        // 魔法罐出现：记录本机观测到的出现时间，用于精确推算下一只
+        if (active && OC.POTS[id]) {
+          App._localPot = App._localPot || {};
+          App._localPot[id] = now();
+        }
         App.refreshHighlights();
         if (active) App.alertEncounter(id);
         // 有了新信号立刻重新识别所在岛；尚未识别时再拉云端（有节流，避免频繁请求）
@@ -369,7 +398,8 @@
     // 撒娇罐：预计出现前 3 分钟提示（而非出现时）
     checkPotPreAlert: function () {
       if (!OC.Settings.get('alertPot')) return;
-      var mine = this.myIslandId ? (this._dc || []).filter(function (x) { return x.id === App.myIslandId; })[0] : null;
+      var mine = this.localPotInfo();
+      if (!mine) mine = this.myIslandId ? (this._dc || []).filter(function (x) { return x.id === App.myIslandId; })[0] : null;
       if (!mine || mine.alive || !mine.nextEpoch) return;
       var eta = mine.nextEpoch - Math.floor(Date.now() / 1000);
       // 用“取整到 5 分钟”的窗口做标记，避免各上报者时间戳抖动导致重复提示
