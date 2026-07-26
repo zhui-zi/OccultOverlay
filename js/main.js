@@ -101,11 +101,13 @@
       // 本地信号：内存态 FATE/CE（258/259，全岛可见）优先，其次视野内 boss
       var signals = Object.keys(OC.Overlay.memActive || {}).map(Number);
       (OC.Overlay.activeIds || []).forEach(function (id) { if (signals.indexOf(id) < 0) signals.push(id); });
+      // 两歧塔(48)是定时开启、多个岛会同时进行的事件，用它匹配会定位到别的岛
+      signals = signals.filter(function (id) { return id !== 48; });
 
       if (signals.length) {
         function score(list) {
           return list.map(function (x) {
-            return { x: x, n: (x.aliveIds || []).filter(function (id) { return signals.indexOf(id) >= 0; }).length };
+            return { x: x, n: (x.aliveIds || []).filter(function (id) { return id !== 48 && signals.indexOf(id) >= 0; }).length };
           }).filter(function (s) { return s.n > 0; }).sort(function (a, b) { return b.n - a.n; });
         }
         var scored = score(inDc);
