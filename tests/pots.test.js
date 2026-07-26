@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const root = require('../js/pots.js');
 
 root.OC.POTS = {
@@ -9,6 +10,14 @@ root.OC.POTS = {
 };
 
 const Pots = root.OC.Pots;
+
+function drFingerprint(dc, fateId, epoch) {
+  const bytes = Buffer.alloc(12);
+  bytes.writeUInt32LE(dc, 0);
+  bytes.writeUInt32LE(fateId, 4);
+  bytes.writeUInt32LE(epoch, 8);
+  return crypto.createHash('sha256').update(bytes).digest('hex').toUpperCase();
+}
 
 function pot(id, spawn, death, seen) {
   return {
@@ -87,5 +96,40 @@ assert.ok(overview[0].etaSec > 0);
 const islands = Pots.islandList(rows, 4700);
 assert.equal(islands.length, 1);
 assert.equal(islands[0].id, 'new');
+
+const expectedFingerprint = drFingerprint(101, 1962, 1720000000);
+assert.equal(Pots.contextFingerprint(101, 1962, 1720000000), expectedFingerprint);
+assert.ok(Pots.contextFingerprints(101, 1962, 1720000001, 1).includes(expectedFingerprint));
+
+const fingerprintIslands = [
+  { id: 'mine', rowId: 10, dc: 101, fingerprint: expectedFingerprint, activeEvents: [] },
+  { id: 'other', rowId: 11, dc: 101, fingerprint: drFingerprint(101, 1963, 1720000000), activeEvents: [] }
+];
+assert.equal(
+  Pots.matchIsland(fingerprintIslands, { fingerprints: [expectedFingerprint], events: [] }, 101, 15).id,
+  'mine'
+);
+assert.equal(
+  Pots.matchIsland(fingerprintIslands, { fingerprints: [expectedFingerprint], events: [] }, 102, 15),
+  null
+);
+
+const timedIslands = [
+  { id: 'a', rowId: 20, dc: 101, fingerprint: '', activeEvents: [{ fateId: 1964, spawnEpoch: 2000 }] },
+  { id: 'b', rowId: 21, dc: 101, fingerprint: '', activeEvents: [{ fateId: 1964, spawnEpoch: 2100 }] }
+];
+assert.equal(
+  Pots.matchIsland(timedIslands, { events: [{ fateId: 1964, spawnEpoch: 2002 }] }, 101, 15).id,
+  'a'
+);
+timedIslands[1].activeEvents[0].spawnEpoch = 2004;
+assert.equal(
+  Pots.matchIsland(timedIslands, { events: [{ fateId: 1964, spawnEpoch: 2002 }] }, 101, 15),
+  null
+);
+assert.equal(
+  Pots.matchIsland(timedIslands, { events: [{ fateId: 1964 }] }, 101, 15),
+  null
+);
 
 console.log('pots tests passed');

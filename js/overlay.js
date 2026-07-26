@@ -50,13 +50,21 @@
 
   // ---- 事件订阅列表 -----------------------------------------------------
   // onFateEvent 由网络包解析产生（cactbot/IINACT FateWatcher），全岛可见、即时，
-  // 与玩家距离无关，是识别所在岛最快的信号（进岛即有，无需走到 FATE 面前）。
+  // 与玩家距离无关；Add 可提供实例识别证据，Update 只证明当前仍存活。
   var SUBSCRIBE = ['ChangeZone', 'ChangePrimaryPlayer', 'LogLine', 'onFateEvent'];
 
   // ---- 现代 WebSocket 接入 ----------------------------------------------
   var ws = null;
   var wsUrl = null;
   var reconnectTimer = null;
+  var transportMode = null;
+
+  function setConnected(connected) {
+    connected = !!connected;
+    if (Overlay.connected === connected) return;
+    Overlay.connected = connected;
+    Overlay.emit(connected ? 'connected' : 'disconnected');
+  }
 
   function getWsUrl() {
     // OverlayPlugin 会以 OVERLAY_WS 或 HOST_PORT 传入 ws 地址（HOST_PORT 常为 faker 地址，
@@ -66,11 +74,11 @@
     var hp = /[?&]HOST_PORT=([^&]+)/.exec(location.search);
     if (hp) return decodeURIComponent(hp[1]);
     if (OC.Settings && OC.Settings.get('wsUrl')) return OC.Settings.get('wsUrl');
-    return 'ws://127.0.0.1:10501/ws';
+    return null;
   }
 
   function connectWs() {
-    wsUrl = getWsUrl();
+    if (transportMode !== 'ws' || !wsUrl) return;
     try {
       ws = new WebSocket(wsUrl);
     } catch (e) {
@@ -81,8 +89,7 @@
       SUBSCRIBE.forEach(function (ev) {
         ws.send(JSON.stringify({ call: 'subscribe', events: [ev] }));
       });
-      Overlay.connected = true;
-      Overlay.emit('connected');
+      setConnected(true);
     });
     ws.addEventListener('message', function (msg) {
       var d;
@@ -90,15 +97,15 @@
       handleMessage(d);
     });
     ws.addEventListener('close', function () {
-      Overlay.connected = false;
-      Overlay.emit('disconnected');
+      if (transportMode !== 'ws') return;
+      setConnected(false);
       scheduleReconnect();
     });
     ws.addEventListener('error', function () { try { ws.close(); } catch (e) {} });
   }
 
   function scheduleReconnect() {
-    if (reconnectTimer) return;
+    if (transportMode !== 'ws' || reconnectTimer) return;
     reconnectTimer = setTimeout(function () {
       reconnectTimer = null;
       connectWs();
@@ -112,19 +119,14 @@
   function connectLegacy() {
     global.__OverlayCallback = handleMessage;
     if (legacyTimer) return;
-    var tries = 0;
     legacyTimer = setInterval(function () {
-      tries++;
       var api = global.OverlayPluginApi;
       if (api && api.ready) {
         clearInterval(legacyTimer); legacyTimer = null;
         SUBSCRIBE.forEach(function (ev) {
           try { api.callHandler(JSON.stringify({ call: 'subscribe', events: [ev] }), function () {}); } catch (e) {}
         });
-        Overlay.connected = true;
-        Overlay.emit('connected');
-      } else if (tries > 60) { // ~30 秒后放弃，交给 WS 路径
-        clearInterval(legacyTimer); legacyTimer = null;
+        setConnected(true);
       }
     }, 500);
   }
@@ -140,9 +142,10 @@
   var _pending = {};
   Overlay.callHandler = function (obj) {
     // 旧版：OverlayPluginApi.callHandler(msg, cb)
-    if (global.OverlayPluginApi && global.OverlayPluginApi.ready) {
+    if (transportMode === 'legacy' && global.OverlayPluginApi && global.OverlayPluginApi.ready) {
       return new Promise(function (resolve) {
         global.OverlayPluginApi.callHandler(JSON.stringify(obj), function (data) {
+          if (typeof data !== 'string') { resolve(data || null); return; }
           try { resolve(JSON.parse(data)); } catch (e) { resolve(null); }
         });
       });
@@ -202,8 +205,9 @@
 
   // ---- 消息分发 ---------------------------------------------------------
   function handleMessage(d) {
-    if (!d || !d.type) return;
+    if (!d) return;
     if (d.rseq != null && _pending[d.rseq]) { var f = _pending[d.rseq]; delete _pending[d.rseq]; f(d); return; }
+    if (!d.type) return;
     switch (d.type) {
       case 'ChangeZone':
         setZone(d.zoneID != null ? d.zoneID : d.zoneId, d.zoneName);
@@ -235,9 +239,18 @@
     }); // add / update = 存在；remove = 结束
   }
 
+  var lastZoneSignal = null;
   function setZone(id, name) {
-    Overlay.territoryId = id != null ? Number(id) : null;
-    Overlay.zoneName = name || '';
+    var territoryId = id != null ? Number(id) : null;
+    var zoneName = name || '';
+    var signalKey = territoryId + ':' + zoneName;
+    var signalAt = Date.now();
+    // ChangeZone and LogLine 01 can describe the same transition. Suppress only
+    // the immediate duplicate; a later same-territory instance change must reset.
+    if (lastZoneSignal && lastZoneSignal.key === signalKey && signalAt - lastZoneSignal.at < 1500) return;
+    lastZoneSignal = { key: signalKey, at: signalAt };
+    Overlay.territoryId = territoryId;
+    Overlay.zoneName = zoneName;
     var byId = OC.Settings && OC.Settings.get('occultTerritoryId')
       ? Overlay.territoryId === Number(OC.Settings.get('occultTerritoryId'))
       : OCCULT_TERRITORY_IDS.indexOf(Overlay.territoryId) >= 0;
@@ -308,19 +321,39 @@
     }
   }
 
-  // ---- 内存态 FATE/CE（258/259 director 行 + getFates 主动轮询）--------
+  // ---- 内存态 FATE/CE（258/259 director 行）-----------------------------
   // Overlay.memActive: { id: true } 当前岛上正在进行的 FATE/CE（与距离无关）
   Overlay.memActive = {};
+  // Overlay.memMeta preserves exact local Add evidence. Update only proves that
+  // the event is alive and must never be treated as its spawn time.
+  Overlay.memMeta = {};
 
   function memChanged(id, active, detail) {
     id = Number(id);
     if (!id) return;
     // 只接受新月岛已知的 CE/FATE/魔法罐，过滤其它区域或无关的 director 数据
     if (!OC.CES[id] && !OC.FATES[id] && !OC.POTS[id]) return;
+    detail = detail || {};
     var was = !!Overlay.memActive[id];
+    var observedAt = Number(detail.observedAt) || Math.floor(Date.now() / 1000);
+    var meta = Overlay.memMeta[id] = Overlay.memMeta[id] || {};
+    var gainedExactStart = false;
+    meta.active = !!active;
+    meta.lastSeen = observedAt;
+    meta.source = detail.source || meta.source || '';
+    if (active && detail.eventType === 'add' && !meta.spawnEpoch) {
+      meta.spawnEpoch = observedAt;
+      gainedExactStart = true;
+    }
+    if (!active) meta.deathEpoch = observedAt;
     if (active) Overlay.memActive[id] = true; else delete Overlay.memActive[id];
-    if (was !== !!active) Overlay.emit('memActive', id, !!active, detail || {});
+    if (was !== !!active || gainedExactStart) Overlay.emit('memActive', id, !!active, detail);
   }
+
+  Overlay.resetMemory = function () {
+    Overlay.memActive = {};
+    Overlay.memMeta = {};
+  };
 
   // 258|ts|category(Add/Update/Remove)|padding|fateId(hex)|progress(hex)|...
   function handleFateDirector(line) {
@@ -350,6 +383,7 @@
     var remain = parseInt(line[3], 16) || 0;
     var players = parseInt(line[6], 16) || 0;
     var active;
+    var was = !!Overlay.memActive[id];
     if (Overlay.memActive[id]) {
       active = status !== 0;                   // 已在进行中：status 0 才算结束
     } else {
@@ -357,7 +391,13 @@
       // 同时过滤掉进本时那种全空的占位记录。
       active = status !== 0 || remain > 0 || players > 0;
     }
-    memChanged(id, active);
+    var observedAt = Date.parse(line[1] || '') / 1000;
+    if (!isFinite(observedAt)) observedAt = Math.floor(Date.now() / 1000);
+    memChanged(id, active, {
+      eventType: active && !was ? 'add' : active ? 'update' : 'remove',
+      observedAt: Math.floor(observedAt),
+      source: 'CEDirector'
+    });
   }
 
   // ---- boss 名称索引：从场上战斗单位判断活跃的 FATE/CE ------------------
@@ -401,7 +441,7 @@
   // 用系统浏览器打开链接（OverlayPlugin 'openWebsiteWithWS' 会调用 Process.Start）
   Overlay.openUrl = function (url) {
     var obj = { call: 'openWebsiteWithWS', url: url };
-    if (global.OverlayPluginApi && global.OverlayPluginApi.ready) {
+    if (transportMode === 'legacy' && global.OverlayPluginApi && global.OverlayPluginApi.ready) {
       try { global.OverlayPluginApi.callHandler(JSON.stringify(obj), function () {}); return true; } catch (e) {}
     }
     if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify(obj)); return true; } catch (e) {} }
@@ -411,7 +451,7 @@
   // ACT 自带 TTS（OverlayPlugin 'say' 处理器），不使用系统 TTS
   Overlay.say = function (text) {
     var obj = { call: 'say', text: text };
-    if (global.OverlayPluginApi && global.OverlayPluginApi.ready) {
+    if (transportMode === 'legacy' && global.OverlayPluginApi && global.OverlayPluginApi.ready) {
       try { global.OverlayPluginApi.callHandler(JSON.stringify(obj), function () {}); return true; } catch (e) {}
     }
     if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify(obj)); return true; } catch (e) {} }
@@ -420,10 +460,12 @@
 
   // ---- 启动 -------------------------------------------------------------
   Overlay.start = function () {
-    // 两种接入方式并行：内置浏览器注入的 OverlayPluginApi（无需 WS 服务），
-    // 以及 WebSocket（OVERLAY_WS / HOST_PORT）。哪个先就绪就用哪个。
-    connectLegacy();
-    connectWs();
+    // 与 cactbot 官方接入方式一致：显式 WS 参数存在时只走 WS，
+    // 否则只等待内置浏览器注入 API，避免失败的 WS 重试覆盖已连接状态。
+    wsUrl = getWsUrl();
+    transportMode = wsUrl ? 'ws' : 'legacy';
+    if (transportMode === 'ws') connectWs();
+    else connectLegacy();
     startPositionPolling();
   };
 

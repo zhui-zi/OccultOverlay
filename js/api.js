@@ -61,6 +61,17 @@
       });
     },
 
+    /** 按数据库主键读取已确认的实例，避免同 tracker_id 的旧/重复行串岛。 */
+    fetchTrackerRow: function (rowId) {
+      var url = OC.BACKEND.url + '?id=eq.' + encodeURIComponent(rowId) + '&limit=1';
+      return fetch(url, { headers: headers() }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).then(function (rows) {
+        return rows && rows.length ? rows[0] : null;
+      });
+    },
+
     /** 只取 last_update（用于每秒轮询变化） */
     fetchLastUpdate: function (id) {
       var url = OC.BACKEND.url + '?tracker_id=eq.' + encodeURIComponent(id) +

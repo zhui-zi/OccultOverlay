@@ -12,6 +12,8 @@
   var OC = global.OC = global.OC || {};
   var RESPAWN = 1800;
   var POT_IDS = [1976, 1977];
+  var OCCULT_FATE_MIN = 1962;
+  var OCCULT_FATE_MAX = 1972;
 
   function parse(s) {
     if (Array.isArray(s)) return s;
@@ -102,8 +104,98 @@
     return out;
   }
 
+  function rotr(value, bits) {
+    return (value >>> bits) | (value << (32 - bits));
+  }
+
+  // SHA-256 for the 12-byte DR instance context. Keeping this synchronous avoids
+  // depending on WebCrypto availability inside older ACT embedded browsers.
+  function sha256Hex(bytes) {
+    var k = [
+      0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+      0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+      0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+      0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+      0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+      0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+      0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+      0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+    ];
+    var h = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+    var padded = bytes.slice();
+    padded.push(0x80);
+    while (padded.length % 64 !== 56) padded.push(0);
+    var bitLength = bytes.length * 8;
+    for (var p = 7; p >= 0; p--) padded.push(p < 4 ? (bitLength >>> (p * 8)) & 0xff : 0);
+
+    for (var offset = 0; offset < padded.length; offset += 64) {
+      var w = new Array(64);
+      var i;
+      for (i = 0; i < 16; i++) {
+        var j = offset + i * 4;
+        w[i] = ((padded[j] << 24) | (padded[j + 1] << 16) | (padded[j + 2] << 8) | padded[j + 3]) | 0;
+      }
+      for (i = 16; i < 64; i++) {
+        var s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+        var s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+        w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+      }
+      var a = h[0], b = h[1], c = h[2], d = h[3];
+      var e = h[4], f = h[5], g = h[6], hh = h[7];
+      for (i = 0; i < 64; i++) {
+        var big1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+        var ch = (e & f) ^ (~e & g);
+        var t1 = (hh + big1 + ch + k[i] + w[i]) | 0;
+        var big0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+        var maj = (a & b) ^ (a & c) ^ (b & c);
+        var t2 = (big0 + maj) | 0;
+        hh = g; g = f; f = e; e = (d + t1) | 0;
+        d = c; c = b; b = a; a = (t1 + t2) | 0;
+      }
+      h[0] = (h[0] + a) | 0; h[1] = (h[1] + b) | 0;
+      h[2] = (h[2] + c) | 0; h[3] = (h[3] + d) | 0;
+      h[4] = (h[4] + e) | 0; h[5] = (h[5] + f) | 0;
+      h[6] = (h[6] + g) | 0; h[7] = (h[7] + hh) | 0;
+    }
+    return h.map(function (value) {
+      return ('00000000' + (value >>> 0).toString(16)).slice(-8);
+    }).join('').toUpperCase();
+  }
+
+  function writeLe32(bytes, offset, value) {
+    value = Number(value) >>> 0;
+    bytes[offset] = value & 0xff;
+    bytes[offset + 1] = (value >>> 8) & 0xff;
+    bytes[offset + 2] = (value >>> 16) & 0xff;
+    bytes[offset + 3] = (value >>> 24) & 0xff;
+  }
+
+  function contextFingerprint(dc, fateId, epoch) {
+    var bytes = new Array(12);
+    writeLe32(bytes, 0, dc);
+    writeLe32(bytes, 4, fateId);
+    writeLe32(bytes, 8, epoch);
+    return sha256Hex(bytes);
+  }
+
   var Pots = OC.Pots = {
     respawnSec: RESPAWN,
+
+    // Same SHA-256(dcID, fateID, StartTimeEpoch) fingerprint used by OccultPotNotifier.
+    contextFingerprint: contextFingerprint,
+
+    contextFingerprints: function (dc, fateId, observedEpoch, radius) {
+      dc = number(dc, 0);
+      fateId = number(fateId, 0);
+      observedEpoch = number(observedEpoch, 0);
+      radius = Math.max(0, number(radius, 0));
+      if (!dc || fateId < OCCULT_FATE_MIN || fateId > OCCULT_FATE_MAX || !observedEpoch) return [];
+      var hashes = [];
+      for (var delta = -radius; delta <= radius; delta++) {
+        hashes.push(contextFingerprint(dc, fateId, observedEpoch + delta));
+      }
+      return hashes;
+    },
 
     /**
      * 计算一组 pot_history 的当前状态。
@@ -165,20 +257,29 @@
 
     /**
      * 全部活跃岛列表（不依赖撒娇罐数据），用于识别玩家所在岛。
-     * 返回 [{ id, dc, lastUpdate, aliveIds:[], ceId, fateId }]
+     * 返回 [{ id, rowId, fingerprint, dc, lastUpdate, aliveIds:[], activeEvents:[] }]
      */
     islandList: function (rows, now) {
       now = number(now, Math.floor(Date.now() / 1000));
       function alive(entry) {
-        return entry && entry.spawn_time > 0 &&
-          (entry.death_time <= 0 || entry.death_time < entry.spawn_time);
+        var spawn = number(entry && entry.spawn_time, -1);
+        var death = number(entry && entry.death_time, -1);
+        return spawn > 0 && (death <= 0 || death < spawn);
       }
       var groups = {};
       (rows || []).forEach(function (tracker) {
         var ces = parse(tracker.encounter_history), fates = parse(tracker.fate_history);
-        var ids = [];
+        var ids = [], activeEvents = [];
         ces.concat(fates).forEach(function (entry) {
-          if (alive(entry)) ids.push(entry.fate_id);
+          if (!alive(entry)) return;
+          var fateId = number(entry.fate_id, 0);
+          var spawnEpoch = number(entry.spawn_time, 0);
+          ids.push(fateId);
+          activeEvents.push({
+            fateId: fateId,
+            spawnEpoch: spawnEpoch,
+            lastSeen: seenAt(entry)
+          });
         });
         var item = {
           id: tracker.tracker_id,
@@ -188,6 +289,7 @@
           lastUpdate: tracker.last_update,
           ago: now - tracker.last_update,
           aliveIds: ids,
+          activeEvents: activeEvents,
           ceId: Pots.currentId(ces),
           fateId: Pots.currentId(fates)
         };
@@ -200,6 +302,40 @@
         }
       });
       return Object.keys(groups).map(function (key) { return groups[key]; });
+    },
+
+    /**
+     * Bind only from a DR fingerprint or an unambiguous local Add timestamp.
+     * A plain active FATE id is intentionally insufficient because several
+     * islands can run the same FATE at once.
+     */
+    matchIsland: function (islands, evidence, dc, tolerance) {
+      islands = islands || [];
+      evidence = evidence || {};
+      tolerance = Math.max(0, number(tolerance, 15));
+      var scoped = dc ? islands.filter(function (item) {
+        return number(item.dc, 0) === number(dc, 0);
+      }) : islands.slice();
+
+      var hashes = evidence.fingerprints || [];
+      if (hashes.length) {
+        var fingerprintMatches = scoped.filter(function (item) {
+          return item.fingerprint && hashes.indexOf(String(item.fingerprint).toUpperCase()) >= 0;
+        });
+        if (fingerprintMatches.length === 1) return fingerprintMatches[0];
+        if (fingerprintMatches.length > 1) return null;
+      }
+
+      var signals = evidence.events || [];
+      var candidates = scoped.filter(function (item) {
+        return signals.some(function (signal) {
+          return (item.activeEvents || []).some(function (remote) {
+            return number(remote.fateId, 0) === number(signal.fateId, 0) &&
+              Math.abs(number(remote.spawnEpoch, 0) - number(signal.spawnEpoch, 0)) <= tolerance;
+          });
+        });
+      });
+      return candidates.length === 1 ? candidates[0] : null;
     },
 
     /**
