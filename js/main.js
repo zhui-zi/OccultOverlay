@@ -329,6 +329,12 @@
         App.refreshHighlights();   // 视野内的 boss 也纳入高亮
         if (App.resolveMyIsland()) App.pollMyIsland(true);
       });
+      OC.Overlay.on('playerContext', function () {
+        // World/DC can arrive through raw ACT memory before position polling.
+        // Re-evaluate immediately so a valid FateDirector Add is not stranded.
+        if (App.resolveMyIsland()) App.pollMyIsland(true);
+        else App.fetchDc(true);
+      });
       // 内存态 FATE/CE 变化：即时提示（不受距离与云端上报延迟影响）
       OC.Overlay.on('memActive', function (id, active, detail) {
         if (OC.POTS[id]) {

@@ -40,6 +40,35 @@
   var WORLD2DC = { 160: 101, 161: 101, 165: 101, 166: 101, 168: 102, 170: 101, 171: 101, 186: 102, 187: 102, 190: 102, 1042: 101, 1043: 103, 1044: 101, 1045: 103, 1060: 101, 1076: 102, 1081: 101, 1106: 103, 1113: 102, 1121: 102, 1166: 102, 1167: 101, 1169: 103, 1170: 102, 1171: 102, 1172: 102, 1173: 101, 1174: 101, 1175: 101, 1176: 102, 1177: 103, 1178: 103, 1179: 103, 1180: 104, 1183: 104, 1186: 104, 1192: 104, 1200: 104, 1201: 104 };
   OC.WORLD2DC = WORLD2DC;
 
+  // OverlayPlugin getCombatants normally returns decimal world IDs, while
+  // ACT LogLine 03 encodes the same value as an unprefixed hexadecimal string.
+  function normalizeWorldId(value) {
+    if (value == null || value === '') return 0;
+    var text = String(value).trim();
+    var decimal = Number(text);
+    if (isFinite(decimal) && WORLD2DC[decimal]) return decimal;
+    var hexadecimal = parseInt(text.replace(/^0x/i, ''), 16);
+    if (isFinite(hexadecimal) && WORLD2DC[hexadecimal]) return hexadecimal;
+    return isFinite(decimal) ? decimal : 0;
+  }
+
+  function setPlayerWorld(value) {
+    var worldId = normalizeWorldId(value);
+    var dc = WORLD2DC[worldId] || 0;
+    if (!worldId || !dc) return false;
+    var changed = Overlay.playerWorld !== worldId || Overlay.playerDc !== dc;
+    Overlay.playerWorld = worldId;
+    Overlay.playerDc = dc;
+    if (changed) Overlay.emit('playerContext', { worldId: worldId, dc: dc });
+    return true;
+  }
+
+  function actorId(value) {
+    if (value == null || value === '') return 0;
+    if (typeof value === 'number') return value;
+    return parseInt(String(value).replace(/^0x/i, ''), 16) || 0;
+  }
+
   var Overlay = OC.Overlay = new EventBus();
   Overlay.connected = false;
   Overlay.territoryId = null;
@@ -186,15 +215,13 @@
         }
         // 3) 兜底：第一个 PC
         if (!me) for (i = 0; i < arr.length; i++) { c = arr[i]; if ((c.type === 1 || c.Type === 1) && c.Name) { me = c; break; } }
-        if (!me || me.PosX == null) return;
-        // Dalamud(x,z) 水平 == OverlayPlugin(PosX, PosY)
-        Overlay.playerPos = { x: me.PosX, z: me.PosY, h: me.Heading };
+        if (!me) return;
         // 跨区旅行时以”当前世界”为准（CurrentWorldID），而非home世界(WorldID)
         var wid = me.CurrentWorldID || me.CurrentWorld || me.WorldID;
-        if (wid) {
-          Overlay.playerWorld = wid;
-          if (WORLD2DC[wid]) Overlay.playerDc = WORLD2DC[wid];
-        }
+        if (wid) setPlayerWorld(wid);
+        if (me.PosX == null) return;
+        // Dalamud(x,z) 水平 == OverlayPlugin(PosX, PosY)
+        Overlay.playerPos = { x: me.PosX, z: me.PosY, h: me.Heading };
         // FATE/CE 状态一律以 258/259 内存数据为准；
         // 战斗单位名字是模糊匹配，会把普通怪误判成 FATE/CE，故不再使用。
         Overlay.emit('position', Overlay.playerPos);
@@ -269,6 +296,15 @@
     // 01 = ChangeZone（部分环境只发 LogLine 不发 ChangeZone 事件）
     if (type === 1) {
       setZone(parseInt(line[2], 16), line[3]);
+      return;
+    }
+
+    // 03 = AddCombatant. This is the most direct ACT memory path for the
+    // current player's world and survives getCombatants schema differences.
+    if (type === 3) {
+      var sameId = Overlay.playerId != null && actorId(line[2]) === actorId(Overlay.playerId);
+      var sameName = Overlay.playerName && line[3] === Overlay.playerName;
+      if (sameId || sameName) setPlayerWorld(line[7]);
       return;
     }
 

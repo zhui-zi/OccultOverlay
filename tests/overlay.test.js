@@ -102,4 +102,21 @@ memory.sandbox.dispatchOverlayEvent({
 assert.equal(memory.sandbox.OC.Overlay.memMeta[1962].active, false);
 assert.equal(memory.sandbox.OC.Overlay.memActive[1962], undefined);
 
+const player = loadOverlay('');
+let playerContext = null;
+player.sandbox.OC.Overlay.on('playerContext', (context) => { playerContext = context; });
+player.sandbox.dispatchOverlayEvent({
+  type: 'ChangePrimaryPlayer',
+  charID: '1002AC15',
+  charName: '吴邪'
+});
+player.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: ['03', '2026-07-28T07:13:45.000+08:00', '1002AC15', '吴邪', '00', '00', '00000000', '499']
+});
+assert.equal(player.sandbox.OC.Overlay.playerWorld, 1177);
+assert.equal(player.sandbox.OC.Overlay.playerDc, 103);
+assert.equal(playerContext.worldId, 1177);
+assert.equal(playerContext.dc, 103);
+
 console.log('overlay tests passed');

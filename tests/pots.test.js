@@ -101,6 +101,10 @@ const expectedFingerprint = drFingerprint(101, 1962, 1720000000);
 assert.equal(Pots.contextFingerprint(101, 1962, 1720000000), expectedFingerprint);
 assert.ok(Pots.contextFingerprints(101, 1962, 1720000001, 1).includes(expectedFingerprint));
 
+// Field replay: ACT Add at 2026-07-28 07:31:29 +08:00 on CN DC 103.
+const observedFingerprint = '2DE19B44DAC2C6E0FBE683AD311F9ACEF44A326B6B37D7AB27DF4CDD937CCC8D';
+assert.equal(Pots.contextFingerprint(103, 1962, 1785195089), observedFingerprint);
+
 const fingerprintIslands = [
   { id: 'mine', rowId: 10, dc: 101, fingerprint: expectedFingerprint, activeEvents: [] },
   { id: 'other', rowId: 11, dc: 101, fingerprint: drFingerprint(101, 1963, 1720000000), activeEvents: [] }
