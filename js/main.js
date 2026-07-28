@@ -185,6 +185,15 @@
       document.getElementById('popover').classList.add('hidden');
     },
 
+    // North Horn cloud pot history is not reliable enough for countdowns yet.
+    // Keep all player-facing North Horn pot timing strictly local.
+    usesLocalPotData: function (territory) {
+      territory = Number(territory) ||
+        Number(OC.Overlay.territoryId) ||
+        Number(OC.MAP && OC.MAP.territory) || 0;
+      return territory === 1346;
+    },
+
     renderPanel: function () {
       var pop = document.getElementById('popover');
       // 保持滚动位置（面板每秒重绘，避免被顶回最上）
@@ -207,11 +216,12 @@
       var request = rowId ? OC.Api.fetchTrackerRow(rowId) : OC.Api.fetchTracker(id);
       request.then(function (rec) {
         if (!rec) return;
+        var territory = Number(rec.territory) || Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
         State.detail = {
-          territory: Number(rec.territory) || Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0,
+          territory: territory,
           ce: pj(rec.encounter_history),
           fate: pj(rec.fate_history),
-          pot: pj(rec.pot_history)
+          pot: App.usesLocalPotData(territory) ? [] : pj(rec.pot_history)
         };
         if (App.openPanel === 'battle') App.renderPanel();
       }).catch(function () {});
@@ -228,7 +238,9 @@
     updateChips: function () {
       // 网络数据每 5 秒刷新一次；两次请求之间仍需按当前时间推进 30 分钟轮次，
       // 否则倒计时到 0 后会停在“即将出现”。
-      if (this._dcRows) this._dc = OC.Pots.dcOverview(this._dcRows, now());
+      if (this._dcRows) {
+        this._dc = this.usesLocalPotData() ? [] : OC.Pots.dcOverview(this._dcRows, now());
+      }
       var conn = document.getElementById('chip-conn');
       if (conn) {
         var c = OC.Overlay.connected;
@@ -251,8 +263,8 @@
           if (mine.alive) { body += '<span class="s a">' + t('alive') + '</span> ' + side; ready = true; }
           else { body += '<b>' + OC.UI.fmtDur(Math.max(0, mine.etaSec)) + '</b> ' + side; ready = mine.etaSec <= 60; }
         } else {
-          // 未能确认所在岛：不显示可能错误的倒计时
-          body += '<span class="s">' + t('locating') + '</span>';
+          // 北征等待本机 258 Add 锚点；南征仍等待严格实例定位。
+          body += '<span class="s">' + t(this.usesLocalPotData() ? 'pot_wait_local' : 'locating') + '</span>';
         }
         pot.classList.toggle('ready', ready);
         pot.innerHTML = body;
@@ -260,10 +272,12 @@
       this.updateActive();
     },
 
-    // 本机 Add/Remove 优先；云端只允许来自已用强证据绑定的数据库行。
+    // 本机 Add/Remove 优先；南征云端只允许来自已用强证据绑定的数据库行。
+    // 北征暂时完全禁用云端 pot_history，避免显示错误轮次。
     localPotInfo: function () {
-      var cloud = this._island && this._island.pot;
-      if ((!cloud || !cloud.length) && this.myIslandRowId) {
+      var localOnly = this.usesLocalPotData();
+      var cloud = localOnly ? [] : (this._island && this._island.pot);
+      if (!localOnly && (!cloud || !cloud.length) && this.myIslandRowId) {
         var overview = (this._dc || []).filter(function (item) {
           return item.rowId === App.myIslandRowId;
         })[0];
@@ -397,7 +411,8 @@
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 1252;
       OC.Api.fetchDcPots(CN_DCS, 1800, territory).then(function (rows) {
         App._dcRows = rows;
-        App._dc = OC.Pots.dcOverview(rows);       // 撒娇罐总览（会过滤掉无罐数据的岛）
+        // 北征云端行仅用于严格定位本岛与补足 CE，不用于罐计时。
+        App._dc = App.usesLocalPotData(territory) ? [] : OC.Pots.dcOverview(rows);
         App._islands = OC.Pots.islandList(rows);  // 全部活跃岛（用于识别所在岛，不依赖罐数据）
         App._dcLoaded = true;
         App.resolveMyIsland();
@@ -421,11 +436,12 @@
       request.then(function (rec) {
         if (!rec) return;
         if ((rowId && App.myIslandRowId !== rowId) || (!rowId && App.myIslandId !== id)) return;
+        var territory = Number(rec.territory) || Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
         var h = {
-          territory: Number(rec.territory) || Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0,
+          territory: territory,
           ce: pj(rec.encounter_history),
           fate: pj(rec.fate_history),
-          pot: pj(rec.pot_history)
+          pot: App.usesLocalPotData(territory) ? [] : pj(rec.pot_history)
         };
         App.checkIslandAlerts(h);
         App._island = h;
@@ -577,27 +593,27 @@
       var colors = g('alertColors') || {};
       var swatch = {
         47744: '#4aa3ff', 47745: '#2ec4b6', 47746: '#3ddb63',
-        47747: '#ff8a3c', 47748: '#b061ff', 47749: '#ffce4d',
-        50974: '#79c8ff', 50975: '#bb9cff', 50976: '#ffb86b'
+        47747: '#ff8a3c', 47748: '#b061ff', 47749: '#ffce4d'
       };
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 1252;
-      var rewardIds = territory === 1346
-        ? [50974, 50975, 50976]
-        : [47744, 47745, 47746, 47747, 47748, 47749];
-      var rewardPrompt = territory === 1346 ? t('alert_dispeller') : t('alert_demiatma');
+      var rewardIds = [47744, 47745, 47746, 47747, 47748, 47749];
       var h = '<div class="panel-head">' + t('panel_settings') + '<button class="pclose" data-close>' + t('close') + '</button></div>';
       h += '<div class="panel-body settings">';
       h += '<div class="s-grp">' + t('alert_title') + '</div>';
       h += rowChk('a-all', t('alert_all'), g('alertAllEncounters'));
       h += rowChk('a-pot', t('alert_pot_opt'), g('alertPot'));
-      h += '<div class="s-sub">' + rewardPrompt + '</div><div class="color-grid">';
-      rewardIds.forEach(function (id) {
-        var it = OC.ITEMS[id], on = !!colors[id];
-        h += '<label class="color-chk' + (on ? ' on' : '') + '" data-cid="' + id + '" style="--sc:' + swatch[id] + '">' +
-          '<input type="checkbox" data-color="' + id + '"' + (on ? ' checked' : '') + '>' +
-          '<span class="sw"></span>' + esc(OC.localName(it.name, g('lang'))) + '</label>';
-      });
-      h += '</div>';
+      if (territory === 1346) {
+        h += '<div class="s-sub">' + t('alert_dispeller_pending') + '</div>';
+      } else {
+        h += '<div class="s-sub">' + t('alert_demiatma') + '</div><div class="color-grid">';
+        rewardIds.forEach(function (id) {
+          var it = OC.ITEMS[id], on = !!colors[id];
+          h += '<label class="color-chk' + (on ? ' on' : '') + '" data-cid="' + id + '" style="--sc:' + swatch[id] + '">' +
+            '<input type="checkbox" data-color="' + id + '"' + (on ? ' checked' : '') + '>' +
+            '<span class="sw"></span>' + esc(OC.localName(it.name, g('lang'))) + '</label>';
+        });
+        h += '</div>';
+      }
       h += rowChk('a-tts', t('alert_tts'), g('useTts'));
       h += '<div class="s-grp">' + t('panel_settings') + '</div>';
       h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'));

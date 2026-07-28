@@ -143,26 +143,26 @@
     1971: { name: { zh: '美丽的咒杀者——执行者', en: 'Fatal Allure', ja: '美しき呪殺者「イグゼクレーター」' }, drops: [47749], encounter_id: 17 },
     1972: { name: { zh: '凶恶使魔——生命收割者', en: 'Serving Darkness', ja: '命の収奪者「ライフギャザラー」' }, drops: [47748], encounter_id: 24 },
 
-    // North Horn. All non-tower FATEs can award any Phantom Dispeller.
-    2074: { name: { en: 'Raging Thrall' }, drops: [50974, 50975, 50976], encounter_id: 0 },
-    2075: { name: { en: 'Eye to Eye' }, drops: [50974, 50975, 50976], encounter_id: 0 },
-    2076: { name: { en: 'Shoreline Showdown' }, drops: [50974, 50975, 50976], encounter_id: 0 },
-    2077: { name: { en: 'Waved Away' }, drops: [50974, 50975, 50976], encounter_id: 0 },
-    2078: { name: { en: 'Allure of the Occult' }, drops: [50974, 50975, 50976], encounter_id: 0 },
-    2079: { name: { en: 'Inconstant Gardener' }, drops: [50974, 50975, 50976], encounter_id: 0 },
-    2080: { name: { en: 'Territorial Dispute' }, drops: [50974, 50975, 50976], encounter_id: 0 },
-    2081: { name: { en: 'A Rotten Affair' }, drops: [50974, 50975, 50976], encounter_id: 0 },
-    2082: { name: { en: 'Gale-force Encounter' }, drops: [50974, 50975, 50976], encounter_id: 0 },
-    2083: { name: { en: 'Scale Model' }, drops: [50974, 50975, 50976], encounter_id: 0 },
-    2084: { name: { en: 'Thunderregnum' }, drops: [50974, 50975, 50976], encounter_id: 0 }
+    // North Horn. Per-event Phantom Dispeller mappings are not available yet.
+    2074: { name: { en: 'Raging Thrall' }, drops: [], encounter_id: 0 },
+    2075: { name: { en: 'Eye to Eye' }, drops: [], encounter_id: 0 },
+    2076: { name: { en: 'Shoreline Showdown' }, drops: [], encounter_id: 0 },
+    2077: { name: { en: 'Waved Away' }, drops: [], encounter_id: 0 },
+    2078: { name: { en: 'Allure of the Occult' }, drops: [], encounter_id: 0 },
+    2079: { name: { en: 'Inconstant Gardener' }, drops: [], encounter_id: 0 },
+    2080: { name: { en: 'Territorial Dispute' }, drops: [], encounter_id: 0 },
+    2081: { name: { en: 'A Rotten Affair' }, drops: [], encounter_id: 0 },
+    2082: { name: { en: 'Gale-force Encounter' }, drops: [], encounter_id: 0 },
+    2083: { name: { en: 'Scale Model' }, drops: [], encounter_id: 0 },
+    2084: { name: { en: 'Thunderregnum' }, drops: [], encounter_id: 0 }
   };
 
   // --- 撒娇罐 Pots（fate_id -> 定义） -----------------------------------
   OC.POTS = {
     1976: { name: { zh: '幸福的魔法罐（北）', en: 'Pleading Pots (North)', ja: 'しあわせのマジックポット(北)' }, territory: 1252, side: 'north', drops: [47749, 47738], encounter_id: 40 },
     1977: { name: { zh: '瑟瑟发抖的魔法罐（南）', en: 'Persistent Pots (South)', ja: 'カチカチのマジックポット(南)' }, territory: 1252, side: 'south', drops: [47745, 47737], encounter_id: 18 },
-    2072: { name: { en: 'Daylight Pottery (North)' }, territory: 1346, side: 'north', drops: [50974, 50975, 50976], encounter_id: 0 },
-    2073: { name: { en: 'In a Pot of Bother (South)' }, territory: 1346, side: 'south', drops: [50974, 50975, 50976], encounter_id: 0 }
+    2072: { name: { en: 'Daylight Pottery (North)' }, territory: 1346, side: 'north', drops: [], encounter_id: 0 },
+    2073: { name: { en: 'In a Pot of Bother (South)' }, territory: 1346, side: 'south', drops: [], encounter_id: 0 }
   };
 
   // --- 危命任务 CE（encounter_id -> 定义） -------------------------------
@@ -185,22 +185,22 @@
     47: { name: { zh: '昏暗妖魂——鬼火苗', en: 'Flame of Dusk', ja: '昏き篝火「ヒンキーパンク」' }, drops: [49833, 49828, 47746], spawn_type: false },
     48: { name: { zh: '两歧塔 力之塔', en: 'The Forked Tower: Blood', ja: 'フォークタワー：力の塔' }, drops: [47868, 47734, 47735, 47736, 47737], spawn_type: false, type: 'tower' },
 
-    // North Horn. All non-tower CEs can award any Phantom Dispeller.
-    49: { name: { en: 'Many Mouths to Feed' }, drops: [50974, 50975, 50976], spawn_type: false },
-    50: { name: { en: 'Doubled Trouble' }, drops: [50974, 50975, 50976], spawn_type: false },
-    51: { name: { en: 'Quarried Away' }, drops: [50974, 50975, 50976], spawn_type: false },
-    52: { name: { en: 'Forbidden Folios' }, drops: [50974, 50975, 50976], spawn_type: false },
-    53: { name: { en: 'Cursed Resurgence' }, drops: [50974, 50975, 50976], spawn_type: false },
-    54: { name: { en: 'Imbalanced Diet' }, drops: [50974, 50975, 50976], spawn_type: false },
-    55: { name: { en: 'Web of Terror' }, drops: [50974, 50975, 50976], spawn_type: false },
-    56: { name: { en: 'A Beast Unleashed' }, drops: [50974, 50975, 50976], spawn_type: false },
-    57: { name: { en: 'Dark Artistry' }, drops: [50974, 50975, 50976], spawn_type: false },
-    58: { name: { en: 'Familiar Tactics' }, drops: [50974, 50975, 50976], spawn_type: false },
-    59: { name: { en: 'Appalling Behavior' }, drops: [50974, 50975, 50976], spawn_type: false },
-    60: { name: { en: 'Tiny Terror' }, drops: [50974, 50975, 50976], spawn_type: false },
-    61: { name: { en: 'Lost on the Wind' }, drops: [50974, 50975, 50976], spawn_type: false },
-    62: { name: { en: 'Ahead of the Competition' }, drops: [50974, 50975, 50976], spawn_type: false },
-    63: { name: { en: 'Accept No Imitators' }, drops: [50974, 50975, 50976], spawn_type: false },
+    // North Horn. Per-event Phantom Dispeller mappings are not available yet.
+    49: { name: { en: 'Many Mouths to Feed' }, drops: [], spawn_type: false },
+    50: { name: { en: 'Doubled Trouble' }, drops: [], spawn_type: false },
+    51: { name: { en: 'Quarried Away' }, drops: [], spawn_type: false },
+    52: { name: { en: 'Forbidden Folios' }, drops: [], spawn_type: false },
+    53: { name: { en: 'Cursed Resurgence' }, drops: [], spawn_type: false },
+    54: { name: { en: 'Imbalanced Diet' }, drops: [], spawn_type: false },
+    55: { name: { en: 'Web of Terror' }, drops: [], spawn_type: false },
+    56: { name: { en: 'A Beast Unleashed' }, drops: [], spawn_type: false },
+    57: { name: { en: 'Dark Artistry' }, drops: [], spawn_type: false },
+    58: { name: { en: 'Familiar Tactics' }, drops: [], spawn_type: false },
+    59: { name: { en: 'Appalling Behavior' }, drops: [], spawn_type: false },
+    60: { name: { en: 'Tiny Terror' }, drops: [], spawn_type: false },
+    61: { name: { en: 'Lost on the Wind' }, drops: [], spawn_type: false },
+    62: { name: { en: 'Ahead of the Competition' }, drops: [], spawn_type: false },
+    63: { name: { en: 'Accept No Imitators' }, drops: [], spawn_type: false },
     64: { name: { en: 'The Forked Tower: Magic' }, drops: [], spawn_type: false, type: 'tower' },
     65: { name: { en: 'The Forked Tower: Magic (Extreme)' }, drops: [], spawn_type: false, type: 'tower' }
   };

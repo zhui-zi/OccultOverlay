@@ -35,9 +35,15 @@ const sandbox = {
       2074: { name: { en: 'Test FATE' }, drops: [50974] },
     },
     POTS: {
-      2072: { name: { en: 'Test Pot' }, drops: [50974] },
+      2072: { name: { en: 'Test Pot' }, side: 'north', territory: 1346, drops: [50974] },
     },
     ITEMS: {
+      47744: { name: { en: 'Test Demiatma 1' } },
+      47745: { name: { en: 'Test Demiatma 2' } },
+      47746: { name: { en: 'Test Demiatma 3' } },
+      47747: { name: { en: 'Test Demiatma 4' } },
+      47748: { name: { en: 'Test Demiatma 5' } },
+      47749: { name: { en: 'Test Demiatma 6' } },
       50974: { name: { en: 'Test Dispeller' } },
       50975: { name: { en: 'Test Dispeller Beta' } },
       50976: { name: { en: 'Test Dispeller Gamma' } },
@@ -53,6 +59,25 @@ const sandbox = {
     },
     Map: {
       updateHighlights() {},
+    },
+    Pots: {
+      merge(shared, local) {
+        sandbox._lastPotMerge = {
+          shared: Array.from(shared || []),
+          local: Array.from(local || []),
+        };
+        return (shared || []).concat(local || []);
+      },
+      status(entries) {
+        if (!entries || !entries.length) return null;
+        const entry = entries[entries.length - 1];
+        return {
+          alive: entry.death_time <= 0 || entry.death_time < entry.spawn_time,
+          nextEpoch: entry.spawn_time + 1800,
+          etaSec: 1800,
+          side: entry.fate_id === 2072 ? 'north' : 'south',
+        };
+      },
     },
     Settings: {
       get(key) {
@@ -129,6 +154,34 @@ assert.deepEqual(
   'disconnected mode may use every shared active event',
 );
 
+const cloudPot = { fate_id: 2072, spawn_time: 100, death_time: 110, last_seen: 110 };
+sandbox.OC.App._island = { ce: [], fate: [], pot: [cloudPot] };
+sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
+sandbox.OC.App.myIslandRowId = 1;
+sandbox.OC.App._localPot = null;
+sandbox.OC.Overlay.territoryId = 1346;
+assert.equal(sandbox.OC.App.usesLocalPotData(), true);
+assert.equal(sandbox.OC.App.localPotInfo(), null);
+assert.deepEqual(sandbox._lastPotMerge.shared, [], 'North Horn must ignore cloud pot history');
+
+sandbox.OC.App._localPot = { 2072: { active: true, lastSeen: 120 } };
+const updateOnlyPot = sandbox.OC.App.localPotInfo();
+assert.equal(updateOnlyPot.alive, true);
+assert.equal(updateOnlyPot.side, 'north');
+assert.equal(updateOnlyPot.nextEpoch, null);
+assert.equal(updateOnlyPot.etaSec, null);
+assert.equal(updateOnlyPot.local, true, 'an Update without Add must remain a local uncertain state');
+
+sandbox.OC.App._localPot = { 2072: { active: false, spawnEpoch: 100, deathEpoch: 110, lastSeen: 110 } };
+assert.equal(sandbox.OC.App.localPotInfo().side, 'north');
+assert.equal(sandbox._lastPotMerge.local.length, 1, 'an exact local Add must drive North Horn timing');
+
+sandbox.OC.Overlay.territoryId = 1252;
+sandbox.OC.App._localPot = null;
+assert.equal(sandbox.OC.App.usesLocalPotData(), false);
+assert.notEqual(sandbox.OC.App.localPotInfo(), null);
+assert.equal(sandbox._lastPotMerge.shared.length, 1, 'South Horn keeps strict-island cloud fallback');
+
 const alerts = [];
 sandbox.OC.App.fireAlert = function (kind, message, key) {
   alerts.push({ kind, message, key });
@@ -197,11 +250,16 @@ const settingsPop = {
     return [];
   },
 };
+sandbox.OC.Overlay.territoryId = 1346;
 sandbox.OC.App.renderSettings(settingsPop);
-assert.match(settingsPop.innerHTML, /alert_dispeller/);
-assert.match(settingsPop.innerHTML, /Test Dispeller/);
-assert.match(settingsPop.innerHTML, /Test Dispeller Beta/);
-assert.match(settingsPop.innerHTML, /Test Dispeller Gamma/);
+assert.match(settingsPop.innerHTML, /alert_dispeller_pending/);
+assert.doesNotMatch(settingsPop.innerHTML, /Test Dispeller/);
 assert.doesNotMatch(settingsPop.innerHTML, /Test Demiatma/);
+
+sandbox.OC.Overlay.territoryId = 1252;
+sandbox.OC.App.renderSettings(settingsPop);
+assert.match(settingsPop.innerHTML, /alert_demiatma/);
+assert.match(settingsPop.innerHTML, /Test Demiatma 1/);
+assert.doesNotMatch(settingsPop.innerHTML, /alert_dispeller_pending/);
 
 console.log('main tests passed');

@@ -38,5 +38,7 @@ Fill the `zh-CN` column. English remains the runtime fallback until a translatio
 | Reward Item | 50974 | Phantom Dispeller α | 消幻晶α |
 | Reward Item | 50975 | Phantom Dispeller β | 消幻晶β |
 | Reward Item | 50976 | Phantom Dispeller γ | 消幻晶γ |
+| UI Text | `alert_dispeller_pending` | Per-event Phantom Dispeller drop mappings are not available yet. |  |
+| UI Text | `pot_wait_local` | Waiting for local pot data… |  |
 
-North Horn trigger monsters and static coffer/pot/carrot locations are not present in the source dataset yet.
+Per-event Phantom Dispeller drops, trigger monsters, and static coffer/pot/carrot locations are not present in the source dataset yet.
