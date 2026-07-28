@@ -9,6 +9,7 @@ Everything is automatic — no setup, no tracker id. Data comes from the shared 
 - Your character position on the map.
 - Pot overview across the CN datacenters, sorted by next-pot time; click an island for its CE / FATE and drops.
 - Optional ACT TTS alerts for every CE, FATE, and pot, with per-spawn deduplication.
+- Zone-specific reward filters for South Horn demiatma and North Horn Phantom Dispellers.
 - Only visible while you are in Occult Crescent.
 - Collapse mode to hide the map.
 - zh / en / ja.

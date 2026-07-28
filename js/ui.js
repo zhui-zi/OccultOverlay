@@ -33,25 +33,32 @@
     });
     return h + '</span>';
   };
-  // 半魂晶颜色后缀：如“（黄）”并用对应颜色字体
-  var DEMIATMA = { 47744: ['青', '#4aa3ff'], 47745: ['碧', '#2ec4b6'], 47746: ['绿', '#3ddb63'], 47747: ['橙', '#ff8a3c'], 47748: ['紫', '#b061ff'], 47749: ['黄', '#ffce4d'] };
-  UI.demiatmaSuffix = function (drops) {
+  // 关键奖励后缀：南征显示半魂晶颜色，北征显示消幻晶型号。
+  var REWARD_BADGES = {
+    47744: ['青', '#4aa3ff'], 47745: ['碧', '#2ec4b6'], 47746: ['绿', '#3ddb63'],
+    47747: ['橙', '#ff8a3c'], 47748: ['紫', '#b061ff'], 47749: ['黄', '#ffce4d'],
+    50974: ['α', '#79c8ff'], 50975: ['β', '#bb9cff'], 50976: ['γ', '#ffb86b']
+  };
+  UI.rewardSuffix = function (drops) {
     var out = '';
     (drops || []).forEach(function (id) {
-      if (DEMIATMA[id]) out += '<span class="dm-c" style="color:' + DEMIATMA[id][1] + '">（' + DEMIATMA[id][0] + '）</span>';
+      if (REWARD_BADGES[id]) out += '<span class="dm-c" style="color:' + REWARD_BADGES[id][1] + '">（' + REWARD_BADGES[id][0] + '）</span>';
     });
     return out;
   };
-  // 仅当玩家开启了该颜色的提示时才显示颜色后缀
-  UI.demiatmaSuffixIfWanted = function (drops) {
+  // 仅显示玩家已开启播报的关键奖励后缀。
+  UI.rewardSuffixIfWanted = function (drops) {
     var want = OC.Settings.get('alertColors') || {};
-    return UI.demiatmaSuffix((drops || []).filter(function (id) { return want[id]; }));
+    return UI.rewardSuffix((drops || []).filter(function (id) { return want[id]; }));
   };
+  // 保留旧接口，避免缓存未完全刷新时发生调用错误。
+  UI.demiatmaSuffix = UI.rewardSuffix;
+  UI.demiatmaSuffixIfWanted = UI.rewardSuffixIfWanted;
 
   UI.dropTags = function (ids) {
     var cats = {};
     (ids || []).forEach(function (id) { var it = OC.ITEMS[id]; if (it) cats[it.cat] = true; });
-    return ['demiatma', 'notes', 'soulshard', 'accessory', 'misc'].filter(function (c) { return cats[c]; })
+    return ['demiatma', 'dispeller', 'notes', 'soulshard', 'accessory', 'misc'].filter(function (c) { return cats[c]; })
       .map(function (c) { return '<span class="cat-tag" style="--c:' + OC.DROP_CAT[c].color + '">' + t(c) + '</span>'; }).join('');
   };
 
@@ -89,17 +96,39 @@
     h += '<div class="panel-body">';
     if (!hist) h += '<div class="dc-empty">' + t('loading') + '</div>';
     else {
-      h += section(t('ce'), hist.ce, 'ce', n);
-      h += section(t('fate'), hist.fate, 'fate', n);
-      h += section(t('pot'), hist.pot, 'pot', n, OC.Pots.status(hist.pot, n));
+      var territory = Number(hist.territory) ||
+        Number(OC.Overlay && OC.Overlay.territoryId) ||
+        Number(OC.MAP && OC.MAP.territory) || 0;
+      h += section(t('ce'), hist.ce, 'ce', n, null, territory);
+      h += section(t('fate'), hist.fate, 'fate', n, null, territory);
+      h += section(t('pot'), hist.pot, 'pot', n, OC.Pots.status(hist.pot, n), territory);
     }
     h += '</div>';
     host.innerHTML = h;
   };
 
-  function section(title, arr, type, n, potStatus) {
+  function completeHistory(arr, type, territory) {
+    var zone = OC.TERRITORIES && OC.TERRITORIES[territory];
+    var key = type === 'ce' ? 'ceIds' : type === 'pot' ? 'potIds' : 'fateIds';
+    if (!zone || !zone[key]) return arr || [];
+    var byId = {};
+    (arr || []).forEach(function (entry) {
+      if (entry && entry.fate_id != null) byId[Number(entry.fate_id)] = entry;
+    });
+    return zone[key].map(function (id) {
+      return byId[id] || {
+        fate_id: id,
+        spawn_time: -1,
+        death_time: -1,
+        last_seen: -1,
+        respawn_times: []
+      };
+    });
+  }
+
+  function section(title, arr, type, n, potStatus, territory) {
     var h = '<div class="p-sec"><div class="p-sec-h">' + title + '</div>';
-    (arr || []).forEach(function (e) {
+    completeHistory(arr, type, territory).forEach(function (e) {
       var def = type === 'ce' ? OC.CES[e.fate_id] : type === 'pot' ? OC.POTS[e.fate_id] : OC.FATES[e.fate_id];
       if (def) h += rowHtml(e, def, type, n, potStatus);
     });

@@ -22,6 +22,13 @@ assert.equal(OC.TERRITORIES[1346].ceIds.length, 17);
 assert.equal(OC.FATES[2074].name.en, 'Raging Thrall');
 assert.equal(OC.POTS[2072].name.en, 'Daylight Pottery (North)');
 assert.equal(OC.CES[65].name.en, 'The Forked Tower: Magic (Extreme)');
+assert.equal(OC.ITEMS[50974].name.zh, '消幻晶α');
+assert.equal(OC.ITEMS[50975].name.en, 'Phantom Dispeller β');
+assert.equal(OC.ITEMS[50976].img, 'ui/icon/026000/026230.tex');
+assert.deepEqual(Array.from(OC.FATES[2074].drops), [50974, 50975, 50976]);
+assert.deepEqual(Array.from(OC.POTS[2072].drops), [50974, 50975, 50976]);
+assert.deepEqual(Array.from(OC.CES[49].drops), [50974, 50975, 50976]);
+assert.deepEqual(Array.from(OC.CES[64].drops), []);
 
 assert.equal(OC.selectMap(1346), true);
 assert.equal(OC.MAP.background, 'assets/map-north.png');

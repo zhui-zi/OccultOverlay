@@ -29,16 +29,30 @@ const sandbox = {
   },
   OC: {
     CES: {
-      49: { name: { en: 'Test CE' }, drops: [47744] },
+      49: { name: { en: 'Test CE' }, drops: [50974] },
     },
     FATES: {
-      2074: { name: { en: 'Test FATE' }, drops: [47744] },
+      2074: { name: { en: 'Test FATE' }, drops: [50974] },
     },
     POTS: {
-      2072: { name: { en: 'Test Pot' }, drops: [] },
+      2072: { name: { en: 'Test Pot' }, drops: [50974] },
     },
     ITEMS: {
-      47744: { name: { en: 'Test Demiatma' } },
+      50974: { name: { en: 'Test Dispeller' } },
+      50975: { name: { en: 'Test Dispeller Beta' } },
+      50976: { name: { en: 'Test Dispeller Gamma' } },
+    },
+    Overlay: {
+      territoryId: 1346,
+      connected: true,
+      inOccult: true,
+      memActive: {},
+    },
+    MAP: {
+      territory: 1346,
+    },
+    Map: {
+      updateHighlights() {},
     },
     Settings: {
       get(key) {
@@ -54,7 +68,7 @@ const sandbox = {
       esc(value) {
         return String(value);
       },
-      demiatmaSuffix() {
+      rewardSuffix() {
         return '';
       },
     },
@@ -94,6 +108,27 @@ assert.equal(markup, '');
 sandbox.OC.App.updateActive();
 assert.equal(writes, 3, 'the hidden state must not be rewritten every tick');
 
+showActiveChips = true;
+sandbox.OC.Overlay.memActive = { 2074: true };
+sandbox.OC.App._island = {
+  ce: [{ fate_id: 49, spawn_time: 100, death_time: -1 }],
+  fate: [{ fate_id: 2074, spawn_time: 100, death_time: -1 }],
+  pot: [{ fate_id: 2072, spawn_time: 100, death_time: -1 }],
+};
+sandbox.OC.App.refreshHighlights();
+assert.deepEqual(
+  Array.from(sandbox.OC.State.highlights).sort((a, b) => a - b),
+  [49, 2074],
+  'connected North Horn must merge strict-island cloud CE when CEDirector is unavailable',
+);
+sandbox.OC.Overlay.connected = false;
+sandbox.OC.App.refreshHighlights();
+assert.deepEqual(
+  Array.from(sandbox.OC.State.highlights).sort((a, b) => a - b),
+  [49, 2072, 2074],
+  'disconnected mode may use every shared active event',
+);
+
 const alerts = [];
 sandbox.OC.App.fireAlert = function (kind, message, key) {
   alerts.push({ kind, message, key });
@@ -119,17 +154,54 @@ assert.deepEqual(alerts.map((entry) => entry.message), [
 sandbox.OC.App.alertEncounter(49);
 assert.equal(alerts.length, 3, 'an active encounter must only be announced once');
 
+sandbox.OC.Overlay.connected = true;
+sandbox.OC.Overlay.inOccult = true;
+sandbox.OC.App._island = { ce: [], fate: [], pot: [] };
+sandbox.OC.App._alerted = {};
+sandbox.OC.App.checkIslandAlerts({
+  ce: [{ fate_id: 49, spawn_time: 200, death_time: -1 }],
+  fate: [{ fate_id: 2074, spawn_time: 200, death_time: -1 }],
+  pot: [{ fate_id: 2072, spawn_time: 200, death_time: -1 }],
+});
+assert.deepEqual(
+  alerts.slice(3).map((entry) => entry.kind),
+  ['ce'],
+  'strict-island cloud fallback must announce CE only while connected in-zone',
+);
+
 alertAllEncounters = false;
 alertPot = true;
-alertColors = { 47744: true };
+alertColors = { 50974: true };
 sandbox.OC.App._alerted = {};
 sandbox.OC.App.alertEncounter(49);
 sandbox.OC.App.alertEncounter(2074);
 sandbox.OC.App.alertEncounter(2072);
-assert.deepEqual(alerts.slice(3).map((entry) => entry.message), [
-  'Test CE · Test Demiatma',
-  'Test FATE · Test Demiatma',
+assert.deepEqual(alerts.slice(4).map((entry) => entry.message), [
+  'Test CE · Test Dispeller',
+  'Test FATE · Test Dispeller',
   'Test Pot',
 ]);
+
+const settingsControls = {
+  '#s-op': { value: '0.9', addEventListener() {} },
+  '#s-scale': { value: '1', addEventListener() {} },
+  '#s-chips': { checked: true, addEventListener() {} },
+  '#s-repo': { addEventListener() {} },
+};
+const settingsPop = {
+  innerHTML: '',
+  querySelector(selector) {
+    return settingsControls[selector] || null;
+  },
+  querySelectorAll() {
+    return [];
+  },
+};
+sandbox.OC.App.renderSettings(settingsPop);
+assert.match(settingsPop.innerHTML, /alert_dispeller/);
+assert.match(settingsPop.innerHTML, /Test Dispeller/);
+assert.match(settingsPop.innerHTML, /Test Dispeller Beta/);
+assert.match(settingsPop.innerHTML, /Test Dispeller Gamma/);
+assert.doesNotMatch(settingsPop.innerHTML, /Test Demiatma/);
 
 console.log('main tests passed');

@@ -17,7 +17,7 @@
       no_ce: '暂无', next: '下一个', respawn: '重生',
       pot_active: '进行中', pot_next: '下一罐', pot_north: '北', pot_south: '南', pot_soon: '即将出现',
       alive: '存活', gone: '已消失', unknown: '—', last_seen: '上次',
-      drops: '掉落', demiatma: '半魂晶', notes: '调查记录', soulshard: '灵魂碎晶', accessory: '饰品', misc: '其他',
+      drops: '掉落', demiatma: '半魂晶', dispeller: '消幻晶', notes: '调查记录', soulshard: '灵魂碎晶', accessory: '饰品', misc: '其他',
       trigger_mob: '触发怪', loc: '位置',
       layer_bronze: '铜宝箱', layer_silver: '银宝箱', layer_potN: '北罐', layer_potS: '南罐',
       layer_reroll: '额外机会', layer_bunny: '胡萝卜',
@@ -35,6 +35,7 @@
       auto_hint: '数据自动来自国服四大区云端，无需任何设置；点击列表中的岛可查看该岛 CE/FATE。',
       alert_title: '提示', alert_all: '播报所有 CE / FATE / 魔法罐',
       alert_pot_opt: '魔法罐出现前3分钟提示', alert_demiatma: '出现掉落以下半魂晶的 CE/FATE 时提示：',
+      alert_dispeller: '出现掉落以下消幻晶的 CE/FATE 时提示：',
       alert_tts: '语音提示', alert_pot: '魔法罐出现', pot_pre_alert: '魔法罐即将出现',
       my_island_hint: '点击查看你所在岛的 CE/FATE（?=同大区多岛未能确认）', set_show_chips: '显示当前 FATE/CE 胶囊', chips_hidden: '已隐藏（可在设置中重新打开）'
     },
@@ -47,7 +48,7 @@
       no_ce: 'None', next: 'Next', respawn: 'Respawn',
       pot_active: 'Active', pot_next: 'Next pot', pot_north: 'N', pot_south: 'S', pot_soon: 'Soon',
       alive: 'Alive', gone: 'Gone', unknown: '—', last_seen: 'Last',
-      drops: 'Drops', demiatma: 'Demiatma', notes: 'Notes', soulshard: 'Soul Shard', accessory: 'Accessory', misc: 'Misc',
+      drops: 'Drops', demiatma: 'Demiatma', dispeller: 'Phantom Dispeller', notes: 'Notes', soulshard: 'Soul Shard', accessory: 'Accessory', misc: 'Misc',
       trigger_mob: 'Trigger', loc: 'Loc',
       layer_bronze: 'Bronze', layer_silver: 'Silver', layer_potN: 'N Pot', layer_potS: 'S Pot',
       layer_reroll: 'Reroll', layer_bunny: 'Carrot',
@@ -65,6 +66,7 @@
       auto_hint: 'Data is loaded automatically from the CN datacenters; click an island to see its CE/FATE.',
       alert_title: 'Alerts', alert_all: 'Alert on every CE / FATE / pot',
       alert_pot_opt: 'Alert 3 min before a pot', alert_demiatma: 'Alert on CE/FATE dropping these demiatma:',
+      alert_dispeller: 'Alert on CE/FATE dropping these Phantom Dispellers:',
       alert_tts: 'Voice', alert_pot: 'Pot spawned', pot_pre_alert: 'Pot spawning soon',
       my_island_hint: 'Click to see your island CE/FATE (? = island unconfirmed)', set_show_chips: 'Show active FATE/CE chips', chips_hidden: 'Hidden (re-enable in settings)'
     },
@@ -77,7 +79,7 @@
       no_ce: 'なし', next: '次', respawn: 'リポップ',
       pot_active: '進行中', pot_next: '次のポット', pot_north: '北', pot_south: '南', pot_soon: 'まもなく',
       alive: '出現中', gone: '消滅', unknown: '—', last_seen: '前回',
-      drops: 'ドロップ', demiatma: 'デミアートマ', notes: '探査記録', soulshard: 'ソウルシャード', accessory: 'アクセ', misc: 'その他',
+      drops: 'ドロップ', demiatma: 'デミアートマ', dispeller: 'ファントムディスペラー', notes: '探査記録', soulshard: 'ソウルシャード', accessory: 'アクセ', misc: 'その他',
       trigger_mob: 'トリガー', loc: '位置',
       layer_bronze: '銅宝箱', layer_silver: '銀宝箱', layer_potN: '北ポット', layer_potS: '南ポット',
       layer_reroll: 'リロール', layer_bunny: 'キャロット',
@@ -95,6 +97,7 @@
       auto_hint: 'データは中国4DCから自動取得。設定不要。島をクリックでCE/FATE表示。',
       alert_title: '通知', alert_all: 'すべてのCE / FATE / ポットを通知',
       alert_pot_opt: 'ポット出現3分前に通知', alert_demiatma: '以下のデミアートマをドロップするCE/FATE出現で通知：',
+      alert_dispeller: '以下のファントムディスペラーをドロップするCE/FATE出現で通知：',
       alert_tts: '音声通知', alert_pot: 'ポット出現', pot_pre_alert: 'ポットまもなく出現',
       my_island_hint: 'クリックで自分の島のCE/FATE（?=島未確定）', set_show_chips: '現在のFATE/CEを表示', chips_hidden: '非表示にしました（設定で再表示）'
     }

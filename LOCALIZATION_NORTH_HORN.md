@@ -35,5 +35,8 @@ Fill the `zh-CN` column. English remains the runtime fallback until a translatio
 | CE | 63 | Accept No Imitators |  |
 | Tower | 64 | The Forked Tower: Magic |  |
 | Tower | 65 | The Forked Tower: Magic (Extreme) |  |
+| Reward Item | 50974 | Phantom Dispeller α | 消幻晶α |
+| Reward Item | 50975 | Phantom Dispeller β | 消幻晶β |
+| Reward Item | 50976 | Phantom Dispeller γ | 消幻晶γ |
 
-North Horn rewards, trigger monsters, and static coffer/pot/carrot locations are not present in the source dataset yet.
+North Horn trigger monsters and static coffer/pot/carrot locations are not present in the source dataset yet.

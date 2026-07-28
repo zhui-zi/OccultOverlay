@@ -207,7 +207,12 @@
       var request = rowId ? OC.Api.fetchTrackerRow(rowId) : OC.Api.fetchTracker(id);
       request.then(function (rec) {
         if (!rec) return;
-        State.detail = { ce: pj(rec.encounter_history), fate: pj(rec.fate_history), pot: pj(rec.pot_history) };
+        State.detail = {
+          territory: Number(rec.territory) || Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0,
+          ce: pj(rec.encounter_history),
+          fate: pj(rec.fate_history),
+          pot: pj(rec.pot_history)
+        };
         if (App.openPanel === 'battle') App.renderPanel();
       }).catch(function () {});
     },
@@ -240,9 +245,9 @@
           body += '<span class="s">' + t('loading') + '</span>';
         } else if (mine) {
           var side = mine.side ? '<span class="side-' + mine.side + '">' + (mine.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
-          // 魔法罐掉落的半魂晶（北=黄/南=碧）：仅在玩家开启了该颜色提示时显示
+          // 仅显示玩家已开启播报的当前区域关键奖励。
           var pdef = potForSide(mine.side, OC.Overlay.territoryId || (OC.MAP && OC.MAP.territory));
-          if (pdef) side += OC.UI.demiatmaSuffixIfWanted(pdef.drops);
+          if (pdef) side += OC.UI.rewardSuffixIfWanted(pdef.drops);
           if (mine.alive) { body += '<span class="s a">' + t('alive') + '</span> ' + side; ready = true; }
           else { body += '<b>' + OC.UI.fmtDur(Math.max(0, mine.etaSec)) + '</b> ' + side; ready = mine.etaSec <= 60; }
         } else {
@@ -321,7 +326,7 @@
           var def = isCe ? OC.CES[id] : isPot ? OC.POTS[id] : OC.FATES[id];
           if (!def) return '';
           var cls = isCe ? 'ce' : isPot ? 'pot' : 'fate';
-          return '<div class="chip chip-act ' + cls + '">' + OC.UI.esc(nm(def.name)) + demiatmaSuffix(def.drops) + '</div>';
+          return '<div class="chip chip-act ' + cls + '">' + OC.UI.esc(nm(def.name)) + rewardSuffix(def.drops) + '</div>';
         }).join('');
       }
       // Position polling and the one-second timer both call this method.
@@ -416,7 +421,12 @@
       request.then(function (rec) {
         if (!rec) return;
         if ((rowId && App.myIslandRowId !== rowId) || (!rowId && App.myIslandId !== id)) return;
-        var h = { ce: pj(rec.encounter_history), fate: pj(rec.fate_history), pot: pj(rec.pot_history) };
+        var h = {
+          territory: Number(rec.territory) || Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0,
+          ce: pj(rec.encounter_history),
+          fate: pj(rec.fate_history),
+          pot: pj(rec.pot_history)
+        };
         App.checkIslandAlerts(h);
         App._island = h;
         App.refreshHighlights();
@@ -424,20 +434,22 @@
       }).catch(function () {});
     },
 
-    // 地图高亮 = 内存态(258/259，全岛且即时) ∪ 云端本岛 ∪ 视野内 boss
+    // 地图高亮 = 本机内存态 ∪ 已严格定位到本岛的云端状态。
     refreshHighlights: function () {
-      // 只用 258/259 内存态：它直接来自本机游戏内存，必定是自己这个岛的实际状态。
-      // 不再用“场上单位名字匹配”（模糊匹配会误判成别的 FATE/CE），
-      // 也不用云端数据（可能来自被误判的岛或已过期）。
+      // 258 FateDirector 是本机全岛状态，优先用于 FATE/魔法罐。
+      // 部分 ACT/游戏版本在北征完全不产出 259 CEDirector，因此 CE 必须合并
+      // 已通过 territory + world/DC + 玩家实例证据严格绑定的本岛 tracker。
       var ids = [];
       Object.keys(OC.Overlay.memActive || {}).forEach(function (k) {
         var id = Number(k); if (ids.indexOf(id) < 0) ids.push(id);
       });
       var trustLocalOnly = OC.Overlay.connected && OC.Overlay.inOccult;
       var isl = this._island;
-      if (!trustLocalOnly && isl) {
-        isl.ce.concat(isl.fate).concat(isl.pot).forEach(function (e) {
-          if (isAlive(e) && ids.indexOf(e.fate_id) < 0) ids.push(e.fate_id);
+      if (isl) {
+        var shared = trustLocalOnly ? isl.ce : isl.ce.concat(isl.fate).concat(isl.pot);
+        shared.forEach(function (e) {
+          var id = Number(e.fate_id);
+          if (isAlive(e) && id && ids.indexOf(id) < 0) ids.push(id);
         });
       }
       OC.State.highlights = ids;
@@ -458,7 +470,7 @@
       this.notifyEncounter(kind, id, def);
     },
 
-    // 播报筛选：总开关优先；关闭时保留原有魔法罐/半魂晶筛选行为。
+    // 播报筛选：总开关优先；关闭时使用魔法罐和当前区域关键奖励筛选。
     notifyEncounter: function (kind, id, def) {
       if (OC.Settings.get('alertAllEncounters')) {
         this.fireAlert(kind, t('notify_' + kind) + ' · ' + nm(def.name), 'spawn:' + id);
@@ -476,12 +488,13 @@
     // 岛上 FATE/CE 刷新时提示：同一目标在“存活期间”只提示一次
     // （云端 spawn_time 会被不同上报者反复更新，不能用它判断“新出现”）
     checkIslandAlerts: function (h) {
-      // 在岛内时提示以本机内存为准（见 refreshHighlights），云端仅用于面板展示，
-      // 否则会因岛屿误判/数据过期播报本岛并不存在的 FATE/CE。
-      if (OC.Overlay.connected && OC.Overlay.inOccult) return;
+      // 岛内 FATE/魔法罐以本机 258 为准；北征 CE 在部分 ACT 版本没有 259，
+      // 因此允许已严格绑定到本岛的 tracker 补足 CE 播报。
+      var ceFallbackOnly = OC.Overlay.connected && OC.Overlay.inOccult;
       var first = !this._island;                 // 首次拉取该岛：只建立基线，不提示
       var alerted = this._alerted = this._alerted || {};
       ['ce', 'fate', 'pot'].forEach(function (tp) {
+        if (ceFallbackOnly && tp !== 'ce') return;
         h[tp].forEach(function (e) {
           var key = tp + ':' + e.fate_id;
           if (!isAlive(e)) {
@@ -562,14 +575,23 @@
     renderSettings: function (pop) {
       var g = OC.Settings.get.bind(OC.Settings);
       var colors = g('alertColors') || {};
-      var swatch = { 47744: '#4aa3ff', 47745: '#2ec4b6', 47746: '#3ddb63', 47747: '#ff8a3c', 47748: '#b061ff', 47749: '#ffce4d' };
+      var swatch = {
+        47744: '#4aa3ff', 47745: '#2ec4b6', 47746: '#3ddb63',
+        47747: '#ff8a3c', 47748: '#b061ff', 47749: '#ffce4d',
+        50974: '#79c8ff', 50975: '#bb9cff', 50976: '#ffb86b'
+      };
+      var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 1252;
+      var rewardIds = territory === 1346
+        ? [50974, 50975, 50976]
+        : [47744, 47745, 47746, 47747, 47748, 47749];
+      var rewardPrompt = territory === 1346 ? t('alert_dispeller') : t('alert_demiatma');
       var h = '<div class="panel-head">' + t('panel_settings') + '<button class="pclose" data-close>' + t('close') + '</button></div>';
       h += '<div class="panel-body settings">';
       h += '<div class="s-grp">' + t('alert_title') + '</div>';
       h += rowChk('a-all', t('alert_all'), g('alertAllEncounters'));
       h += rowChk('a-pot', t('alert_pot_opt'), g('alertPot'));
-      h += '<div class="s-sub">' + t('alert_demiatma') + '</div><div class="color-grid">';
-      [47744, 47745, 47746, 47747, 47748, 47749].forEach(function (id) {
+      h += '<div class="s-sub">' + rewardPrompt + '</div><div class="color-grid">';
+      rewardIds.forEach(function (id) {
         var it = OC.ITEMS[id], on = !!colors[id];
         h += '<label class="color-chk' + (on ? ' on' : '') + '" data-cid="' + id + '" style="--sc:' + swatch[id] + '">' +
           '<input type="checkbox" data-color="' + id + '"' + (on ? ' checked' : '') + '>' +
@@ -642,7 +664,7 @@
   function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }
   function isAlive(e) { return e && e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time); }
 
-  function demiatmaSuffix(drops) { return OC.UI.demiatmaSuffix(drops); }
+  function rewardSuffix(drops) { return OC.UI.rewardSuffix(drops); }
   function row(l, c) { return '<div class="s-row"><label>' + l + '</label>' + c + '</div>'; }
   function rowChk(id, l, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + l + '</label></div>'; }
   function bindChk(pop, id, key) {
