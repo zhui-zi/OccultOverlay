@@ -313,15 +313,23 @@
     updateActive: function () {
       var box = document.getElementById('chips-active');
       if (!box) return;
-      if (!OC.Settings.get('showActiveChips')) { box.innerHTML = ''; return; }
-      var ids = OC.State.highlights || [];
-      box.innerHTML = ids.map(function (id) {
-        var isCe = !!OC.CES[id], isPot = !!OC.POTS[id];
-        var def = isCe ? OC.CES[id] : isPot ? OC.POTS[id] : OC.FATES[id];
-        if (!def) return '';
-        var cls = isCe ? 'ce' : isPot ? 'pot' : 'fate';
-        return '<div class="chip chip-act ' + cls + '">' + OC.UI.esc(nm(def.name)) + demiatmaSuffix(def.drops) + '</div>';
-      }).join('');
+      var html = '';
+      if (OC.Settings.get('showActiveChips')) {
+        var ids = OC.State.highlights || [];
+        html = ids.map(function (id) {
+          var isCe = !!OC.CES[id], isPot = !!OC.POTS[id];
+          var def = isCe ? OC.CES[id] : isPot ? OC.POTS[id] : OC.FATES[id];
+          if (!def) return '';
+          var cls = isCe ? 'ce' : isPot ? 'pot' : 'fate';
+          return '<div class="chip chip-act ' + cls + '">' + OC.UI.esc(nm(def.name)) + demiatmaSuffix(def.drops) + '</div>';
+        }).join('');
+      }
+      // Position polling and the one-second timer both call this method.
+      // Preserve the existing glass-effect nodes unless their content changed;
+      // rebuilding identical nodes makes ACT's Chromium surface flash.
+      if (box._ocActiveHtml === html) return;
+      box._ocActiveHtml = html;
+      box.innerHTML = html;
     },
 
     wireOverlay: function () {
