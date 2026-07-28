@@ -25,6 +25,7 @@
     showActiveChips: true,      // 顶部“当前 FATE/CE”胶囊（右键可隐藏）
     collapsed: false,
     useTts: true,               // 语音提示（不可用时退回提示音）
+    alertAllEncounters: false,  // 播报所有 CE/FATE/魔法罐
     alertPot: false,            // 撒娇罐出现时提示
     alertColors: {},            // 半魂晶颜色提示：{ itemId: true }
     _alertScope: 'dc',          // 提示范围：dc=仅本大区

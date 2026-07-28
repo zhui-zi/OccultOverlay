@@ -450,14 +450,27 @@
       var isCe = !!OC.CES[id], isPot = !!OC.POTS[id];
       var def = isCe ? OC.CES[id] : isPot ? OC.POTS[id] : OC.FATES[id];
       if (!def) return;
-      var key = (isCe ? 'ce' : isPot ? 'pot' : 'fate') + ':' + id;
+      var kind = isCe ? 'ce' : isPot ? 'pot' : 'fate';
+      var key = kind + ':' + id;
       this._alerted = this._alerted || {};
       if (this._alerted[key]) return;
       this._alerted[key] = 1;
-      if (isPot) { if (OC.Settings.get('alertPot')) this.fireAlert('pot', nm(def.name), 'spawn:' + id); return; }
+      this.notifyEncounter(kind, id, def);
+    },
+
+    // 播报筛选：总开关优先；关闭时保留原有魔法罐/半魂晶筛选行为。
+    notifyEncounter: function (kind, id, def) {
+      if (OC.Settings.get('alertAllEncounters')) {
+        this.fireAlert(kind, t('notify_' + kind) + ' · ' + nm(def.name), 'spawn:' + id);
+        return;
+      }
+      if (kind === 'pot') {
+        if (OC.Settings.get('alertPot')) this.fireAlert('pot', nm(def.name), 'spawn:' + id);
+        return;
+      }
       var colors = OC.Settings.get('alertColors') || {};
       var hit = (def.drops || []).filter(function (d) { return colors[d]; })[0];
-      if (hit) this.fireAlert(isCe ? 'ce' : 'fate', nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')), 'spawn:' + id);
+      if (hit) this.fireAlert(kind, nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')), 'spawn:' + id);
     },
 
     // 岛上 FATE/CE 刷新时提示：同一目标在“存活期间”只提示一次
@@ -468,7 +481,6 @@
       if (OC.Overlay.connected && OC.Overlay.inOccult) return;
       var first = !this._island;                 // 首次拉取该岛：只建立基线，不提示
       var alerted = this._alerted = this._alerted || {};
-      var colors = OC.Settings.get('alertColors') || {};
       ['ce', 'fate', 'pot'].forEach(function (tp) {
         h[tp].forEach(function (e) {
           var key = tp + ':' + e.fate_id;
@@ -482,12 +494,7 @@
           if (first) return;                                   // 基线不提示
           var def = tp === 'ce' ? OC.CES[e.fate_id] : tp === 'pot' ? OC.POTS[e.fate_id] : OC.FATES[e.fate_id];
           if (!def) return;
-          if (tp === 'pot') {                                  // 撒娇罐出现即提示
-            if (OC.Settings.get('alertPot')) App.fireAlert('pot', nm(def.name), 'spawn:' + e.fate_id);
-            return;
-          }
-          var hit = (def.drops || []).filter(function (d) { return colors[d]; })[0];
-          if (hit) App.fireAlert(tp, nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')), 'spawn:' + e.fate_id);
+          App.notifyEncounter(tp, e.fate_id, def);
         });
       });
     },
@@ -559,6 +566,7 @@
       var h = '<div class="panel-head">' + t('panel_settings') + '<button class="pclose" data-close>' + t('close') + '</button></div>';
       h += '<div class="panel-body settings">';
       h += '<div class="s-grp">' + t('alert_title') + '</div>';
+      h += rowChk('a-all', t('alert_all'), g('alertAllEncounters'));
       h += rowChk('a-pot', t('alert_pot_opt'), g('alertPot'));
       h += '<div class="s-sub">' + t('alert_demiatma') + '</div><div class="color-grid">';
       [47744, 47745, 47746, 47747, 47748, 47749].forEach(function (id) {
@@ -590,6 +598,7 @@
         document.documentElement.style.setProperty('--ui-scale', sc.value);
       });
       bindChk(pop, 'a-pot', 'alertPot');
+      bindChk(pop, 'a-all', 'alertAllEncounters');
       bindChk(pop, 'a-tts', 'useTts');
       var chipsChk = pop.querySelector('#s-chips');
       if (chipsChk) chipsChk.addEventListener('change', function () {
