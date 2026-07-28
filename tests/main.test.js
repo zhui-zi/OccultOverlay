@@ -160,17 +160,16 @@ sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
 sandbox.OC.App.myIslandRowId = 1;
 sandbox.OC.App._localPot = null;
 sandbox.OC.Overlay.territoryId = 1346;
-assert.equal(sandbox.OC.App.usesLocalPotData(), true);
-assert.equal(sandbox.OC.App.localPotInfo(), null);
-assert.deepEqual(sandbox._lastPotMerge.shared, [], 'North Horn must ignore cloud pot history');
+assert.notEqual(sandbox.OC.App.localPotInfo(), null);
+assert.deepEqual(sandbox._lastPotMerge.shared, [cloudPot], 'North Horn accepts strict-island cloud pot history');
 
 sandbox.OC.App._localPot = { 2072: { active: true, lastSeen: 120 } };
 const updateOnlyPot = sandbox.OC.App.localPotInfo();
 assert.equal(updateOnlyPot.alive, true);
 assert.equal(updateOnlyPot.side, 'north');
-assert.equal(updateOnlyPot.nextEpoch, null);
-assert.equal(updateOnlyPot.etaSec, null);
-assert.equal(updateOnlyPot.local, true, 'an Update without Add must remain a local uncertain state');
+assert.equal(updateOnlyPot.nextEpoch, 1900);
+assert.equal(updateOnlyPot.etaSec, 1800);
+assert.equal(updateOnlyPot.local, true, 'a strict-island cloud spawn may anchor a local Update');
 
 sandbox.OC.App._localPot = { 2072: { active: false, spawnEpoch: 100, deathEpoch: 110, lastSeen: 110 } };
 assert.equal(sandbox.OC.App.localPotInfo().side, 'north');
@@ -178,7 +177,6 @@ assert.equal(sandbox._lastPotMerge.local.length, 1, 'an exact local Add must dri
 
 sandbox.OC.Overlay.territoryId = 1252;
 sandbox.OC.App._localPot = null;
-assert.equal(sandbox.OC.App.usesLocalPotData(), false);
 assert.notEqual(sandbox.OC.App.localPotInfo(), null);
 assert.equal(sandbox._lastPotMerge.shared.length, 1, 'South Horn keeps strict-island cloud fallback');
 

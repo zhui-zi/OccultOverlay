@@ -92,6 +92,13 @@
       });
     },
 
+    refreshRail: function () {
+      var rail = document.querySelector('.rail');
+      if (!rail) return;
+      rail.innerHTML = railHtml();
+      this.bindRail();
+    },
+
     toggleCollapse: function () {
       this.collapsed = !this.collapsed;
       OC.Settings.set('collapsed', this.collapsed);
@@ -185,15 +192,6 @@
       document.getElementById('popover').classList.add('hidden');
     },
 
-    // North Horn cloud pot history is not reliable enough for countdowns yet.
-    // Keep all player-facing North Horn pot timing strictly local.
-    usesLocalPotData: function (territory) {
-      territory = Number(territory) ||
-        Number(OC.Overlay.territoryId) ||
-        Number(OC.MAP && OC.MAP.territory) || 0;
-      return territory === 1346;
-    },
-
     renderPanel: function () {
       var pop = document.getElementById('popover');
       // 保持滚动位置（面板每秒重绘，避免被顶回最上）
@@ -221,7 +219,7 @@
           territory: territory,
           ce: pj(rec.encounter_history),
           fate: pj(rec.fate_history),
-          pot: App.usesLocalPotData(territory) ? [] : pj(rec.pot_history)
+          pot: pj(rec.pot_history)
         };
         if (App.openPanel === 'battle') App.renderPanel();
       }).catch(function () {});
@@ -239,7 +237,7 @@
       // 网络数据每 5 秒刷新一次；两次请求之间仍需按当前时间推进 30 分钟轮次，
       // 否则倒计时到 0 后会停在“即将出现”。
       if (this._dcRows) {
-        this._dc = this.usesLocalPotData() ? [] : OC.Pots.dcOverview(this._dcRows, now());
+        this._dc = OC.Pots.dcOverview(this._dcRows, now());
       }
       var conn = document.getElementById('chip-conn');
       if (conn) {
@@ -263,8 +261,7 @@
           if (mine.alive) { body += '<span class="s a">' + t('alive') + '</span> ' + side; ready = true; }
           else { body += '<b>' + OC.UI.fmtDur(Math.max(0, mine.etaSec)) + '</b> ' + side; ready = mine.etaSec <= 60; }
         } else {
-          // 北征等待本机 258 Add 锚点；南征仍等待严格实例定位。
-          body += '<span class="s">' + t(this.usesLocalPotData() ? 'pot_wait_local' : 'locating') + '</span>';
+          body += '<span class="s">' + t('locating') + '</span>';
         }
         pot.classList.toggle('ready', ready);
         pot.innerHTML = body;
@@ -272,12 +269,10 @@
       this.updateActive();
     },
 
-    // 本机 Add/Remove 优先；南征云端只允许来自已用强证据绑定的数据库行。
-    // 北征暂时完全禁用云端 pot_history，避免显示错误轮次。
+    // 本机 Add/Remove 优先；云端只允许来自已用强证据绑定的数据库行。
     localPotInfo: function () {
-      var localOnly = this.usesLocalPotData();
-      var cloud = localOnly ? [] : (this._island && this._island.pot);
-      if (!localOnly && (!cloud || !cloud.length) && this.myIslandRowId) {
+      var cloud = this._island && this._island.pot;
+      if ((!cloud || !cloud.length) && this.myIslandRowId) {
         var overview = (this._dc || []).filter(function (item) {
           return item.rowId === App.myIslandRowId;
         })[0];
@@ -361,6 +356,7 @@
       OC.Overlay.on('zone', function (territoryId) {
         if (OC.selectMap && OC.selectMap(territoryId)) {
           OC.Map.render(document.getElementById('mapLayer'));
+          App.refreshRail();
         }
         App.resetIsland();
         App.updateChips(); App.updateMapVisible();
@@ -411,8 +407,7 @@
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 1252;
       OC.Api.fetchDcPots(CN_DCS, 1800, territory).then(function (rows) {
         App._dcRows = rows;
-        // 北征云端行仅用于严格定位本岛与补足 CE，不用于罐计时。
-        App._dc = App.usesLocalPotData(territory) ? [] : OC.Pots.dcOverview(rows);
+        App._dc = OC.Pots.dcOverview(rows);
         App._islands = OC.Pots.islandList(rows);  // 全部活跃岛（用于识别所在岛，不依赖罐数据）
         App._dcLoaded = true;
         App.resolveMyIsland();
@@ -441,7 +436,7 @@
           territory: territory,
           ce: pj(rec.encounter_history),
           fate: pj(rec.fate_history),
-          pot: App.usesLocalPotData(territory) ? [] : pj(rec.pot_history)
+          pot: pj(rec.pot_history)
         };
         App.checkIslandAlerts(h);
         App._island = h;
@@ -691,9 +686,10 @@
 
   function railHtml() {
     var L = OC.MAP_LAYERS, layers = OC.Settings.get('mapLayers');
-    var labels = { bronze: '铜', silver: '银', potN: '北', potS: '南', reroll: '续', bunny: '萝' };
+    var labels = { bronze: '铜', silver: '银', potN: '北', potS: '南', potAny: '罐', reroll: '续', bunny: '萝' };
     var h = '';
     L.forEach(function (l) {
+      if (!OC.MAP.points[l.src] || !OC.MAP.points[l.src].length) return;
       h += '<button class="rbtn' + (layers[l.key] ? ' on' : '') + '" data-layer="' + l.key + '" title="' + OC.i18n.t('layer_' + l.key) + '" style="--rc:' + l.color + '">' + labels[l.key] + '</button>';
     });
     h += '<div class="rail-div"></div>';

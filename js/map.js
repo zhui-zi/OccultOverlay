@@ -11,6 +11,7 @@
     { key: 'silver', src: 'silver', color: '#e8eef5', r: 17 },
     { key: 'potN', src: 'potNorth', color: '#4a90ff', r: 16, ring: true },
     { key: 'potS', src: 'potSouth', color: '#ff8a3c', r: 16, ring: true },
+    { key: 'potAny', src: 'potAny', color: '#79c8ff', r: 16, ring: true },
     { key: 'reroll', src: 'reroll', color: '#c56bff', r: 15, diamond: true },
     { key: 'bunny', src: 'bunny', color: '#3ddb63', r: 15, tri: true }
   ];
