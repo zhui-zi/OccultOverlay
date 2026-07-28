@@ -1,15 +1,19 @@
 /* =========================================================================
- * mapPoints.js — 新月岛（South Horn / territory 1252）真实点位坐标
+ * mapPoints.js — 新月岛（South Horn / North Horn）地图与点位坐标
  *
- * 数据来自 EurekaTrackerAutoPopper（作者本人仓库）。坐标为游戏世界坐标 [x, z]。
- * 地图贴图 assets/map.png 为 2048x2048（Map o6b1/01，SizeFactor=100, Offset=0），
+ * 数据来自 EurekaTrackerAutoPopper。坐标为游戏世界坐标 [x, z]。
+ * 两张地图均为 2048x2048（SizeFactor=100, Offset=0），
  * 世界坐标 -> 贴图像素：px = x + 1024, py = z + 1024。
- * 计数：铜60 银8 北罐30 南罐30 续罐20 萝卜25
+ * South Horn 点位计数：铜60 银8 北罐30 南罐30 续罐20 萝卜25。
+ * North Horn 静态点位仍为空；已接入 FATE/CE/魔法罐坐标。
  * ========================================================================= */
 (function (global) {
   'use strict';
   var OC = global.OC = global.OC || {};
-  OC.MAP = {
+  var southHorn = {
+    territory: 1252,
+    mapId: 967,
+    background: 'assets/map.png',
     texSize: 2048,
     center: 1024,          // px = world + center
     worldToPx: function (x, z) { return [x + 1024, z + 1024]; },
@@ -23,5 +27,65 @@
     },
     // CE(33-48) 来自 EurekaTrackerAutoPopper；FATE(1962-1972)/撒娇罐(1976,1977) 来自 BOCCHI（更准确）
     encounters: {33:[299.92,729.98],34:[450.29,356.47],35:[620.17,800.05],36:[680.91,534.07],37:[-340.12,800.06],38:[-413.44,74.69],39:[-799.85,245.2],40:[676.51,-254.43],41:[-117.02,-850.35],42:[629.34,-52.77],43:[-353.24,-606.3],44:[457.35,-357.9],45:[72.07,-549.96],46:[870.56,180.05],47:[-569.2,-158.8],48:[63.07,3.83],1962:[162.0,676.0],1963:[373.2,486.0],1964:[-226.1,254.0],1965:[-548.5,-595.0],1966:[-223.1,36.0],1967:[-48.1,-320.0],1968:[-370.0,650.0],1969:[-589.1,333.0],1970:[-71.0,557.0],1971:[79.0,278.0],1972:[413.0,-13.0],1976:[200.0,-215.0],1977:[-481.0,528.0]}
+  };
+
+  // North Horn data added by EurekaTrackerAutoPopper on 2026-07-28.
+  // The source currently has no coffer, pot, reroll, or carrot location lists.
+  var northHorn = {
+    territory: 1346,
+    mapId: 1135,
+    background: 'assets/map-north.png',
+    texSize: 2048,
+    center: 1024,
+    worldToPx: function (x, z) { return [x + 1024, z + 1024]; },
+    points: {
+      bronze: [],
+      silver: [],
+      potNorth: [],
+      potSouth: [],
+      reroll: [],
+      bunny: []
+    },
+    encounters: {
+      49: [-870, -560],
+      50: [-215, -65],
+      51: [-519, -641],
+      52: [659, 659],
+      53: [-688, 150],
+      54: [765, 0],
+      55: [170, -136],
+      56: [238, 367],
+      57: [224, -860],
+      58: [-390, 700],
+      59: [807, -562],
+      60: [152, 716],
+      61: [-150, -860],
+      62: [-82, 485],
+      63: [500, -310],
+      64: [63.07, 3.83],
+      65: [63.07, 3.83],
+      2072: [233, -470],
+      2073: [-505.28, 244.04],
+      2074: [724, 220],
+      2075: [510, -30],
+      2076: [95, 470],
+      2077: [330, -250],
+      2078: [-402, -253],
+      2079: [-170, -500],
+      2080: [-90, 866],
+      2081: [-440, -790],
+      2082: [-855.74, 482.15],
+      2083: [-661, -54],
+      2084: [140, -708]
+    }
+  };
+
+  OC.MAPS = { 1252: southHorn, 1346: northHorn };
+  OC.MAP = southHorn;
+  OC.selectMap = function (territoryId) {
+    var next = OC.MAPS[Number(territoryId)] || OC.MAP;
+    var changed = next !== OC.MAP;
+    OC.MAP = next;
+    return changed;
   };
 })(typeof window !== 'undefined' ? window : this);

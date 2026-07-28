@@ -1,13 +1,11 @@
 /* =========================================================================
  * map.js — 主视图：地图 + 点位图层 + CE/FATE 高亮 + 玩家位置
- * 底图 assets/map.png（2048x2048），世界坐标 (x,z) -> 像素 (x+1024, z+1024)。
+ * South Horn and North Horn both use 2048x2048, SizeFactor=100, Offset=0.
  * 只有底图受不透明度影响；标记始终清晰（不透明）。
  * ========================================================================= */
 (function (global) {
   'use strict';
   var OC = global.OC = global.OC || {};
-  var TEX = 2048;
-
   var LAYERS = [
     { key: 'bronze', src: 'bronze', color: '#e0912f', r: 15 },
     { key: 'silver', src: 'silver', color: '#e8eef5', r: 17 },
@@ -24,19 +22,22 @@
     render: function (container) {
       if (!container) return;
       var layers = OC.Settings.get('mapLayers');
-      var pts = OC.MAP.points;
-      var s = '<svg viewBox="0 0 ' + TEX + ' ' + TEX + '" class="map-svg" preserveAspectRatio="xMidYMid meet">';
+      var map = OC.MAP;
+      var tex = map.texSize || 2048;
+      var center = map.center || tex / 2;
+      var pts = map.points;
+      var s = '<svg viewBox="0 0 ' + tex + ' ' + tex + '" class="map-svg" preserveAspectRatio="xMidYMid meet">';
       // 仅底图受不透明度影响
       s += '<g class="map-bg">';
-      s += '<image href="assets/map.png" x="0" y="0" width="' + TEX + '" height="' + TEX + '" onerror="this.remove()"/>';
-      s += '<rect x="0" y="0" width="' + TEX + '" height="' + TEX + '" fill="#0a1018" opacity="0.15"/>';
+      s += '<image href="' + esc(map.background || 'assets/map.png') + '" x="0" y="0" width="' + tex + '" height="' + tex + '" onerror="this.remove()"/>';
+      s += '<rect x="0" y="0" width="' + tex + '" height="' + tex + '" fill="#0a1018" opacity="0.15"/>';
       s += '</g>';
 
       // 标记层（始终清晰）
       s += '<g class="map-marks">';
       LAYERS.forEach(function (L) {
         if (!layers[L.key]) return;
-        (pts[L.src] || []).forEach(function (p) { s += marker(p[0] + 1024, p[1] + 1024, L); });
+        (pts[L.src] || []).forEach(function (p) { s += marker(p[0] + center, p[1] + center, L); });
       });
       s += '</g>';
 
@@ -77,13 +78,14 @@
     var ids = (OC.State && OC.State.highlights) || [];
     // 实时坐标优先：bossPos 来自 getCombatants（走近 boss 时更新），否则用静态表
     var bossPos = (OC.Overlay && OC.Overlay.bossPos) || {};
+    var center = (OC.MAP && OC.MAP.center) || 1024;
     var s = '';
     ids.forEach(function (id) {
       // 优先使用实时 boss 坐标，回退到静态刷新点（BOCCHI/EurekaTrackerAutoPopper）
       var loc = bossPos[id] || OC.MAP.encounters[id]; if (!loc) return;
       var isCe = !!OC.CES[id];
       var col = isCe ? '#ff4d4d' : (OC.POTS[id] ? '#b061ff' : '#ffd24d');
-      var x = loc[0] + 1024, y = loc[1] + 1024;
+      var x = loc[0] + center, y = loc[1] + center;
       var label = OC.localName((OC.CES[id] || OC.FATES[id] || OC.POTS[id] || {}).name, OC.Settings.get('lang')) || '';
       s += '<g class="hi-mark">' +
         '<circle cx="' + x + '" cy="' + y + '" r="42" fill="none" stroke="' + col + '" stroke-width="8"/>' +
@@ -98,7 +100,8 @@
   function youMarker() {
     var pp = OC.Overlay && OC.Overlay.playerPos;
     if (!pp) return '';
-    var x = pp.x + 1024, y = pp.z + 1024;
+    var center = (OC.MAP && OC.MAP.center) || 1024;
+    var x = pp.x + center, y = pp.z + center;
     var g = '<g class="you">';
     // 面向：柔和的锥形视野扇（heading 弧度，0=朝南=向下）
     if (pp.h != null) {

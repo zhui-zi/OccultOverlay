@@ -1,6 +1,6 @@
 # Occult Crescent Overlay
 
-A map overlay for FFXIV's Occult Crescent (South Horn), for ACT / OverlayPlugin.
+A map overlay for FFXIV's Occult Crescent (South Horn and North Horn), for ACT / OverlayPlugin.
 Everything is automatic — no setup, no tracker id. Data comes from the shared cloud.
 
 ## Features

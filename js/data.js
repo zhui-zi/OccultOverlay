@@ -1,14 +1,33 @@
 /* =========================================================================
- * data.js — 新月岛（隐秘月华 / Occult Crescent · South Horn）静态数据
+ * data.js — 新月岛（Occult Crescent · South Horn / North Horn）静态数据
  *
  * FATE / CE / 撒娇罐 / 掉落物 定义。
- * 数据源：tracker.xivstats.com 的公开数据模型（PostgREST: OccultTrackerV3）。
- * name 里保留官方多语言（en/ja/de/fr），并补充社区中文（zh）。
+ * 数据源：EurekaTrackerAutoPopper 与 OccultTrackerV3。
+ * North Horn 新内容先保留英文，等待人工补充中文。
  * ========================================================================= */
 (function (global) {
   'use strict';
 
   var OC = global.OC = global.OC || {};
+
+  OC.TERRITORIES = {
+    1252: {
+      key: 'southHorn',
+      name: { zh: '新月岛 南征之章', en: 'Occult Crescent: South Horn', ja: '蜃気楼の島 クレセントアイル：南征編' },
+      mapId: 967,
+      fateIds: [1962, 1963, 1964, 1965, 1966, 1967, 1968, 1969, 1970, 1971, 1972],
+      potIds: [1976, 1977],
+      ceIds: [33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]
+    },
+    1346: {
+      key: 'northHorn',
+      name: { en: 'Occult Crescent: North Horn' },
+      mapId: 1135,
+      fateIds: [2074, 2075, 2076, 2077, 2078, 2079, 2080, 2081, 2082, 2083, 2084],
+      potIds: [2072, 2073],
+      ceIds: [49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65]
+    }
+  };
 
   // --- 后端与图标服务 -----------------------------------------------------
   OC.BACKEND = {
@@ -117,16 +136,31 @@
     1969: { name: { zh: '土壤守护者——癫泥怪', en: 'Sworn to Soil', ja: '土壌の守り手「マッドマッド」' }, drops: [47745], encounter_id: 18 },
     1970: { name: { zh: '监视之瞳——岛屿监视者', en: 'A Prying Eye', ja: '監視の瞳「アイルオブザーバー」' }, drops: [47744], encounter_id: 29 },
     1971: { name: { zh: '美丽的咒杀者——执行者', en: 'Fatal Allure', ja: '美しき呪殺者「イグゼクレーター」' }, drops: [47749], encounter_id: 17 },
-    1972: { name: { zh: '凶恶使魔——生命收割者', en: 'Serving Darkness', ja: '命の収奪者「ライフギャザラー」' }, drops: [47748], encounter_id: 24 }
+    1972: { name: { zh: '凶恶使魔——生命收割者', en: 'Serving Darkness', ja: '命の収奪者「ライフギャザラー」' }, drops: [47748], encounter_id: 24 },
+
+    // North Horn. English is the temporary localization source.
+    2074: { name: { en: 'Raging Thrall' }, drops: [], encounter_id: 0 },
+    2075: { name: { en: 'Eye to Eye' }, drops: [], encounter_id: 0 },
+    2076: { name: { en: 'Shoreline Showdown' }, drops: [], encounter_id: 0 },
+    2077: { name: { en: 'Waved Away' }, drops: [], encounter_id: 0 },
+    2078: { name: { en: 'Allure of the Occult' }, drops: [], encounter_id: 0 },
+    2079: { name: { en: 'Inconstant Gardener' }, drops: [], encounter_id: 0 },
+    2080: { name: { en: 'Territorial Dispute' }, drops: [], encounter_id: 0 },
+    2081: { name: { en: 'A Rotten Affair' }, drops: [], encounter_id: 0 },
+    2082: { name: { en: 'Gale-force Encounter' }, drops: [], encounter_id: 0 },
+    2083: { name: { en: 'Scale Model' }, drops: [], encounter_id: 0 },
+    2084: { name: { en: 'Thunderregnum' }, drops: [], encounter_id: 0 }
   };
 
-  // --- 撒娇罐 Pots（fate_id -> 定义），1976 北 / 1977 南 -----------------
+  // --- 撒娇罐 Pots（fate_id -> 定义） -----------------------------------
   OC.POTS = {
-    1976: { name: { zh: '幸福的魔法罐（北）', en: 'Pleading Pots (North)', ja: 'しあわせのマジックポット(北)' }, side: 'north', drops: [47749, 47738], encounter_id: 40 },
-    1977: { name: { zh: '瑟瑟发抖的魔法罐（南）', en: 'Persistent Pots (South)', ja: 'カチカチのマジックポット(南)' }, side: 'south', drops: [47745, 47737], encounter_id: 18 }
+    1976: { name: { zh: '幸福的魔法罐（北）', en: 'Pleading Pots (North)', ja: 'しあわせのマジックポット(北)' }, territory: 1252, side: 'north', drops: [47749, 47738], encounter_id: 40 },
+    1977: { name: { zh: '瑟瑟发抖的魔法罐（南）', en: 'Persistent Pots (South)', ja: 'カチカチのマジックポット(南)' }, territory: 1252, side: 'south', drops: [47745, 47737], encounter_id: 18 },
+    2072: { name: { en: 'Daylight Pottery (North)' }, territory: 1346, side: 'north', drops: [], encounter_id: 0 },
+    2073: { name: { en: 'In a Pot of Bother (South)' }, territory: 1346, side: 'south', drops: [], encounter_id: 0 }
   };
 
-  // --- 危命任务 CE（encounter_id -> 定义），33-47 常规 + 48 岔路塔 -------
+  // --- 危命任务 CE（encounter_id -> 定义） -------------------------------
   // spawn_type=true 表示由特定怪物（monster）击杀触发。
   OC.CES = {
     33: { name: { zh: '脑髓爱好者——夺心魔', en: 'Scourge of the Mind', ja: '脳髄愛好家「マインドフレイア」' }, drops: [49831, 49826, 47744], spawn_type: true, monster: { en: 'Crescent Monk', ja: 'クレセント・モンク' } },
@@ -144,7 +178,26 @@
     45: { name: { zh: '贩卖诅咒的商贩——金钱龟', en: 'Cursed Concern', ja: '呪いの商亀「コイントートス」' }, drops: [49827, 49832, 47747, 47733], spawn_type: false },
     46: { name: { zh: '城塞守卫——复原狮像', en: 'Eternal Watch', ja: '復元された獅子像「リペアドライオン」' }, drops: [49827, 49832, 47748], spawn_type: false },
     47: { name: { zh: '昏暗妖魂——鬼火苗', en: 'Flame of Dusk', ja: '昏き篝火「ヒンキーパンク」' }, drops: [49833, 49828, 47746], spawn_type: false },
-    48: { name: { zh: '两歧塔 力之塔', en: 'The Forked Tower: Blood', ja: 'フォークタワー：力の塔' }, drops: [47868, 47734, 47735, 47736, 47737], spawn_type: false, type: 'tower' }
+    48: { name: { zh: '两歧塔 力之塔', en: 'The Forked Tower: Blood', ja: 'フォークタワー：力の塔' }, drops: [47868, 47734, 47735, 47736, 47737], spawn_type: false, type: 'tower' },
+
+    // North Horn. Rewards and trigger monsters are not present in the source yet.
+    49: { name: { en: 'Many Mouths to Feed' }, drops: [], spawn_type: false },
+    50: { name: { en: 'Doubled Trouble' }, drops: [], spawn_type: false },
+    51: { name: { en: 'Quarried Away' }, drops: [], spawn_type: false },
+    52: { name: { en: 'Forbidden Folios' }, drops: [], spawn_type: false },
+    53: { name: { en: 'Cursed Resurgence' }, drops: [], spawn_type: false },
+    54: { name: { en: 'Imbalanced Diet' }, drops: [], spawn_type: false },
+    55: { name: { en: 'Web of Terror' }, drops: [], spawn_type: false },
+    56: { name: { en: 'A Beast Unleashed' }, drops: [], spawn_type: false },
+    57: { name: { en: 'Dark Artistry' }, drops: [], spawn_type: false },
+    58: { name: { en: 'Familiar Tactics' }, drops: [], spawn_type: false },
+    59: { name: { en: 'Appalling Behavior' }, drops: [], spawn_type: false },
+    60: { name: { en: 'Tiny Terror' }, drops: [], spawn_type: false },
+    61: { name: { en: 'Lost on the Wind' }, drops: [], spawn_type: false },
+    62: { name: { en: 'Ahead of the Competition' }, drops: [], spawn_type: false },
+    63: { name: { en: 'Accept No Imitators' }, drops: [], spawn_type: false },
+    64: { name: { en: 'The Forked Tower: Magic' }, drops: [], spawn_type: false, type: 'tower' },
+    65: { name: { en: 'The Forked Tower: Magic (Extreme)' }, drops: [], spawn_type: false, type: 'tower' }
   };
 
   // --- 撒娇罐时刻表常量（分钟），取自社区实测 ----------------------------

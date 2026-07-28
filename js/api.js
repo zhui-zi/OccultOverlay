@@ -8,8 +8,8 @@
  *   新建：  POST  body: 默认记录 + password + datacenter
  *
  * 记录字段：
- *   tracker_id, password, tracker_type, datacenter, last_update,
- *   encounter_history(CE 33-48), fate_history(1962-1972), pot_history(1976/1977)
+ *   tracker_id, password, tracker_type, territory, datacenter, last_update,
+ *   encounter_history, fate_history, pot_history
  * 每条 history 是 JSON 字符串，数组元素形如：
  *   { fate_id, spawn_time, death_time, last_seen, respawn_times, killed_fates, killed_ces }
  * ========================================================================= */
@@ -128,12 +128,13 @@
     },
 
     /** 拉取若干大区最近活跃的岛屿（含 pot_history），用于总览 */
-    fetchDcPots: function (dcList, sinceSec) {
+    fetchDcPots: function (dcList, sinceSec, territory) {
       var now = Math.floor(Date.now() / 1000);
       var url = OC.BACKEND.url +
         '?datacenter=in.(' + dcList.join(',') + ')' +
         '&last_update=gt.' + (now - sinceSec) +
-        '&select=id,tracker_id,datacenter,last_fate,last_update,pot_history,encounter_history,fate_history';
+        (territory ? '&territory=eq.' + encodeURIComponent(territory) : '') +
+        '&select=id,tracker_id,territory,datacenter,last_fate,last_update,pot_history,encounter_history,fate_history';
       return fetch(url, { headers: headers() }).then(function (r) {
         return r.ok ? r.json() : [];
       });

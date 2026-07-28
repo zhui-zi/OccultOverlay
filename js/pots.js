@@ -11,9 +11,11 @@
   'use strict';
   var OC = global.OC = global.OC || {};
   var RESPAWN = 1800;
-  var POT_IDS = [1976, 1977];
-  var OCCULT_FATE_MIN = 1962;
-  var OCCULT_FATE_MAX = 1972;
+  var POT_IDS = [1976, 1977, 2072, 2073];
+
+  function isContextFate(id) {
+    return (id >= 1962 && id <= 1972) || (id >= 2074 && id <= 2084);
+  }
 
   function parse(s) {
     if (Array.isArray(s)) return s;
@@ -189,7 +191,7 @@
       fateId = number(fateId, 0);
       observedEpoch = number(observedEpoch, 0);
       radius = Math.max(0, number(radius, 0));
-      if (!dc || fateId < OCCULT_FATE_MIN || fateId > OCCULT_FATE_MAX || !observedEpoch) return [];
+      if (!dc || !isContextFate(fateId) || !observedEpoch) return [];
       var hashes = [];
       for (var delta = -radius; delta <= radius; delta++) {
         hashes.push(contextFingerprint(dc, fateId, observedEpoch + delta));
@@ -285,6 +287,7 @@
           id: tracker.tracker_id,
           rowId: number(tracker.id, 0),
           fingerprint: tracker.last_fate || '',
+          territory: number(tracker.territory, 0),
           dc: tracker.datacenter,
           lastUpdate: tracker.last_update,
           ago: now - tracker.last_update,
@@ -294,7 +297,7 @@
           fateId: Pots.currentId(fates)
         };
         var identity = item.fingerprint ? 'f:' + item.fingerprint : 't:' + item.id;
-        var key = item.dc + ':' + identity;
+        var key = item.territory + ':' + item.dc + ':' + identity;
         var current = groups[key];
         if (!current || item.lastUpdate > current.lastUpdate ||
             (item.lastUpdate === current.lastUpdate && item.rowId > current.rowId)) {
@@ -316,6 +319,10 @@
       var scoped = dc ? islands.filter(function (item) {
         return number(item.dc, 0) === number(dc, 0);
       }) : islands.slice();
+      var territory = number(evidence.territory, 0);
+      if (territory) scoped = scoped.filter(function (item) {
+        return number(item.territory, 0) === territory;
+      });
 
       var hashes = evidence.fingerprints || [];
       if (hashes.length) {
@@ -356,6 +363,7 @@
           id: tracker.tracker_id,
           rowId: number(tracker.id, 0),
           fingerprint: tracker.last_fate || '',
+          territory: number(tracker.territory, 0),
           dc: tracker.datacenter,
           lastUpdate: tracker.last_update,
           ago: now - tracker.last_update,
@@ -377,7 +385,7 @@
           return Math.round(spawn / 60);
         }).join(',');
         var signature = item.fingerprint ? 'f:' + item.fingerprint : 'p:' + fallback;
-        var key = item.dc + ':' + signature;
+        var key = item.territory + ':' + item.dc + ':' + signature;
         counts[key] = (counts[key] || 0) + 1;
         var current = groups[key];
         if (!current || item.lastUpdate > current.lastUpdate ||

@@ -9,6 +9,16 @@
   var t = function (k) { return OC.i18n.t(k); };
   function nm(o) { return OC.localName(o, OC.Settings.get('lang')); }
   function now() { return Math.floor(Date.now() / 1000); }
+  function potForSide(side, territory) {
+    var found = null;
+    Object.keys(OC.POTS).some(function (key) {
+      var def = OC.POTS[key];
+      if (def.side !== side || Number(def.territory) !== Number(territory)) return false;
+      found = def;
+      return true;
+    });
+    return found;
+  }
   var CN_DCS = [101, 102, 103, 104];
 
   var State = OC.State = { highlights: [], detail: null, detailId: null };
@@ -101,10 +111,11 @@
         events.push({ fateId: id, spawnEpoch: Number(item.spawnEpoch) });
       });
       var fateEvents = events.filter(function (item) {
-        return item.fateId >= 1962 && item.fateId <= 1972;
+        return !!OC.FATES[item.fateId];
       }).sort(function (a, b) { return b.spawnEpoch - a.spawnEpoch; });
       var latest = fateEvents[0];
       var dc = Number(OC.Overlay.playerDc) || 0;
+      var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
       var key = latest && dc ? dc + ':' + latest.fateId + ':' + latest.spawnEpoch : '';
       if (this._evidenceKey !== key) {
         this._evidenceKey = key;
@@ -112,7 +123,7 @@
           ? OC.Pots.contextFingerprints(dc, latest.fateId, latest.spawnEpoch, 15)
           : [];
       }
-      return { fingerprints: this._contextFingerprints || [], events: events };
+      return { fingerprints: this._contextFingerprints || [], events: events, territory: territory };
     },
 
     // 仅接受 DR 指纹或唯一的本地 Add 时间匹配。普通“同 FATE 正在进行”
@@ -230,7 +241,7 @@
         } else if (mine) {
           var side = mine.side ? '<span class="side-' + mine.side + '">' + (mine.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
           // 魔法罐掉落的半魂晶（北=黄/南=碧）：仅在玩家开启了该颜色提示时显示
-          var pdef = OC.POTS[mine.side === 'north' ? 1976 : mine.side === 'south' ? 1977 : 0];
+          var pdef = potForSide(mine.side, OC.Overlay.territoryId || (OC.MAP && OC.MAP.territory));
           if (pdef) side += OC.UI.demiatmaSuffixIfWanted(pdef.drops);
           if (mine.alive) { body += '<span class="s a">' + t('alive') + '</span> ' + side; ready = true; }
           else { body += '<b>' + OC.UI.fmtDur(Math.max(0, mine.etaSec)) + '</b> ' + side; ready = mine.etaSec <= 60; }
@@ -320,7 +331,10 @@
         App.updateChips();
         App.updateMapVisible();
       });
-      OC.Overlay.on('zone', function () {
+      OC.Overlay.on('zone', function (territoryId) {
+        if (OC.selectMap && OC.selectMap(territoryId)) {
+          OC.Map.render(document.getElementById('mapLayer'));
+        }
         App.resetIsland();
         App.updateChips(); App.updateMapVisible();
       });
@@ -367,7 +381,8 @@
       if (throttled && this._lastDcFetch && tn - this._lastDcFetch < 3000) return;
       this._lastDcFetch = tn;
       // 30 分钟窗口：岛屿上报间隔可能较长，窗口太窄会导致识别不到所在岛
-      OC.Api.fetchDcPots(CN_DCS, 1800).then(function (rows) {
+      var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 1252;
+      OC.Api.fetchDcPots(CN_DCS, 1800, territory).then(function (rows) {
         App._dcRows = rows;
         App._dc = OC.Pots.dcOverview(rows);       // 撒娇罐总览（会过滤掉无罐数据的岛）
         App._islands = OC.Pots.islandList(rows);  // 全部活跃岛（用于识别所在岛，不依赖罐数据）

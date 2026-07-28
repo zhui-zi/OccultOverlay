@@ -19,10 +19,10 @@
 
   var OC = global.OC = global.OC || {};
 
-  // 新月岛（南方海域 / South Horn）区域判定。
+  // 新月岛（South Horn / North Horn）区域判定。
   // 官方 territoryId 若与默认不符，可在设置里覆盖；同时用区域名兜底匹配。
-  var OCCULT_TERRITORY_IDS = [1252, 1253, 1254]; // South Horn 及相关分区（可扩展）
-  var OCCULT_NAME_RE = /occult|crescent|south horn|新月|隠世|クレセント|południ|kreszent/i;
+  var OCCULT_TERRITORY_IDS = [1252, 1346];
+  var OCCULT_NAME_RE = /occult|crescent|south horn|north horn|新月|南征|北征|隠世|クレセント|południ|kreszent/i;
 
   function EventBus() { this._h = {}; }
   EventBus.prototype.on = function (name, cb) {
@@ -404,16 +404,24 @@
     else memChanged(fateId, true, detail); // Add / Update
   }
 
-  // CEDirector 的 ceKey 是 0-15 的序号，并非 DynamicEvent 行号(33-48)。
-  // 对应关系（与 cactbot zone_south_horn 一致）：0=两歧塔(48)，1-15 => 32+ceKey。
-  function ceKeyToId(k) { return k === 0 ? 48 : (k >= 1 && k <= 15) ? 32 + k : 0; }
+  // CEDirector uses a territory-local sequence instead of the DynamicEvent row.
+  // South: 0=tower 48, 1-15 => 33-47.
+  // North: 0=tower 64, 1-15 => 49-63, 16=extreme tower 65.
+  function ceKeyToId(k, territoryId) {
+    if (Number(territoryId) === 1346) {
+      if (k === 0) return 64;
+      if (k >= 1 && k <= 15) return 48 + k;
+      return k === 16 ? 65 : 0;
+    }
+    return k === 0 ? 48 : (k >= 1 && k <= 15) ? 32 + k : 0;
+  }
   OC.ceKeyToId = ceKeyToId;
 
   // 259|ts|popTime|timeRemaining|unk|ceKey(hex)|numPlayers|status|unk|progress|...
   function handleCeDirector(line) {
     var ceKey = parseInt(line[5], 16);
     if (isNaN(ceKey)) return;
-    var id = ceKeyToId(ceKey);
+    var id = ceKeyToId(ceKey, Overlay.territoryId);
     if (!id) return;
     var status = parseInt(line[7], 16) || 0;   // 0=未激活 1=招募人手 2=准备开始 3=战斗中
     var remain = parseInt(line[3], 16) || 0;
