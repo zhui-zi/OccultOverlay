@@ -37,6 +37,9 @@ assert.equal((host.innerHTML.match(/class="p-row pot/g) || []).length, 2);
 assert.match(host.innerHTML, /The Forked Tower: Magic \(Extreme\)/);
 assert.match(host.innerHTML, /Thunderregnum/);
 assert.match(host.innerHTML, /In a Pot of Bother \(South\)/);
+assert.match(host.innerHTML, /data-monster-image="assets\/trigger-monsters\/49\.png"/);
+assert.match(host.innerHTML, />▸ Crescent Wamoura<\/button>/);
+assert.doesNotMatch(host.innerHTML, /src="assets\/trigger-monsters\/49\.png"/, 'monster location images must load on demand');
 
 const locatingHost = { innerHTML: '' };
 sandbox.OC.UI.renderBattlePanel(locatingHost, null, null, true);

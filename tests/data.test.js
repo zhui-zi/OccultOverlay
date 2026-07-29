@@ -32,11 +32,20 @@ assert.equal(OC.CES[65].name.en, 'The Forked Tower: Magic (Extreme)');
 assert.equal(OC.CES[65].name.zh, '两歧塔 超魔之塔');
 assert.equal(OC.CES[65].type, 'tower-extreme');
 assert.equal(OC.CES[49].spawn_type, true);
-assert.equal(OC.CES[49].monster.en, 'Pelekys');
+assert.equal(OC.CES[49].monster.en, 'Crescent Wamoura');
+assert.equal(OC.CES[49].monster.zh, '新月瓦魔蛾');
+assert.equal(OC.CES[49].monster.ja, 'クレセント・ワモーラ');
 assert.equal(OC.CES[50].monster.en, 'Crescent Blackguard');
 assert.equal(OC.CES[53].monster.en, 'Crescent Big Horn');
 assert.equal(OC.CES[55].monster.en, 'Crescent Hellhound');
 assert.equal(OC.CES[61].monster.en, 'Crescent Wraith');
+for (const id of [49, 50, 53, 55, 61]) {
+  assert.equal(OC.CES[id].monster_image, `assets/trigger-monsters/${id}.png`);
+  const image = fs.readFileSync(require.resolve(`../${OC.CES[id].monster_image}`));
+  assert.equal(image.toString('ascii', 1, 4), 'PNG');
+}
+assert.equal(OC.ITEMS[49831].name.en, 'Occult Earrings of Magic');
+assert.equal(OC.ITEMS[49832].name.en, 'Occult Necklace of Magic');
 assert.equal(OC.ITEMS[50974].name.zh, '消幻晶α');
 assert.equal(OC.ITEMS[50975].name.en, 'Phantom Dispeller β');
 assert.equal(OC.ITEMS[50976].img, 'ui/icon/026000/026230.tex');

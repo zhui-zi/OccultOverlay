@@ -108,7 +108,23 @@
     }
     h += '</div>';
     host.innerHTML = h;
+    bindMonsterImages(host);
   };
+
+  function bindMonsterImages(host) {
+    if (!host.querySelectorAll) return;
+    host.querySelectorAll('[data-monster-image]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var row = button.closest('.p-row');
+        var map = row && row.querySelector('.monster-map');
+        var image = map && map.querySelector('img');
+        if (!map || !image) return;
+        if (!image.getAttribute('src')) image.setAttribute('src', button.getAttribute('data-monster-image'));
+        map.classList.toggle('hidden');
+        button.setAttribute('aria-expanded', map.classList.contains('hidden') ? 'false' : 'true');
+      });
+    });
+  }
 
   function completeHistory(arr, type, territory) {
     var zone = OC.TERRITORIES && OC.TERRITORIES[territory];
@@ -145,10 +161,20 @@
     var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + esc(nm(def.name)) + '</span>' + badge(e, def, n, alive, type, potStatus) + '</div>';
     var tags = '';
     if (def.type === 'tower') tags += '<span class="tag tw">' + t('tower') + '</span>';
-    if (def.spawn_type && def.monster) tags += '<span class="tag mob">▸ ' + esc(nm(def.monster)) + '</span>';
+    var monsterMap = '';
+    if (def.spawn_type && def.monster) {
+      if (def.monster_image) {
+        tags += '<button type="button" class="tag mob mob-loc" data-monster-image="' + esc(def.monster_image) +
+          '" aria-expanded="false" title="' + esc(t('loc')) + '">▸ ' + esc(nm(def.monster)) + '</button>';
+        monsterMap = '<div class="monster-map hidden"><img alt="' + esc(nm(def.monster)) + ' ' + esc(t('loc')) + '"></div>';
+      } else {
+        tags += '<span class="tag mob">▸ ' + esc(nm(def.monster)) + '</span>';
+      }
+    }
     if (def.side) tags += '<span class="tag side-' + def.side + '">' + (def.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>';
     tags += UI.dropTags(def.drops);
-    h += '<div class="p-row-mid">' + tags + '</div><div class="p-row-bot">' + UI.dropIcons(def.drops) + '</div></div>';
+    h += '<div class="p-row-mid">' + tags + '</div>' + monsterMap +
+      '<div class="p-row-bot">' + UI.dropIcons(def.drops) + '</div></div>';
     return h;
   }
   function avgInterval(e) {
