@@ -686,7 +686,7 @@
 
   function railHtml() {
     var L = OC.MAP_LAYERS, layers = OC.Settings.get('mapLayers');
-    var labels = { bronze: '铜', silver: '银', potN: '北', potS: '南', potAny: '罐', reroll: '续', bunny: '萝' };
+    var labels = { bronze: '铜', silver: '银', potN: '北', potS: '南', reroll: '续', bunny: '萝' };
     var h = '';
     L.forEach(function (l) {
       if (!OC.MAP.points[l.src] || !OC.MAP.points[l.src].length) return;

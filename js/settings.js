@@ -29,7 +29,7 @@
     alertPot: false,            // 撒娇罐出现时提示
     alertColors: {},            // 半魂晶颜色提示：{ itemId: true }
     _alertScope: 'dc',          // 提示范围：dc=仅本大区
-    mapLayers: { bronze: false, silver: false, potN: false, potS: false, potAny: false, reroll: false, bunny: false }
+    mapLayers: { bronze: false, silver: false, potN: false, potS: false, reroll: false, bunny: false }
   };
 
   var data = load();

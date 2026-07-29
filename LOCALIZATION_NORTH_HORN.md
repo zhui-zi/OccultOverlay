@@ -61,7 +61,6 @@ All current North Horn runtime strings are localized.
 
 | Key | English | zh-CN |
 | --- | --- | --- |
-| `layer_potAny` | Pot coffer | 魔法罐宝箱 |
 | `alert_dispeller_pending` | Per-event Phantom Dispeller drop mappings are not available yet. | 各 FATE/CE 的消幻晶掉落对应关系尚无数据。 |
 
 ## Confirmed Terms
@@ -74,4 +73,4 @@ These terms are already localized and require no action.
 | 50975 | Phantom Dispeller β | 消幻晶β |
 | 50976 | Phantom Dispeller γ | 消幻晶γ |
 
-Per-event Phantom Dispeller drops are still unavailable. Surface coffer, aggregate pot coffer, carrot, and trigger-monster data are integrated.
+Per-event Phantom Dispeller drops are still unavailable. Surface coffer, north/south pot coffer, reroll, carrot, and trigger-monster data are integrated.

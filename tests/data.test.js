@@ -54,20 +54,21 @@ const i18nSandbox = {
 };
 i18nSandbox.window = i18nSandbox;
 vm.runInNewContext(fs.readFileSync(require.resolve('../js/i18n.js'), 'utf8'), i18nSandbox, { filename: '../js/i18n.js' });
-assert.equal(i18nSandbox.OC.i18n.t('layer_potAny'), '魔法罐宝箱');
 assert.equal(i18nSandbox.OC.i18n.t('alert_dispeller_pending'), '各 FATE/CE 的消幻晶掉落对应关系尚无数据。');
 
 assert.equal(OC.selectMap(1346), true);
 assert.equal(OC.MAP.background, 'assets/map-north.png');
 assert.equal(OC.MAP.points.bronze.length, 55);
 assert.equal(OC.MAP.points.silver.length, 7);
-assert.equal(OC.MAP.points.potAny.length, 80);
+assert.equal(OC.MAP.points.potNorth.length, 30);
+assert.equal(OC.MAP.points.potSouth.length, 30);
+assert.equal(OC.MAP.points.reroll.length, 20);
 assert.equal(OC.MAP.points.bunny.length, 25);
 assert.deepEqual(Array.from(OC.MAP.encounters[2084]), [140, -708]);
 
 OC.Settings = {
   get(key) {
-    if (key === 'mapLayers') return { potAny: true };
+    if (key === 'mapLayers') return { potN: true, potS: true, reroll: true };
     if (key === 'lang') return 'en';
     return null;
   },
@@ -77,7 +78,9 @@ OC.State = { highlights: [] };
 vm.runInNewContext(fs.readFileSync(require.resolve('../js/map.js'), 'utf8'), sandbox, { filename: '../js/map.js' });
 const mapTarget = { innerHTML: '' };
 OC.Map.render(mapTarget);
-assert.equal((mapTarget.innerHTML.match(/fill="#79c8ff"/g) || []).length, 80);
+assert.equal((mapTarget.innerHTML.match(/fill="#4a90ff"/g) || []).length, 30);
+assert.equal((mapTarget.innerHTML.match(/fill="#ff8a3c"/g) || []).length, 30);
+assert.equal((mapTarget.innerHTML.match(/fill="#c56bff"/g) || []).length, 20);
 
 assert.equal(OC.selectMap(1252), true);
 assert.equal(OC.MAP.background, 'assets/map.png');
