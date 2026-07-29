@@ -24,6 +24,8 @@ assert.equal(OC.TERRITORIES[1346].name.zh, '蜃景幻界新月岛 北征之章')
 assert.equal(OC.FATES[2074].name.en, 'Raging Thrall');
 assert.equal(OC.FATES[2074].name.zh, '暴力牛魔—好战弥诺陶洛斯');
 assert.equal(OC.FATES[2074].name.ja, '暴力の牛魔「ミノタウロス・マキア」');
+assert.equal(OC.POTS[1976].name.en, 'Persistent Pots (North)');
+assert.equal(OC.POTS[1977].name.en, 'Pleading Pots (South)');
 assert.equal(OC.POTS[2072].name.en, 'Daylight Pottery (North)');
 assert.equal(OC.POTS[2073].name.zh, '被吹飞的魔法罐(南)');
 assert.equal(OC.CES[65].name.en, 'The Forked Tower: Magic (Extreme)');
@@ -79,6 +81,8 @@ assert.equal(OC.MAP.points.potSouth.length, 30);
 assert.equal(OC.MAP.points.reroll.length, 20);
 assert.equal(OC.MAP.points.bunny.length, 25);
 assert.deepEqual(Array.from(OC.MAP.encounters[2084]), [140, -708]);
+assert.equal(OC.MAP.encounters[64], undefined);
+assert.equal(OC.MAP.encounters[65], undefined);
 
 assert.equal(OC.selectMap(1346, { y: -100 }), true);
 assert.equal(OC.MAP.mapId, 1244);

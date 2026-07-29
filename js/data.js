@@ -162,8 +162,8 @@
 
   // --- 撒娇罐 Pots（fate_id -> 定义） -----------------------------------
   OC.POTS = {
-    1976: { name: { zh: '幸福的魔法罐（北）', en: 'Pleading Pots (North)', ja: 'しあわせのマジックポット(北)' }, territory: 1252, side: 'north', drops: [47749, 47738], encounter_id: 40 },
-    1977: { name: { zh: '瑟瑟发抖的魔法罐（南）', en: 'Persistent Pots (South)', ja: 'カチカチのマジックポット(南)' }, territory: 1252, side: 'south', drops: [47745, 47737], encounter_id: 18 },
+    1976: { name: { zh: '幸福的魔法罐（北）', en: 'Persistent Pots (North)', ja: 'しあわせのマジックポット(北)' }, territory: 1252, side: 'north', drops: [47749, 47738], encounter_id: 40 },
+    1977: { name: { zh: '瑟瑟发抖的魔法罐（南）', en: 'Pleading Pots (South)', ja: 'カチカチのマジックポット(南)' }, territory: 1252, side: 'south', drops: [47745, 47737], encounter_id: 18 },
     2072: { name: { zh: '被欺负的魔法罐(北)', en: 'Daylight Pottery (North)', ja: '隠されのマジックポット（北）' }, territory: 1346, side: 'north', drops: [], encounter_id: 0 },
     2073: { name: { zh: '被吹飞的魔法罐(南)', en: 'In a Pot of Bother (South)', ja: '飛ばされのマジックポット（南）' }, territory: 1346, side: 'south', drops: [], encounter_id: 0 }
   };
