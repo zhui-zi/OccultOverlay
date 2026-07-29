@@ -140,6 +140,24 @@
       });
     },
 
+    /** 按 DR 实例指纹直接查询本岛，避免先下载整个大区的活跃记录。 */
+    fetchIslandByFingerprints: function (fingerprints, territory, datacenter) {
+      fingerprints = (fingerprints || []).filter(function (value, index, all) {
+        return /^[0-9A-F]{64}$/i.test(String(value)) && all.indexOf(value) === index;
+      });
+      if (!fingerprints.length || !territory || !datacenter) return Promise.resolve([]);
+      var url = OC.BACKEND.url +
+        '?last_fate=in.(' + fingerprints.map(encodeURIComponent).join(',') + ')' +
+        '&territory=eq.' + encodeURIComponent(territory) +
+        '&datacenter=eq.' + encodeURIComponent(datacenter) +
+        '&select=id,tracker_id,territory,datacenter,last_fate,last_update,pot_history,encounter_history,fate_history' +
+        '&order=last_update.desc,id.desc';
+      return fetch(url, { headers: headers() }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      });
+    },
+
     /** 新建一个 tracker，返回 tracker_id */
     create: function (password, datacenter) {
       var rec = defaultRecord(password, datacenter);

@@ -260,4 +260,35 @@ assert.match(settingsPop.innerHTML, /alert_demiatma/);
 assert.match(settingsPop.innerHTML, /Test Demiatma 1/);
 assert.doesNotMatch(settingsPop.innerHTML, /alert_dispeller_pending/);
 
+let shownIsland = null;
+sandbox.OC.App.resolveMyIsland = function () { return 'mine'; };
+sandbox.OC.App.myIslandRowId = 42;
+sandbox.OC.App.showIsland = function (id, rowId) { shownIsland = { id, rowId }; };
+sandbox.OC.App.showMyIsland();
+assert.deepEqual(shownIsland, { id: 'mine', rowId: 42 });
+
+let renderedLocating = false;
+let fetchedForLocation = false;
+const popover = {
+  classList: { remove() {} },
+};
+sandbox.document.getElementById = function (id) {
+  if (id === 'popover') return popover;
+  if (id === 'chips-active') return activeBox;
+  return null;
+};
+sandbox.OC.UI.renderBattlePanel = function (host, hist, id, locating) {
+  assert.equal(host, popover);
+  assert.equal(hist, null);
+  assert.equal(id, null);
+  renderedLocating = locating;
+};
+sandbox.OC.App.resolveMyIsland = function () { return null; };
+sandbox.OC.App.fetchDc = function (throttled) { fetchedForLocation = throttled; };
+sandbox.OC.App.showMyIsland();
+assert.equal(sandbox.OC.App.openPanel, 'battle');
+assert.equal(sandbox.OC.State.detailLocating, true);
+assert.equal(renderedLocating, true);
+assert.equal(fetchedForLocation, true);
+
 console.log('main tests passed');

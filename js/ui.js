@@ -89,12 +89,12 @@
   };
 
   // ---- 岛屿详情：CE / FATE / 罐 ----
-  UI.renderBattlePanel = function (host, hist, id) {
+  UI.renderBattlePanel = function (host, hist, id, locating) {
     var n = now();
     var h = '<div class="panel-head">' + t('panel_battle') + (id ? ' · ' + esc(id) : '') +
       '<button class="pclose" data-close>' + t('close') + '</button></div>';
     h += '<div class="panel-body">';
-    if (!hist) h += '<div class="dc-empty">' + t('loading') + '</div>';
+    if (!hist) h += '<div class="dc-empty">' + t(locating ? 'locating' : 'loading') + '</div>';
     else {
       var territory = Number(hist.territory) ||
         Number(OC.Overlay && OC.Overlay.territoryId) ||

@@ -38,4 +38,9 @@ assert.match(host.innerHTML, /The Forked Tower: Magic \(Extreme\)/);
 assert.match(host.innerHTML, /Thunderregnum/);
 assert.match(host.innerHTML, /In a Pot of Bother \(South\)/);
 
+const locatingHost = { innerHTML: '' };
+sandbox.OC.UI.renderBattlePanel(locatingHost, null, null, true);
+assert.match(locatingHost.innerHTML, />locating</);
+assert.doesNotMatch(locatingHost.innerHTML, />loading</);
+
 console.log('ui tests passed');

@@ -21,7 +21,7 @@
   }
   var CN_DCS = [101, 102, 103, 104];
 
-  var State = OC.State = { highlights: [], detail: null, detailId: null };
+  var State = OC.State = { highlights: [], detail: null, detailId: null, detailLocating: false };
 
   var App = OC.App = {
     openPanel: null,
@@ -62,8 +62,7 @@
       document.getElementById('chip-conn').addEventListener('click', function () { App.toggleCollapse(); });
       document.getElementById('chip-pot').addEventListener('click', function (e) {
         e.stopPropagation();
-        if (App.myIslandId) App.showIsland(App.myIslandId, App.myIslandRowId);
-        else App.togglePanel('dcpots');
+        App.showMyIsland();
       });
       // 右键“当前 FATE/CE”胶囊即可隐藏（可在设置里重新打开）
       document.getElementById('chips-active').addEventListener('contextmenu', function (e) {
@@ -107,14 +106,15 @@
       this.updateMapVisible();
     },
 
-    // 构造与 DR 相同的实例证据：大区 + 最新存活普通 FATE + Add 时间。
+    // 构造与 DR 相同的实例证据：大区 + 最新普通 FATE + Add 时间。
     // 只有 Add 才有出生时间；悬浮窗重载后首先收到的 Update 不参与指纹。
+    // Add 证据在 FATE 结束后仍然有效，直至换区/断线时统一清空。
     instanceEvidence: function () {
       var meta = OC.Overlay.memMeta || {};
       var events = [];
       Object.keys(meta).forEach(function (key) {
         var id = Number(key), item = meta[key] || {};
-        if (!item.active || !item.spawnEpoch || id === 48) return;
+        if (!item.spawnEpoch || id === 48) return;
         events.push({ fateId: id, spawnEpoch: Number(item.spawnEpoch) });
       });
       var fateEvents = events.filter(function (item) {
@@ -156,17 +156,68 @@
       return null;
     },
 
+    // 参考 AutoPopper/DR：有 Add 指纹后直接按 last_fate 查询，而不是等待
+    // 四大区 30 分钟记录下载完成。查询结果仍需通过同一套严格匹配。
+    locateMyIslandFast: function (force) {
+      if (this.resolveMyIsland()) return Promise.resolve(true);
+      var evidence = this.instanceEvidence();
+      var dc = Number(OC.Overlay.playerDc) || 0;
+      var territory = Number(evidence.territory) || 0;
+      if (!evidence.fingerprints.length || !dc || !territory ||
+          !OC.Api || !OC.Api.fetchIslandByFingerprints) {
+        return Promise.resolve(false);
+      }
+
+      var key = territory + ':' + dc + ':' + evidence.fingerprints.join(',');
+      var tn = Date.now();
+      if (!force && this._lastLocateKey === key && tn - (this._lastLocateAt || 0) < 2000) {
+        return this._locatePromise || Promise.resolve(false);
+      }
+      this._lastLocateKey = key;
+      this._lastLocateAt = tn;
+      var generation = this._locateGeneration || 0;
+      var request = OC.Api.fetchIslandByFingerprints(evidence.fingerprints, territory, dc)
+        .then(function (rows) {
+          if (generation !== (App._locateGeneration || 0) || !rows || !rows.length) return false;
+          var direct = OC.Pots.islandList(rows);
+          var directRows = {};
+          direct.forEach(function (item) { directRows[item.rowId] = true; });
+          App._islands = direct.concat((App._islands || []).filter(function (item) {
+            return !directRows[item.rowId];
+          }));
+          if (!App.resolveMyIsland()) return false;
+          var record = rows.filter(function (row) {
+            return Number(row.id) === Number(App.myIslandRowId);
+          })[0];
+          if (record) App.applyIslandRecord(record, App.myIslandId);
+          else App.pollMyIsland(true);
+          App.updateChips();
+          return true;
+        })
+        .catch(function () { return false; });
+      this._locatePromise = request;
+      request.then(function () {
+        if (App._locatePromise === request) App._locatePromise = null;
+      });
+      return request;
+    },
+
     // 每次区域/实例切换或断线都清空；即便 territoryId 相同也重新识别。
     resetIsland: function () {
       this.myIslandId = null; this.myIslandRowId = null; this.myIslandFingerprint = '';
       this._evidenceKey = ''; this._contextFingerprints = [];
+      this._locateGeneration = (this._locateGeneration || 0) + 1;
+      this._lastLocateKey = ''; this._lastLocateAt = 0; this._locatePromise = null;
       this._island = null; this._potAlertedFor = null; this._alerted = {};
       this._lastIslandFetch = 0;
       this._localPot = null;                 // 换本后本机观测的罐状态作废
+      State.detail = null; State.detailId = null;
+      State.detailLocating = this.openPanel === 'battle';
       if (OC.Overlay.resetMemory) OC.Overlay.resetMemory();
       else OC.Overlay.memActive = {};
       OC.State.highlights = [];
       OC.Map.updateHighlights(document.getElementById('mapLayer'));
+      if (State.detailLocating) this.renderPanel();
     },
 
     // 不在新月岛时完全隐藏悬浮窗；在岛内则按折叠状态决定是否显示地图
@@ -188,7 +239,8 @@
       this.renderPanel();
     },
     closePanel: function () {
-      this.openPanel = null; this.detailId = null; this.detail = null;
+      this.openPanel = null;
+      State.detailId = null; State.detail = null; State.detailLocating = false;
       document.getElementById('popover').classList.add('hidden');
     },
 
@@ -198,22 +250,37 @@
       var oldBody = pop.querySelector('.panel-body');
       var scroll = oldBody ? oldBody.scrollTop : 0;
       if (this.openPanel === 'dcpots') OC.UI.renderDcPots(pop, this._dc, !this._dcLoaded);
-      else if (this.openPanel === 'battle') OC.UI.renderBattlePanel(pop, State.detail, State.detailId);
+      else if (this.openPanel === 'battle') OC.UI.renderBattlePanel(pop, State.detail, State.detailId, State.detailLocating);
       else if (this.openPanel === 'settings') this.renderSettings(pop);
       pop.classList.toggle('compact', this.openPanel === 'dcpots'); // 魔法罐总览用紧凑样式
       var newBody = pop.querySelector('.panel-body');
       if (newBody && scroll) newBody.scrollTop = scroll;
     },
 
+    // 顶部罐计时始终打开本岛详情；未严格定位时停留在本岛定位状态，
+    // 不回退到与右侧“罐”按钮重复的四大区总览。
+    showMyIsland: function () {
+      var id = this.resolveMyIsland();
+      if (id) return this.showIsland(id, this.myIslandRowId);
+      State.detail = null; State.detailId = null; State.detailLocating = true;
+      this.openPanel = 'battle';
+      var pop = document.getElementById('popover');
+      pop.classList.remove('hidden');
+      OC.UI.renderBattlePanel(pop, null, null, true);
+      this.locateMyIslandFast(true);
+      this.fetchDc(true);
+    },
+
     // 点击某岛 -> 拉取详情并显示战斗面板
     showIsland: function (id, rowId) {
-      State.detailId = id;
+      State.detail = null; State.detailId = id; State.detailLocating = false;
       this.openPanel = 'battle';
       document.getElementById('popover').classList.remove('hidden');
       OC.UI.renderBattlePanel(document.getElementById('popover'), null, id); // loading
       var request = rowId ? OC.Api.fetchTrackerRow(rowId) : OC.Api.fetchTracker(id);
       request.then(function (rec) {
         if (!rec) return;
+        if (App.openPanel !== 'battle' || State.detailId !== id) return;
         var territory = Number(rec.territory) || Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
         State.detail = {
           territory: territory,
@@ -221,7 +288,7 @@
           fate: pj(rec.fate_history),
           pot: pj(rec.pot_history)
         };
-        if (App.openPanel === 'battle') App.renderPanel();
+        App.renderPanel();
       }).catch(function () {});
     },
 
@@ -365,12 +432,15 @@
         OC.Map.updatePlayer(document.getElementById('mapLayer'));
         App.refreshHighlights();   // 视野内的 boss 也纳入高亮
         if (App.resolveMyIsland()) App.pollMyIsland(true);
+        else App.locateMyIslandFast();
       });
       OC.Overlay.on('playerContext', function () {
         // World/DC can arrive through raw ACT memory before position polling.
         // Re-evaluate immediately so a valid FateDirector Add is not stranded.
         if (App.resolveMyIsland()) App.pollMyIsland(true);
-        else App.fetchDc(true);
+        else App.locateMyIslandFast(true).then(function (found) {
+          if (!found) App.fetchDc(true);
+        });
       });
       // 内存态 FATE/CE 变化：即时提示（不受距离与云端上报延迟影响）
       OC.Overlay.on('memActive', function (id, active, detail) {
@@ -391,8 +461,10 @@
         }
         App.refreshHighlights();
         if (active) App.alertEncounter(id);
-        // 有了新信号立刻重新识别所在岛；尚未识别时再拉云端（有节流，避免频繁请求）
-        if (!App.resolveMyIsland()) App.fetchDc(true);
+        // 有了 Add 指纹立即做定向查询；未命中时才退回大区列表。
+        if (!App.resolveMyIsland()) App.locateMyIslandFast(true).then(function (found) {
+          if (!found) App.fetchDc(true);
+        });
         else App.pollMyIsland(true);
       });
     },
@@ -417,6 +489,26 @@
       }).catch(function () { App._dcLoaded = true; });
     },
 
+    applyIslandRecord: function (rec, id) {
+      if (!rec) return;
+      var territory = Number(rec.territory) || Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
+      var h = {
+        territory: territory,
+        ce: pj(rec.encounter_history),
+        fate: pj(rec.fate_history),
+        pot: pj(rec.pot_history)
+      };
+      this.checkIslandAlerts(h);
+      this._island = h;
+      this.refreshHighlights();
+      if (this.openPanel === 'battle' && (State.detailLocating || State.detailId === id)) {
+        State.detailId = id;
+        State.detailLocating = false;
+        State.detail = h;
+        this.renderPanel();
+      }
+    },
+
     // 拉取“我所在岛”的完整数据，驱动地图高亮 + 提示（云端，玩家在起始点也有效）
     pollMyIsland: function (throttled) {
       // 不在新月岛时不拉取本岛数据（避免残留数据触发提示）
@@ -431,17 +523,7 @@
       request.then(function (rec) {
         if (!rec) return;
         if ((rowId && App.myIslandRowId !== rowId) || (!rowId && App.myIslandId !== id)) return;
-        var territory = Number(rec.territory) || Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
-        var h = {
-          territory: territory,
-          ce: pj(rec.encounter_history),
-          fate: pj(rec.fate_history),
-          pot: pj(rec.pot_history)
-        };
-        App.checkIslandAlerts(h);
-        App._island = h;
-        App.refreshHighlights();
-        if (App.openPanel === 'battle' && State.detailId === id) { State.detail = h; App.renderPanel(); }
+        App.applyIslandRecord(rec, id);
       }).catch(function () {});
     },
 
