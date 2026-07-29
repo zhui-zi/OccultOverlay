@@ -301,8 +301,7 @@
     // AutoPopper-compatible missing-instance state machine. Only scheduled
     // FATE Add checks increment the counter; position polling never creates rows.
     checkOrCreateIsland: function (context) {
-      if (!context || OC.Settings.get('autoReport') === false ||
-          !OC.Overlay.connected || !OC.Overlay.inOccult ||
+      if (!context || !OC.Overlay.connected || !OC.Overlay.inOccult ||
           context.generation !== (this._locateGeneration || 0)) {
         return Promise.resolve(false);
       }
@@ -358,7 +357,7 @@
 
     scheduleTrackerCheck: function (fateId, spawnEpoch) {
       var context = this.trackerContext(fateId, spawnEpoch);
-      if (!context || OC.Settings.get('autoReport') === false) return;
+      if (!context) return;
       if (this.myIslandRowId) {
         this.queueIslandUpload(context.fingerprint, true);
         return;
@@ -391,8 +390,7 @@
     },
 
     queueIslandUpload: function (fingerprint, immediate) {
-      if (!this.myIslandRowId || OC.Settings.get('autoReport') === false ||
-          !OC.Overlay.connected || !OC.Overlay.inOccult) return;
+      if (!this.myIslandRowId || !OC.Overlay.connected || !OC.Overlay.inOccult) return;
       this._pendingUploadFingerprint = fingerprint || this.instanceEvidence().fingerprint || this.myIslandFingerprint;
       if (this._uploadTimer) clearTimeout(this._uploadTimer);
       this._uploadTimer = setTimeout(function () {
@@ -410,7 +408,6 @@
         .then(function () {
           if (generation !== (App._locateGeneration || 0) ||
               Number(rowId) !== Number(App.myIslandRowId) ||
-              OC.Settings.get('autoReport') === false ||
               !OC.Overlay.connected || !OC.Overlay.inOccult) return false;
           var fingerprint = App._pendingUploadFingerprint ||
             App.instanceEvidence().fingerprint || App.myIslandFingerprint;
@@ -948,7 +945,6 @@
       h += rowChk('a-tts', t('alert_tts'), g('useTts'));
       h += '<div class="s-grp">' + t('panel_settings') + '</div>';
       h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'));
-      h += rowChk('s-auto', t('set_auto'), g('autoReport'));
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
       h += '<div class="repo-link"><a id="s-repo" href="#">github.com/zhui-zi/OccultOverlay</a></div>';
@@ -970,11 +966,6 @@
       bindChk(pop, 'a-pot', 'alertPot');
       bindChk(pop, 'a-all', 'alertAllEncounters');
       bindChk(pop, 'a-tts', 'useTts');
-      var auto = pop.querySelector('#s-auto');
-      if (auto) auto.addEventListener('change', function () {
-        OC.Settings.set('autoReport', auto.checked);
-        if (auto.checked) App.scheduleKnownTrackerChecks();
-      });
       var chipsChk = pop.querySelector('#s-chips');
       if (chipsChk) chipsChk.addEventListener('change', function () {
         OC.Settings.set('showActiveChips', chipsChk.checked);

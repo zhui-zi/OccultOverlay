@@ -256,6 +256,7 @@ const settingsPop = {
 };
 sandbox.OC.Overlay.territoryId = 1346;
 sandbox.OC.App.renderSettings(settingsPop);
+assert.doesNotMatch(settingsPop.innerHTML, /id="s-auto"/);
 assert.match(settingsPop.innerHTML, /alert_dispeller_pending/);
 assert.doesNotMatch(settingsPop.innerHTML, /Test Dispeller/);
 assert.doesNotMatch(settingsPop.innerHTML, /Test Demiatma/);

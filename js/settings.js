@@ -19,7 +19,6 @@
     ceCooldownSec: '',
     notifySound: true,
     notifyOnlyInZone: true,
-    autoReport: true,           // 侦测到 CE/FATE/罐 时自动提交到云端（无人工上报）
     opacity: 0.9,
     uiScale: 1,                 // 界面缩放（放大胶囊/按钮/面板）
     showActiveChips: true,      // 顶部“当前 FATE/CE”胶囊（右键可隐藏）
