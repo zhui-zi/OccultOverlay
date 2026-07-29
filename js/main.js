@@ -31,6 +31,8 @@
       width = Number(width) || 0;
       height = Number(height) || 0;
       pixelRatio = Number(pixelRatio) || 1;
+      if (width <= 1100 || height <= 650) return 0.9;
+      if (width <= 1440 || height <= 800) return 0.95;
       if (pixelRatio > 1.1) return 1;
       return width >= 3000 && height >= 1700 ? 1.5 : 1;
     },
