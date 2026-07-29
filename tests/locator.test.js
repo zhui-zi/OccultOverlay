@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const fingerprint = 'A'.repeat(64);
 let requested = null;
 let applied = null;
+let fingerprintFetchCalls = 0;
 const sandbox = {
   console,
   Promise,
@@ -76,6 +77,7 @@ const sandbox = {
         };
       },
       fetchIslandByFingerprints(fingerprints, territory, dc) {
+        fingerprintFetchCalls += 1;
         requested = { fingerprints: Array.from(fingerprints), territory, dc };
         return Promise.resolve([{
           id: 42,
@@ -127,6 +129,7 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
   assert.equal(sandbox.OC.App.myIslandId, 'mine');
   assert.equal(applied.id, 'mine');
   assert.equal(applied.record.id, 42);
+  assert.equal(fingerprintFetchCalls, 1, 'fast matching must use the fingerprint response without another fetch');
   clearTimeout(sandbox.OC.App._uploadTimer);
   sandbox.OC.App._uploadTimer = null;
   sandbox.OC.App._pendingUploadFingerprint = '';
@@ -166,6 +169,16 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
   const preview = sandbox.OC.App.updatePreviewIsland();
   assert.equal(preview.id, 'preview-only');
   assert.equal(sandbox.OC.App.myIslandRowId, null, 'snapshot preview must never authorize writes');
+  applied = null;
+  assert.equal(
+    sandbox.OC.App.bindMatchedIsland({
+      id: 'preview-only',
+      rowId: 55,
+      fingerprint,
+    }),
+    'preview-only',
+  );
+  assert.equal(applied.record.id, 55, 'a later strict match must reuse the prefetched row immediately');
   sandbox._previewMatch = null;
   sandbox.OC.Overlay.memActive = {};
 

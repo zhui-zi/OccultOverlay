@@ -60,13 +60,20 @@
 
   // ---- 撒娇罐总览（国服四大区）----
   UI.renderDcPots = function (host, list, loading) {
+    var current = now();
+    var visible = (list || []).filter(function (item) {
+      if (item.alive) {
+        return !item.anchorEpoch || current < item.anchorEpoch + OC.Pots.respawnSec;
+      }
+      return item.nextEpoch > current;
+    });
     var h = '<div class="panel-head">' + t('dc_pots_title') + '<button class="pclose" data-close>' + t('close') + '</button></div>';
     h += '<div class="panel-body">';
-    if (loading && (!list || !list.length)) h += '<div class="dc-empty">' + t('loading') + '</div>';
-    else if (!list || !list.length) h += '<div class="dc-empty">' + t('no_active_island') + '</div>';
+    if (loading && !visible.length) h += '<div class="dc-empty">' + t('loading') + '</div>';
+    else if (!visible.length) h += '<div class="dc-empty">' + t('no_active_island') + '</div>';
     else {
       h += '<div class="dc-list">';
-      list.forEach(function (it) {
+      visible.forEach(function (it) {
         var dc = (OC.DATACENTERS[it.dc] || { name: it.dc }).name;
         var sd = it.side ? '<span class="dc-side side-' + it.side + '">' + (it.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
         var status = (it.alive ? '<span class="dc-alive">' + t('alive') + '</span>' : '<span class="dc-eta" data-tk="eta" data-tv="' + it.nextEpoch + '">' + UI.fmtDur(Math.max(0, it.etaSec)) + '</span>') + sd;

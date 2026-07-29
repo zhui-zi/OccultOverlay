@@ -43,4 +43,19 @@ sandbox.OC.UI.renderBattlePanel(locatingHost, null, null, true);
 assert.match(locatingHost.innerHTML, />locating</);
 assert.doesNotMatch(locatingHost.innerHTML, />loading</);
 
+const current = Math.floor(Date.now() / 1000);
+const overviewHost = { innerHTML: '', querySelectorAll() { return []; } };
+sandbox.OC.Pots.respawnSec = 1800;
+sandbox.OC.UI.renderDcPots(overviewHost, [{
+  id: 'stale',
+  dc: 103,
+  alive: false,
+  nextEpoch: current,
+  etaSec: 0,
+  anchorEpoch: current - 1800,
+  side: 'north',
+}], false);
+assert.doesNotMatch(overviewHost.innerHTML, /class="dc-row/, 'an expired ETA must disappear immediately');
+assert.doesNotMatch(overviewHost.innerHTML, /pot_soon/, 'an expired ETA must not be shown as soon');
+
 console.log('ui tests passed');

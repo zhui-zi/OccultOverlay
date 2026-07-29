@@ -73,22 +73,21 @@
   function prediction(anchor, now) {
     if (!anchor) return null;
     var spawn = number(anchor.spawn_time, -1);
-    if (spawn <= 0) return null;
+    if (spawn <= 0 || now < spawn) return null;
 
-    // 与 OccultPotNotifier.UpdatePrediction 相同。当前轮存活由调用方先处理；
-    // 这里只找严格位于“现在”之后的下一轮。
-    var cycles = now < spawn ? 0 : Math.floor((now - spawn) / RESPAWN) + 1;
-    var nextEpoch = spawn + cycles * RESPAWN;
+    // 只推算实际观测锚点之后的紧邻一轮。若预计时刻已经过去，必须等待
+    // 新一轮 Add 更新锚点，不能拿旧记录继续按 30 分钟无限外推。
+    var nextEpoch = spawn + RESPAWN;
+    if (now >= nextEpoch) return null;
     var anchorSide = sideOf(anchor.fate_id);
-    var side = cycles % 2 === 0 ? anchorSide : otherSide(anchorSide);
     return {
       alive: false,
       nextEpoch: nextEpoch,
       etaSec: nextEpoch - now,
-      side: side,
+      side: otherSide(anchorSide),
       anchorEpoch: spawn,
       anchorId: number(anchor.fate_id, 0),
-      cycles: cycles
+      cycles: 1
     };
   }
 
@@ -234,6 +233,7 @@
 
     /**
      * 计算一组 pot_history 的当前状态。
+     * 只返回存活状态或最近一次实测出现所锚定的下一轮；过期锚点返回 null。
      * 返回 { alive, etaSec, nextEpoch, side, anchorEpoch, anchorId, cycles } 或 null。
      */
     status: function (potArr, now) {

@@ -231,17 +231,41 @@ sandbox.OC.App._localPot = { 2072: { active: false, spawnEpoch: 100, deathEpoch:
 assert.equal(sandbox.OC.App.localPotInfo().side, 'north');
 assert.equal(sandbox._lastPotMerge.local.length, 1, 'an exact local Add must drive North Horn timing');
 
-sandbox.OC.Overlay.territoryId = 1252;
+sandbox.OC.App._island = null;
+sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
 sandbox.OC.App._localPot = null;
+assert.notEqual(sandbox.OC.App.localPotInfo(), null);
+assert.deepEqual(
+  sandbox._lastPotMerge.shared,
+  [cloudPot],
+  'a strict ID match must expose the cached ETA without waiting for another row fetch',
+);
+
+sandbox.OC.Overlay.territoryId = 1252;
+sandbox.OC.App._island = { ce: [], fate: [], pot: [cloudPot] };
 assert.notEqual(sandbox.OC.App.localPotInfo(), null);
 assert.equal(sandbox._lastPotMerge.shared.length, 1, 'South Horn keeps strict-island cloud fallback');
 
 sandbox.OC.App._island = null;
 sandbox.OC.App.myIslandRowId = null;
-sandbox.OC.App._previewIsland = { id: 'preview', rowId: 2, pot: [cloudPot] };
+sandbox.OC.App._dc = [];
+sandbox.OC.App._localPot = {
+  2072: {
+    active: false,
+    spawnEpoch: Math.floor(Date.now() / 1000) - 60,
+    deathEpoch: Math.floor(Date.now() / 1000) - 30,
+    lastSeen: Math.floor(Date.now() / 1000) - 30,
+  },
+};
+assert.notEqual(
+  sandbox.OC.App.localPotInfo(),
+  null,
+  'a trusted local Add must provide timing without waiting for an island ID',
+);
 sandbox.OC.App._localPot = null;
+sandbox.OC.App._previewIsland = { id: 'preview', rowId: 2, pot: [cloudPot] };
 const previewPot = sandbox.OC.App.localPotInfo();
-assert.equal(previewPot.unconfirmed, true);
+assert.equal(previewPot, null, 'an unconfirmed island must never provide a pot time');
 alertPot = true;
 let previewAlerted = false;
 sandbox.OC.App.fireAlert = function () { previewAlerted = true; };
@@ -355,11 +379,13 @@ sandbox.OC.UI.renderBattlePanel = function (host, hist, id, locating) {
   renderedLocating = locating;
 };
 sandbox.OC.App.resolveMyIsland = function () { return null; };
+sandbox.OC.App._previewIsland = { id: 'preview', rowId: 2, pot: [cloudPot] };
 sandbox.OC.App.fetchDc = function (throttled) { fetchedForLocation = throttled; };
 sandbox.OC.App.showMyIsland();
 assert.equal(sandbox.OC.App.openPanel, 'battle');
 assert.equal(sandbox.OC.State.detailLocating, true);
 assert.equal(renderedLocating, true);
 assert.equal(fetchedForLocation, true);
+assert.deepEqual(shownIsland, { id: 'mine', rowId: 42 }, 'an unconfirmed preview must not be opened');
 
 console.log('main tests passed');

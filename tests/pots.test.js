@@ -50,16 +50,14 @@ assert.equal(next.alive, false);
 assert.equal(next.nextEpoch, 2800);
 assert.equal(next.etaSec, 1600);
 assert.equal(next.side, 'south');
+assert.equal(Pots.status([pot(1976, 1000, 1100)], 2799).etaSec, 1);
+assert.equal(Pots.status([pot(1976, 1000, 1100)], 2800), null);
 
 next = Pots.status([pot(1976, 1000, 1100)], 4700);
-assert.equal(next.nextEpoch, 6400);
-assert.equal(next.etaSec, 1700);
-assert.equal(next.side, 'south');
-assert.equal(next.cycles, 3);
+assert.equal(next, null, 'an expired observation must not create later 30-minute predictions');
 
 next = Pots.status([pot(1977, 2000, 2100)], 1900);
-assert.equal(next.nextEpoch, 2000);
-assert.equal(next.side, 'south');
+assert.equal(next, null, 'a future observation cannot anchor a precise prediction');
 
 const merged = Pots.merge(
   [pot(1976, 1000, -1, 1050), pot(1977, 900, 950, 950)],
@@ -89,11 +87,12 @@ const rows = [
     fate_history: '[]'
   }
 ];
-const overview = Pots.dcOverview(rows, 4700);
+const overview = Pots.dcOverview(rows, 1200);
 assert.equal(overview.length, 1);
 assert.equal(overview[0].id, 'new');
 assert.equal(overview[0].sources, 2);
 assert.ok(overview[0].etaSec > 0);
+assert.equal(Pots.dcOverview(rows, 4700).length, 0, 'stale pot rows must disappear from the overview');
 
 const islands = Pots.islandList(rows, 4700);
 assert.equal(islands.length, 1);

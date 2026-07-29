@@ -16,7 +16,7 @@
     return found;
   }
   var CN_DCS = [101, 102, 103, 104];
-  var TRACKER_VERSION = 'OccultOverlay-v65';
+  var TRACKER_VERSION = 'OccultOverlay-v67';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
 
   var State = OC.State = { highlights: [], detail: null, detailId: null, detailLocating: false };
@@ -227,10 +227,14 @@
       };
     },
 
-    bindMatchedIsland: function (matched) {
+    bindMatchedIsland: function (matched, record) {
       if (!matched) return null;
       if (this.myIslandRowId && Number(this.myIslandRowId) !== Number(matched.rowId)) {
         return null;
+      }
+      if (!record && this._previewIsland &&
+          Number(this._previewIsland.rowId) === Number(matched.rowId)) {
+        record = this._previewIsland.record;
       }
       var changed = this.myIslandRowId !== matched.rowId;
       this.myIslandRowId = matched.rowId;
@@ -242,6 +246,7 @@
         this._potAlertedFor = null;
         this._alerted = {};
       }
+      if (record) this.applyIslandRecord(record, this.myIslandId);
       return this.myIslandId;
     },
 
@@ -255,12 +260,11 @@
       this._islands = direct.concat((this._islands || []).filter(function (item) {
         return !directRows[item.rowId];
       }));
-      var id = this.bindMatchedIsland(matched);
-      if (!id) return null;
       var record = rows.filter(function (row) {
         return Number(row.id) === Number(matched.rowId);
       })[0];
-      if (record) this.applyIslandRecord(record, id);
+      var id = this.bindMatchedIsland(matched, record);
+      if (!id) return null;
       return id;
     },
 
@@ -580,8 +584,6 @@
     showMyIsland: function () {
       var id = this.resolveMyIsland();
       if (id) return this.showIsland(id, this.myIslandRowId);
-      var preview = this.updatePreviewIsland();
-      if (preview) return this.showIsland(preview.id + '?', preview.rowId);
       State.detail = null; State.detailId = null; State.detailLocating = true;
       this.openPanel = 'battle';
       var pop = document.getElementById('popover');
@@ -640,7 +642,6 @@
         if (!mine && !this._dcLoaded) {
           body += '<span class="s">' + t('loading') + '</span>';
         } else if (mine) {
-          if (mine.unconfirmed) body += '<span class="s">?</span> ';
           var side = mine.side ? '<span class="side-' + mine.side + '">' + (mine.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
           var pdef = potForSide(mine.side, OC.Overlay.territoryId || (OC.MAP && OC.MAP.territory));
           if (pdef) side += OC.UI.rewardSuffixIfWanted(pdef.drops);
@@ -655,19 +656,14 @@
       this.updateActive();
     },
 
-    // 本机可信 Add/Remove 优先；初始快照唯一候选只用于带 ? 的只读预览。
+    // 本机可信 Add/Remove 不等待实例匹配；云端时间只允许来自严格确认的实例。
     localPotInfo: function () {
-      var cloud = this._island && this._island.pot;
-      var unconfirmed = false;
+      var cloud = this.myIslandRowId && this._island && this._island.pot;
       if ((!cloud || !cloud.length) && this.myIslandRowId) {
         var overview = (this._dc || []).filter(function (item) {
           return item.rowId === App.myIslandRowId;
         })[0];
         if (overview) cloud = overview.potHistory;
-      }
-      if ((!cloud || !cloud.length) && !this.myIslandRowId && this._previewIsland) {
-        cloud = this._previewIsland.pot;
-        unconfirmed = !!(cloud && cloud.length);
       }
 
       var local = this._localPot || {};
@@ -705,14 +701,12 @@
       if (activeId) {
         var side = (OC.POTS[activeId] || {}).side || null;
         if (!status) return {
-          alive: true, nextEpoch: null, etaSec: null, side: side, local: true,
-          unconfirmed: unconfirmed
+          alive: true, nextEpoch: null, etaSec: null, side: side, local: true
         };
         status.alive = true;
         status.side = side;
         status.local = true;
       }
-      if (status) status.unconfirmed = unconfirmed;
       return status;
     },
 
@@ -967,7 +961,7 @@
     checkPotPreAlert: function () {
       if (!OC.Settings.get('alertPot')) return;
       var mine = this.localPotInfo();
-      if (!mine || mine.alive || mine.unconfirmed || !mine.nextEpoch) return;
+      if (!mine || mine.alive || !mine.nextEpoch) return;
       var eta = mine.nextEpoch - Math.floor(Date.now() / 1000);
       // 用“取整到 5 分钟”的窗口做标记，避免各上报者时间戳抖动导致重复提示
       var slot = Math.round(mine.nextEpoch / 300);
