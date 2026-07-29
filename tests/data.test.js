@@ -22,7 +22,7 @@ assert.equal(OC.TERRITORIES[1346].ceIds.length, 17);
 assert.equal(OC.TERRITORIES[1346].name.zh, '蜃景幻界新月岛 北征之章');
 
 assert.equal(OC.FATES[2074].name.en, 'Raging Thrall');
-assert.equal(OC.FATES[2074].name.zh, '暴力牛魔——好战弥诺陶洛斯');
+assert.equal(OC.FATES[2074].name.zh, '暴力牛魔—好战弥诺陶洛斯');
 assert.equal(OC.FATES[2074].name.ja, '暴力の牛魔「ミノタウロス・マキア」');
 assert.equal(OC.POTS[2072].name.en, 'Daylight Pottery (North)');
 assert.equal(OC.POTS[2073].name.zh, '被吹飞的魔法罐(南)');

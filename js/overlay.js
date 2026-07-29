@@ -420,7 +420,7 @@
   function bossTokens(nameObj) {
     if (!nameObj) return [];
     var tk = [];
-    if (nameObj.zh) { var z = nameObj.zh, i = z.lastIndexOf('——'); tk.push(i >= 0 ? z.slice(i + 2) : z); }
+    if (nameObj.zh) { var z = nameObj.zh, i = z.lastIndexOf('—'); tk.push(i >= 0 ? z.slice(i + 1) : z); }
     if (nameObj.ja) { var m = /[「『](.+?)[」』]/.exec(nameObj.ja); tk.push(m ? m[1] : nameObj.ja); }
     if (nameObj.en) tk.push(nameObj.en);
     return tk.filter(function (x) { return x && x.length >= 2; });
