@@ -75,7 +75,7 @@
   Overlay.zoneName = '';
   Overlay.inOccult = false;
   Overlay.playerName = '';
-  Overlay.playerPos = null; // {x, y} 若数据源提供，否则 null
+  Overlay.playerPos = null; // {x, y, z, h}; y is altitude, x/z are horizontal
 
   // ---- 事件订阅列表 -----------------------------------------------------
   // onFateEvent 由网络包解析产生（cactbot/IINACT FateWatcher），全岛可见、即时，
@@ -220,8 +220,13 @@
         var wid = me.CurrentWorldID || me.CurrentWorld || me.WorldID;
         if (wid) setPlayerWorld(wid);
         if (me.PosX == null) return;
-        // Dalamud(x,z) 水平 == OverlayPlugin(PosX, PosY)
-        Overlay.playerPos = { x: me.PosX, z: me.PosY, h: me.Heading };
+        // Dalamud(x,z) horizontal == OverlayPlugin(PosX, PosY); PosZ is altitude.
+        Overlay.playerPos = {
+          x: Number(me.PosX),
+          y: me.PosZ != null ? Number(me.PosZ) : null,
+          z: Number(me.PosY),
+          h: Number(me.Heading)
+        };
         // FATE/CE 状态一律以 258/259 内存数据为准；
         // 战斗单位名字是模糊匹配，会把普通怪误判成 FATE/CE，故不再使用。
         Overlay.emit('position', Overlay.playerPos);

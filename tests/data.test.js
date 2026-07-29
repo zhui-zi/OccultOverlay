@@ -15,6 +15,7 @@ for (const file of ['../js/data.js', '../data/mapPoints.js']) {
 
 const OC = sandbox.OC;
 assert.equal(OC.TERRITORIES[1346].mapId, 1135);
+assert.deepEqual(Array.from(OC.TERRITORIES[1346].mapIds), [1135, 1244]);
 assert.equal(OC.TERRITORIES[1346].fateIds.length, 11);
 assert.equal(OC.TERRITORIES[1346].potIds.length, 2);
 assert.equal(OC.TERRITORIES[1346].ceIds.length, 17);
@@ -65,6 +66,25 @@ assert.equal(OC.MAP.points.potSouth.length, 30);
 assert.equal(OC.MAP.points.reroll.length, 20);
 assert.equal(OC.MAP.points.bunny.length, 25);
 assert.deepEqual(Array.from(OC.MAP.encounters[2084]), [140, -708]);
+
+assert.equal(OC.selectMap(1346, { y: -100 }), true);
+assert.equal(OC.MAP.mapId, 1244);
+assert.equal(OC.MAP.variant, 'subterrane');
+assert.equal(OC.MAP.background, 'assets/map-north-subterrane.png');
+assert.equal(OC.MAP.points.bronze.length, 5);
+assert.equal(OC.MAP.points.silver.length, 1);
+assert.equal(OC.MAP.points.potNorth.length, 0);
+assert.equal(OC.MAP.points.potSouth.length, 0);
+assert.equal(OC.MAP.points.reroll.length, 0);
+assert.equal(OC.MAP.points.bunny.length, 0);
+assert.deepEqual(Array.from(OC.MAP.points.silver[0]), [223.6532, -30.64362]);
+assert.equal(OC.selectMap(1346, { y: -40 }), true);
+assert.equal(OC.MAP.mapId, 1135);
+
+const subterraneMap = fs.readFileSync(require.resolve('../assets/map-north-subterrane.png'));
+assert.equal(subterraneMap.toString('ascii', 1, 4), 'PNG');
+assert.equal(subterraneMap.readUInt32BE(16), 2048);
+assert.equal(subterraneMap.readUInt32BE(20), 2048);
 
 OC.Settings = {
   get(key) {

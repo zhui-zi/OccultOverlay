@@ -132,4 +132,30 @@ assert.equal(player.sandbox.OC.ceKeyToId(1, 1346), 49);
 assert.equal(player.sandbox.OC.ceKeyToId(0, 1346), 64);
 assert.equal(player.sandbox.OC.ceKeyToId(16, 1346), 65);
 
-console.log('overlay tests passed');
+const position = loadOverlay('');
+let observedPosition = null;
+position.sandbox.OverlayPluginApi = {
+  ready: true,
+  callHandler(message, cb) {
+    const request = JSON.parse(message);
+    const response = request.call === 'getCombatants'
+      ? { combatants: [{ ID: 1, Name: 'Player', Type: 1, PosX: 12, PosY: 34, PosZ: -100, Heading: 1.5 }] }
+      : {};
+    if (cb) cb(JSON.stringify(response));
+  },
+};
+position.sandbox.OC.Overlay.on('position', (value) => { observedPosition = value; });
+position.sandbox.OC.Overlay.start();
+position.intervals[0](); // connect legacy transport
+position.intervals[1](); // poll getCombatants
+
+Promise.resolve().then(() => {
+  assert.deepEqual(
+    { x: observedPosition.x, y: observedPosition.y, z: observedPosition.z, h: observedPosition.h },
+    { x: 12, y: -100, z: 34, h: 1.5 },
+  );
+  console.log('overlay tests passed');
+}).catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

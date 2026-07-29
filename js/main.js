@@ -672,6 +672,10 @@
         App.updateChips(); App.updateMapVisible();
       });
       OC.Overlay.on('position', function () {
+        if (OC.selectMap && OC.selectMap(OC.Overlay.territoryId, OC.Overlay.playerPos)) {
+          OC.Map.render(document.getElementById('mapLayer'));
+          App.refreshRail();
+        }
         OC.Map.updatePlayer(document.getElementById('mapLayer'));
         App.refreshHighlights();   // 视野内的 boss 也纳入高亮
         if (App.resolveMyIsland()) App.pollMyIsland(true);

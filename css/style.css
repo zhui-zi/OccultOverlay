@@ -45,7 +45,13 @@ html, body {
   display: flex; gap: 6px; flex-wrap: wrap; z-index: 5; align-items: flex-start;
 }
 .chips-active { display: flex; gap: 6px; flex-wrap: wrap; }
-.chip-act { font-weight: 600; }
+.chip.chip-act {
+  font-weight: 600;
+  /* ACT Chromium can flash a backdrop-filter layer when animated map SVGs repaint below it. */
+  background: rgb(14, 20, 30);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
 .chip-act.ce { border-color: var(--ce); box-shadow: 0 0 8px rgba(255,92,92,0.35); }
 .chip-act.fate { border-color: var(--fate); box-shadow: 0 0 8px rgba(91,155,213,0.35); }
 .chip-act.pot { border-color: var(--pot); box-shadow: 0 0 8px rgba(176,97,255,0.35); }

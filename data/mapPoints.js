@@ -13,6 +13,7 @@
   var southHorn = {
     territory: 1252,
     mapId: 967,
+    variant: 'surface',
     background: 'assets/map.png',
     texSize: 2048,
     center: 1024,          // px = world + center
@@ -34,6 +35,7 @@
   var northHorn = {
     territory: 1346,
     mapId: 1135,
+    variant: 'surface',
     background: 'assets/map-north.png',
     texSize: 2048,
     center: 1024,
@@ -80,10 +82,46 @@
     }
   };
 
+  // North Horn subterrane (Map 1244) data from EurekaTrackerAutoPopper.
+  // Upstream currently contains treasure coffer locations only.
+  var northSubterrane = {
+    territory: 1346,
+    mapId: 1244,
+    variant: 'subterrane',
+    background: 'assets/map-north-subterrane.png',
+    texSize: 2048,
+    center: 1024,
+    worldToPx: function (x, z) { return [x + 1024, z + 1024]; },
+    points: {
+      bronze: [
+        [-144.7256, 304.9379],
+        [41.2326, 168.5024],
+        [161, 16.00002],
+        [313.9192, 180.0712],
+        [-287.7408, 125.6662]
+      ],
+      silver: [[223.6532, -30.64362]],
+      potNorth: [],
+      potSouth: [],
+      reroll: [],
+      bunny: []
+    },
+    encounters: {}
+  };
+
   OC.MAPS = { 1252: southHorn, 1346: northHorn };
+  OC.MAP_VARIANTS = { 967: southHorn, 1135: northHorn, 1244: northSubterrane };
   OC.MAP = southHorn;
-  OC.selectMap = function (territoryId) {
+  OC.selectMap = function (territoryId, hint) {
     var next = OC.MAPS[Number(territoryId)] || OC.MAP;
+    if (Number(territoryId) === 1346) {
+      var mapId = typeof hint === 'number' ? hint : hint && Number(hint.mapId);
+      var altitude = hint && hint.y != null ? Number(hint.y) : null;
+      // Surface points bottom out around Y=-41; subterrane points begin at Y=-92.
+      if (mapId === 1244 || (Number.isFinite(altitude) && altitude < -70)) {
+        next = northSubterrane;
+      }
+    }
     var changed = next !== OC.MAP;
     OC.MAP = next;
     return changed;

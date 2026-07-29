@@ -112,6 +112,12 @@ sandbox.window = sandbox;
 const source = fs.readFileSync(require.resolve('../js/main.js'), 'utf8');
 vm.runInNewContext(source, sandbox, { filename: 'main.js' });
 
+const styles = fs.readFileSync(require.resolve('../css/style.css'), 'utf8');
+const activeChipRule = styles.match(/\.chip\.chip-act\s*\{([^}]*)\}/);
+assert.ok(activeChipRule, 'active capsule style must exist');
+assert.match(activeChipRule[1], /backdrop-filter:\s*none/);
+assert.match(activeChipRule[1], /background:\s*rgb\(14,\s*20,\s*30\)/);
+
 sandbox.OC.State.highlights = [49, 2074];
 sandbox.OC.App.updateActive();
 assert.equal(writes, 1);
