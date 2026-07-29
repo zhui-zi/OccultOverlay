@@ -1,18 +1,4 @@
-/* =========================================================================
- * api.js — 与 tracker.xivstats.com 后端（PostgREST）通信
- *
- * 端点：https://infi.ovh/api/OccultTrackerV3
- *   读取：  GET  ?tracker_id=eq.{id}
- *   轮询：  GET  ?tracker_id=eq.{id}&select=last_update   （每秒）
- *   上报：  PATCH ?tracker_id=eq.{id}   body: { <history>: json, last_update }
- *   新建：  POST  body: 默认记录 + password + datacenter
- *
- * 记录字段：
- *   tracker_id, password, tracker_type, territory, datacenter, last_update,
- *   encounter_history, fate_history, pot_history
- * 每条 history 是 JSON 字符串，数组元素形如：
- *   { fate_id, spawn_time, death_time, last_seen, respawn_times, killed_fates, killed_ces }
- * ========================================================================= */
+/* PostgREST client for the shared OccultTrackerV3 backend. */
 (function (global) {
   'use strict';
 
@@ -27,12 +13,10 @@
     return h;
   }
 
-  // 构造一条空白 history 记录
   function blankEntry(id) {
     return { fate_id: id, spawn_time: -1, death_time: -1, last_seen: -1, respawn_times: [], killed_fates: 0, killed_ces: 0 };
   }
 
-  // 构造新建 tracker 用的默认记录
   function defaultRecord(password, datacenter) {
     var enc = Object.keys(OC.CES).map(function (k) { return blankEntry(Number(k)); });
     var fat = Object.keys(OC.FATES).map(function (k) { return blankEntry(Number(k)); });
@@ -49,7 +33,6 @@
   }
 
   var Api = OC.Api = {
-    /** 读取整条 tracker 记录，返回对象或 null */
     fetchTracker: function (id) {
       var url = OC.BACKEND.url + '?tracker_id=eq.' + encodeURIComponent(id) +
         '&order=last_update.desc,id.desc&limit=1';
@@ -72,7 +55,6 @@
       });
     },
 
-    /** 只取 last_update（用于每秒轮询变化） */
     fetchLastUpdate: function (id) {
       var url = OC.BACKEND.url + '?tracker_id=eq.' + encodeURIComponent(id) +
         '&select=last_update&order=last_update.desc,id.desc&limit=1';
@@ -84,15 +66,6 @@
       });
     },
 
-    /**
-     * 上报某个 FATE/CE/罐 的状态。
-     * @param id       tracker_id
-     * @param record   当前完整记录（含各 history 字符串）
-     * @param type     'ce' | 'fate' | 'pot'
-     * @param fateId   对应 fate_id / encounter_id
-     * @param status   'spawned' | 'dead'
-     * @returns Promise<更新后的 history 数组>
-     */
     report: function (id, record, type, fateId, status) {
       var field = type === 'ce' ? 'encounter_history' : type === 'fate' ? 'fate_history' : 'pot_history';
       var arr;
@@ -127,7 +100,6 @@
       });
     },
 
-    /** 拉取若干大区最近活跃的岛屿（含 pot_history），用于总览 */
     fetchDcPots: function (dcList, sinceSec, territory) {
       var now = Math.floor(Date.now() / 1000);
       var url = OC.BACKEND.url +
@@ -158,7 +130,6 @@
       });
     },
 
-    /** 创建 AutoPopper 兼容的实例 tracker，并返回数据库生成的完整记录。 */
     createIslandTracker: function (record) {
       return fetch(OC.BACKEND.url, {
         method: 'POST',
@@ -187,7 +158,6 @@
       });
     },
 
-    /** 新建一个 tracker，返回 tracker_id */
     create: function (password, datacenter) {
       var rec = defaultRecord(password, datacenter);
       return fetch(OC.BACKEND.url, {

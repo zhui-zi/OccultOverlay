@@ -1,12 +1,4 @@
-/* =========================================================================
- * mapPoints.js — 新月岛（South Horn / North Horn）地图与点位坐标
- *
- * 数据来自 EurekaTrackerAutoPopper。坐标为游戏世界坐标 [x, z]。
- * 两张地图均为 2048x2048（SizeFactor=100, Offset=0），
- * 世界坐标 -> 贴图像素：px = x + 1024, py = z + 1024。
- * South Horn 点位计数：铜60 银8 北罐30 南罐30 续罐20 萝卜25。
- * North Horn 已接入地表宝箱、罐箱、胡萝卜、FATE/CE/魔法罐坐标。
- * ========================================================================= */
+/* EurekaTrackerAutoPopper map data in world coordinates [x, z]. */
 (function (global) {
   'use strict';
   var OC = global.OC = global.OC || {};
@@ -30,8 +22,6 @@
     encounters: {33:[299.92,729.98],34:[450.29,356.47],35:[620.17,800.05],36:[680.91,534.07],37:[-340.12,800.06],38:[-413.44,74.69],39:[-799.85,245.2],40:[676.51,-254.43],41:[-117.02,-850.35],42:[629.34,-52.77],43:[-353.24,-606.3],44:[457.35,-357.9],45:[72.07,-549.96],46:[870.56,180.05],47:[-569.2,-158.8],48:[63.07,3.83],1962:[162.0,676.0],1963:[373.2,486.0],1964:[-226.1,254.0],1965:[-548.5,-595.0],1966:[-223.1,36.0],1967:[-48.1,-320.0],1968:[-370.0,650.0],1969:[-589.1,333.0],1970:[-71.0,557.0],1971:[79.0,278.0],1972:[413.0,-13.0],1976:[200.0,-215.0],1977:[-481.0,528.0]}
   };
 
-  // North Horn data from EurekaTrackerAutoPopper on 2026-07-29.
-  // Pot coffer locations are split into north, south, and reroll lists.
   var northHorn = {
     territory: 1346,
     mapId: 1135,
@@ -82,8 +72,7 @@
     }
   };
 
-  // North Horn subterrane (Map 1244) data from EurekaTrackerAutoPopper.
-  // Upstream currently contains treasure coffer locations only.
+  // Upstream currently provides treasure coffers only for Map 1244.
   var northSubterrane = {
     territory: 1346,
     mapId: 1244,

@@ -1,10 +1,4 @@
-/* =========================================================================
- * data.js — 新月岛（Occult Crescent · South Horn / North Horn）静态数据
- *
- * FATE / CE / 撒娇罐 / 掉落物 定义。
- * 数据源：EurekaTrackerAutoPopper 与 OccultTrackerV3。
- * North Horn names include zh-CN, English, and Japanese runtime fallbacks.
- * ========================================================================= */
+/* Static Occult Crescent data from EurekaTrackerAutoPopper and OccultTrackerV3. */
 (function (global) {
   'use strict';
 
@@ -32,16 +26,13 @@
 
   // --- 后端与图标服务 -----------------------------------------------------
   OC.BACKEND = {
-    // PostgREST 表端点（读取 / 轮询 / 上报）
     url: 'https://infi.ovh/api/OccultTrackerV3',
     // 公开匿名 JWT（role: anon），与官方站点一致
     anonKey:
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.Ur6wgi_rD4dr3uLLvbLoaEvfLCu4QFWdrF-uHRtbl_s',
-    // 图标资源：把游戏 tex 路径转成 png（beta.xivapi 可用）
     iconBase: 'https://beta.xivapi.com/api/1/asset?format=png&path='
   };
 
-  // 把定义里的 img（ui/icon/xxx.tex）转成可显示的 URL
   OC.iconUrl = function (texPath) {
     if (!texPath) return '';
     return OC.BACKEND.iconBase + encodeURIComponent(texPath);
@@ -75,7 +66,6 @@
     RESPAWN: 3600
   };
 
-  // 掉落分类
   OC.DROP_CAT = {
     demiatma: { zh: '半魂晶', en: 'Demiatma', color: '#5bc0de' },
     dispeller: { zh: '消幻晶', en: 'Phantom Dispeller', color: '#79c8ff' },
@@ -86,7 +76,6 @@
   };
 
   // --- 掉落物（item_id -> 定义） -----------------------------------------
-  // cat 为掉落分类；name 为多语言；img 为游戏图标 tex 路径。
   OC.ITEMS = {
     // 半魂晶 Demiatma
     47744: { cat: 'demiatma', img: 'ui/icon/026000/026025.tex', name: { zh: '青色半魂晶', en: 'Azurite Demiatma', ja: '青晶のデミアートマ' } },
@@ -214,7 +203,6 @@
     // 偶数序号=北(North / 1976)，奇数序号=南(South / 1977)
   };
 
-  // 取本地化名字：优先 lang，回退 zh -> en -> ja -> 任意
   OC.localName = function (nameObj, lang) {
     if (!nameObj) return '';
     return nameObj[lang] || nameObj.zh || nameObj.en || nameObj.ja || Object.values(nameObj)[0] || '';

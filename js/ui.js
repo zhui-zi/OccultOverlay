@@ -1,6 +1,3 @@
-/* =========================================================================
- * ui.js — 撒娇罐总览、岛屿详情(CE/FATE/罐)、掉落图标、通知
- * ========================================================================= */
 (function (global) {
   'use strict';
   var OC = global.OC = global.OC || {};
@@ -51,7 +48,6 @@
     var want = OC.Settings.get('alertColors') || {};
     return UI.rewardSuffix((drops || []).filter(function (id) { return want[id]; }));
   };
-  // 保留旧接口，避免缓存未完全刷新时发生调用错误。
   UI.demiatmaSuffix = UI.rewardSuffix;
   UI.demiatmaSuffixIfWanted = UI.rewardSuffixIfWanted;
 

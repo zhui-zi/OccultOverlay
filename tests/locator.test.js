@@ -89,7 +89,6 @@ const sandbox = {
         return Promise.resolve(null);
       },
     },
-    // A legacy stored false value must no longer disable shared tracker sync.
     Settings: { get(key) { return key === 'autoReport' ? false : null; } },
     i18n: { t(key) { return key; } },
     localName(value) { return value.en; },

@@ -1,8 +1,4 @@
-/* =========================================================================
- * main.js — 主控（自动模式）
- * 地图为主体；顶部胶囊；右侧圆形按钮；撒娇罐总览为主要数据来源。
- * ACT director 事件负责本地状态，云端仅补足经实例指纹确认的共享数据。
- * ========================================================================= */
+/* ACT director state with strictly matched shared-tracker fallback. */
 (function (global) {
   'use strict';
   var OC = global.OC = global.OC || {};
@@ -60,20 +56,17 @@
       this.updateChips();
       this.updateMapVisible();
 
-      // 胶囊点击：连接胶囊(新月岛)=折叠开关；撒娇罐胶囊=打开“我所在岛”的详情
       document.getElementById('chip-conn').addEventListener('click', function () { App.toggleCollapse(); });
       document.getElementById('chip-pot').addEventListener('click', function (e) {
         e.stopPropagation();
         App.showMyIsland();
       });
-      // 右键“当前 FATE/CE”胶囊即可隐藏（可在设置里重新打开）
       document.getElementById('chips-active').addEventListener('contextmenu', function (e) {
         e.preventDefault();
         OC.Settings.set('showActiveChips', false);
         App.updateActive();
         OC.UI.toast('fate', t('chips_hidden'), '');
       });
-      // 面板关闭按钮：事件委托（避免每秒重绘后失效）
       var pop = document.getElementById('popover');
       pop.addEventListener('click', function (e) {
         if (e.target.closest('[data-close]')) App.closePanel();
@@ -513,7 +506,6 @@
       this.fetchDc(true);
     },
 
-    // 点击某岛 -> 拉取详情并显示战斗面板
     showIsland: function (id, rowId) {
       State.detail = null; State.detailId = id; State.detailLocating = false;
       this.openPanel = 'battle';
@@ -564,7 +556,6 @@
           body += '<span class="s">' + t('loading') + '</span>';
         } else if (mine) {
           var side = mine.side ? '<span class="side-' + mine.side + '">' + (mine.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
-          // 仅显示玩家已开启播报的当前区域关键奖励。
           var pdef = potForSide(mine.side, OC.Overlay.territoryId || (OC.MAP && OC.MAP.territory));
           if (pdef) side += OC.UI.rewardSuffixIfWanted(pdef.drops);
           if (mine.alive) { body += '<span class="s a">' + t('alive') + '</span> ' + side; ready = true; }
@@ -647,9 +638,7 @@
           return '<div class="chip chip-act ' + cls + '">' + OC.UI.esc(nm(def.name)) + rewardSuffix(def.drops) + '</div>';
         }).join('');
       }
-      // Position polling and the one-second timer both call this method.
-      // Preserve the existing glass-effect nodes unless their content changed;
-      // rebuilding identical nodes makes ACT's Chromium surface flash.
+      // Rebuilding identical nodes makes ACT's Chromium surface flash.
       if (box._ocActiveHtml === html) return;
       box._ocActiveHtml = html;
       box.innerHTML = html;
@@ -681,15 +670,12 @@
         else App.locateMyIslandFast();
       });
       OC.Overlay.on('playerContext', function () {
-        // World/DC can arrive through raw ACT memory before position polling.
-        // Re-evaluate immediately so a valid FateDirector Add is not stranded.
         App.scheduleKnownTrackerChecks();
         if (App.resolveMyIsland()) App.pollMyIsland(true);
         else App.locateMyIslandFast(true).then(function (found) {
           if (!found) App.fetchDc(true);
         });
       });
-      // 内存态 FATE/CE 变化：即时提示（不受距离与云端上报延迟影响）
       OC.Overlay.on('memActive', function (id, active, detail) {
         detail = detail || {};
         var observedAt = Number(detail.observedAt) || now();
@@ -711,7 +697,6 @@
         if (active && detail.eventType === 'add' && OC.FATES[id]) {
           App.scheduleTrackerCheck(id, observedAt);
         }
-        // 有了 Add 指纹立即做定向查询；未命中时才退回大区列表。
         if (!App.resolveMyIsland()) App.locateMyIslandFast(true).then(function (found) {
           if (!found) App.fetchDc(true);
         });
@@ -722,9 +707,7 @@
       });
     },
 
-    // 拉取国服四大区活跃岛屿（撒娇罐总览 + 顶部胶囊数据源）
     fetchDc: function (throttled) {
-      // 节流：事件驱动的请求最快 3 秒一次，避免频繁拉取导致卡顿
       var tn = Date.now();
       if (throttled && this._lastDcFetch && tn - this._lastDcFetch < 3000) return;
       this._lastDcFetch = tn;
@@ -762,7 +745,6 @@
       }
     },
 
-    // 拉取“我所在岛”的完整数据，驱动地图高亮 + 提示（云端，玩家在起始点也有效）
     pollMyIsland: function (throttled) {
       // 不在新月岛时不拉取本岛数据（避免残留数据触发提示）
       if (OC.Overlay.connected && !OC.Overlay.inOccult) { this._island = null; return; }
@@ -824,7 +806,6 @@
       this.updateActive();
     },
 
-    // 按 id 提示（内存态与云端共用；存活期间只提示一次）
     alertEncounter: function (id) {
       var isCe = !!OC.CES[id], isPot = !!OC.POTS[id];
       var def = isCe ? OC.CES[id] : isPot ? OC.POTS[id] : OC.FATES[id];
@@ -918,7 +899,6 @@
       this._alertPlaying = true;
       OC.UI.toast(item.kind, item.msg, '');
       if (!OC.UI.speak(item.msg)) OC.UI.beep(item.kind);
-      // 每条提示之间留出间隔，让 TTS 有时间念完
       setTimeout(function () {
         App._alertPlaying = false;
         App._drainAlerts();
@@ -926,7 +906,6 @@
     },
 
     startLoops: function () {
-      // 每 5 秒刷新国服总览（顶部胶囊 + 面板）
       setInterval(function () { App.fetchDc(); }, 5000);
       // 每秒：更新胶囊 + 面板计时文本（不重绘，避免滚动被顶回/闪烁）+ 撒娇罐提前提示
       setInterval(function () {

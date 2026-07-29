@@ -1,19 +1,4 @@
-/* =========================================================================
- * overlay.js — 与 ACT / OverlayPlugin 的连接层
- *
- * 支持两种接入：
- *   1) 现代 ngld/OverlayPlugin WebSocket（?OVERLAY_WS=ws://127.0.0.1:10501/ws）
- *   2) 旧版 window.OverlayPluginApi（IINACT / 内置浏览器）
- * 若都不可用，进入“独立/演示”模式，界面照常可用（手动上报）。
- *
- * 对外事件（OC.Overlay.on(name, cb)）：
- *   'connected'   () 已连接游戏
- *   'disconnected'() 断开
- *   'zone'        (territoryId:Number, zoneName:String, inOccult:Boolean)
- *   'log'         (type:Number, parts:Array, raw:String)  每条日志行
- *   'ce'          ({encounterId, status:'spawned'|'dead', name}) 侦测到 CE
- *   'fate'        ({fateId, status, name}) 侦测到 FATE
- * ========================================================================= */
+/* ACT connection layer for WebSocket and injected OverlayPluginApi transports. */
 (function (global) {
   'use strict';
 
@@ -77,12 +62,10 @@
   Overlay.playerName = '';
   Overlay.playerPos = null; // {x, y, z, h}; y is altitude, x/z are horizontal
 
-  // ---- 事件订阅列表 -----------------------------------------------------
   // onFateEvent 由网络包解析产生（cactbot/IINACT FateWatcher），全岛可见、即时，
   // 与玩家距离无关；Add 可提供实例识别证据，Update 只证明当前仍存活。
   var SUBSCRIBE = ['ChangeZone', 'ChangePrimaryPlayer', 'LogLine', 'onFateEvent'];
 
-  // ---- 现代 WebSocket 接入 ----------------------------------------------
   var ws = null;
   var wsUrl = null;
   var reconnectTimer = null;
@@ -141,9 +124,6 @@
     }, 5000);
   }
 
-  // ---- 旧版 OverlayPluginApi 接入（IINACT / 内置浏览器） ----------------
-  // 内置浏览器模式：无需开启 WS 服务，直接用注入的 OverlayPluginApi。
-  // API 可能在脚本之后才注入，这里轮询等待其就绪再订阅。
   var legacyTimer = null;
   function connectLegacy() {
     global.__OverlayCallback = handleMessage;
@@ -160,17 +140,14 @@
     }, 500);
   }
 
-  // OverlayPlugin 通用回调（common.js 兼容）
   global.dispatchOverlayEvent = function (msg) { handleMessage(msg); };
   document.addEventListener('onOverlayDataUpdate', function (e) {
     if (e && e.detail) handleMessage(e.detail);
   });
 
-  // ---- 请求/响应（getCombatants 等，读内存） ---------------------------
   var _rseq = 0;
   var _pending = {};
   Overlay.callHandler = function (obj) {
-    // 旧版：OverlayPluginApi.callHandler(msg, cb)
     if (transportMode === 'legacy' && global.OverlayPluginApi && global.OverlayPluginApi.ready) {
       return new Promise(function (resolve) {
         global.OverlayPluginApi.callHandler(JSON.stringify(obj), function (data) {
@@ -179,7 +156,6 @@
         });
       });
     }
-    // 现代 WS：用 rseq 关联响应
     if (ws && ws.readyState === 1) {
       var id = ++_rseq;
       obj.rseq = id;
@@ -192,28 +168,22 @@
     return Promise.resolve(null);
   };
 
-  // 定时读取自己坐标（内存），供地图显示玩家位置；
-  // 同时通过 getFates 读取全图 FATE 状态（距离无关），用于即时识别所在岛。
   var posTimer = null;
   function startPositionPolling() {
     if (posTimer) return;
     posTimer = setInterval(function () {
       if (!Overlay.connected) return;
 
-      // --- getCombatants：玩家坐标 + 大区检测 + 近距离 boss 扫描 ---
       Overlay.callHandler({ call: 'getCombatants' }).then(function (data) {
         if (!data || !data.combatants) return;
         var arr = data.combatants;
         var me = null, i, c;
-        // 1) 按主角 ID 精确匹配
         if (Overlay.playerId != null) {
           for (i = 0; i < arr.length; i++) { c = arr[i]; if (c.ID == Overlay.playerId) { me = c; break; } }
         }
-        // 2) 按主角名匹配（type/Type 兼容大小写，1 = PC）
         if (!me && Overlay.playerName) {
           for (i = 0; i < arr.length; i++) { c = arr[i]; if (c.Name === Overlay.playerName) { me = c; break; } }
         }
-        // 3) 兜底：第一个 PC
         if (!me) for (i = 0; i < arr.length; i++) { c = arr[i]; if ((c.type === 1 || c.Type === 1) && c.Name) { me = c; break; } }
         if (!me) return;
         // 跨区旅行时以”当前世界”为准（CurrentWorldID），而非home世界(WorldID)
@@ -235,7 +205,6 @@
     }, 2000);
   }
 
-  // ---- 消息分发 ---------------------------------------------------------
   function handleMessage(d) {
     if (!d) return;
     if (d.rseq != null && _pending[d.rseq]) { var f = _pending[d.rseq]; delete _pending[d.rseq]; f(d); return; }
@@ -291,8 +260,6 @@
     Overlay.emit('zone', Overlay.territoryId, Overlay.zoneName, Overlay.inOccult);
   }
 
-  // ---- 日志行解析（尽力侦测 CE/FATE） ----------------------------------
-  // OverlayPlugin LogLine：d.line = [typeHex, ts, ...parts]，d.rawLine 原文
   function handleLogLine(d) {
     var line = d.line || [];
     var type = parseInt(line[0], 10);
@@ -313,7 +280,6 @@
       return;
     }
 
-    // 调试钩子：设置 OC.Overlay.debugRaw = fn 可捕获原始日志行
     if (Overlay.debugRaw) { try { Overlay.debugRaw(line); } catch (e) {} }
 
     // 258 FateDirector / 259 CEDirector：由 ACT 读取内存产生，
@@ -450,7 +416,6 @@
     });
   }
 
-  // ---- boss 名称索引：从场上战斗单位判断活跃的 FATE/CE ------------------
   var _bossIndex = null;
   function bossTokens(nameObj) {
     if (!nameObj) return [];
@@ -472,14 +437,11 @@
     Overlay.bossPos = Overlay.bossPos || {};
     (combatants || []).forEach(function (c) {
       var name = c && c.Name; if (!name || name.length < 2) return;
-      // 仅 BNpc/敌方单位（type 2）才可能是 FATE/CE boss；排除玩家等
       if (c.type != null && c.type !== 2) return;
       for (var i = 0; i < _bossIndex.length; i++) {
         var b = _bossIndex[i];
-        // 精确匹配，或战斗单位名包含完整 boss 名（不做反向包含，避免误报）
         if (name === b.t || name.indexOf(b.t) >= 0) {
           found[b.id] = 1;
-          // 记录 boss 实际坐标，用于地图精确定位（静态表可能有误）
           if (c.PosX != null) Overlay.bossPos[b.id] = [c.PosX, c.PosY];
           break;
         }
@@ -488,7 +450,6 @@
     return Object.keys(found).map(Number);
   }
 
-  // 用系统浏览器打开链接（OverlayPlugin 'openWebsiteWithWS' 会调用 Process.Start）
   Overlay.openUrl = function (url) {
     var obj = { call: 'openWebsiteWithWS', url: url };
     if (transportMode === 'legacy' && global.OverlayPluginApi && global.OverlayPluginApi.ready) {
@@ -498,7 +459,6 @@
     return false; // 未连接 ACT：由调用方回退到 window.open
   };
 
-  // ACT 自带 TTS（OverlayPlugin 'say' 处理器），不使用系统 TTS
   Overlay.say = function (text) {
     var obj = { call: 'say', text: text };
     if (transportMode === 'legacy' && global.OverlayPluginApi && global.OverlayPluginApi.ready) {
@@ -508,7 +468,6 @@
     return false;
   };
 
-  // ---- 启动 -------------------------------------------------------------
   Overlay.start = function () {
     // 与 cactbot 官方接入方式一致：显式 WS 参数存在时只走 WS，
     // 否则只等待内置浏览器注入 API，避免失败的 WS 重试覆盖已连接状态。
@@ -519,7 +478,6 @@
     startPositionPolling();
   };
 
-  // 手动设置区域（演示 / 调试用）
   Overlay.setZoneManual = setZone;
 
   Overlay.isConnected = function () { return Overlay.connected; };
