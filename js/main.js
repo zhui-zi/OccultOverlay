@@ -16,7 +16,7 @@
     return found;
   }
   var CN_DCS = [101, 102, 103, 104];
-  var TRACKER_VERSION = 'OccultOverlay-v64';
+  var TRACKER_VERSION = 'OccultOverlay-v65';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
 
   var State = OC.State = { highlights: [], detail: null, detailId: null, detailLocating: false };

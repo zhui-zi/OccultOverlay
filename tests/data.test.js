@@ -33,13 +33,25 @@ assert.equal(OC.CES[49].spawn_type, true);
 assert.equal(OC.CES[49].monster.en, 'Pelekys');
 assert.equal(OC.CES[50].monster.en, 'Crescent Blackguard');
 assert.equal(OC.CES[53].monster.en, 'Crescent Big Horn');
+assert.equal(OC.CES[55].monster.en, 'Crescent Hellhound');
 assert.equal(OC.CES[61].monster.en, 'Crescent Wraith');
 assert.equal(OC.ITEMS[50974].name.zh, '消幻晶α');
 assert.equal(OC.ITEMS[50975].name.en, 'Phantom Dispeller β');
 assert.equal(OC.ITEMS[50976].img, 'ui/icon/026000/026230.tex');
+assert.equal(OC.ITEMS[51972].name.en, "Blue Mage's Soul Shard");
+assert.equal(OC.ITEMS[51974].name.zh, '灵魂碎晶：死灵法师');
+assert.equal(OC.ITEMS[51979].name.ja, '探査記録:アルバテル');
+assert.equal(OC.ITEMS[51988].cat, 'notes');
+for (const item of Object.values(OC.ITEMS)) {
+  if (item.cat === 'notes') assert.match(item.name.zh, /^调查记录：/);
+}
 assert.deepEqual(Array.from(OC.FATES[2074].drops), []);
 assert.deepEqual(Array.from(OC.POTS[2072].drops), []);
 assert.deepEqual(Array.from(OC.CES[49].drops), []);
+assert.deepEqual(Array.from(OC.CES[50].drops), [51988]);
+assert.deepEqual(Array.from(OC.CES[57].drops), [51974, 51984]);
+assert.deepEqual(Array.from(OC.CES[59].drops), [51972, 51983]);
+assert.deepEqual(Array.from(OC.CES[63].drops), [51982]);
 assert.deepEqual(Array.from(OC.CES[64].drops), []);
 
 const north = OC.TERRITORIES[1346];

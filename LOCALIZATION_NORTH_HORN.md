@@ -55,7 +55,25 @@ All current North Horn runtime strings are localized.
 | 49 | Pelekys | 提蔛 |
 | 50 | Crescent Blackguard | 新月黑卫 |
 | 53 | Crescent Big Horn | 新月大角牛 |
+| 55 | Crescent Hellhound | 新月地狱犬 |
 | 61 | Crescent Wraith | 新月幽灵 |
+
+## Items
+
+| Item ID | English | zh-CN |
+| ---: | --- | --- |
+| 51972 | Blue Mage's Soul Shard | 灵魂碎晶：青魔法师 |
+| 51974 | Necromancer's Soul Shard | 灵魂碎晶：死灵法师 |
+| 51979 | Notes on Arbatel | 调查记录：古术魔典 |
+| 51980 | Notes on the Tiny Mage | 调查记录：小小法师 |
+| 51981 | Notes on Algol | 调查记录：阿尔戈尔 |
+| 51982 | Notes on the Metamorph | 调查记录：变形法师 |
+| 51983 | Notes on the Pallmagia | 调查记录：惨白魔人 |
+| 51984 | Notes on the Phantom Necromancer | 调查记录：魔亡灵法师 |
+| 51985 | Notes on the Abductor | 调查记录：诱拐魔 |
+| 51986 | Notes on the Claret Dragon | 调查记录：赤龙 |
+| 51987 | Notes on the Alabaster Blade | 调查记录：雪石膏之剑 |
+| 51988 | Notes on Conjured Calofisteri | 调查记录：卡洛菲斯提莉二重身 |
 
 ## UI Text
 
@@ -73,4 +91,4 @@ These terms are already localized and require no action.
 | 50975 | Phantom Dispeller β | 消幻晶β |
 | 50976 | Phantom Dispeller γ | 消幻晶γ |
 
-Per-event Phantom Dispeller drops are still unavailable. Surface coffer, north/south pot coffer, reroll, carrot, and trigger-monster data are integrated.
+Per-event Phantom Dispeller drops are still unavailable. Soul-shard, exploration-note, surface coffer, north/south pot coffer, reroll, carrot, and trigger-monster data are integrated.

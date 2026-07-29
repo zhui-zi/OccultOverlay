@@ -10,7 +10,8 @@ Everything is automatic — no setup, no tracker id. Data comes from the shared 
 - Pot overview across the CN datacenters, sorted by next-pot time; click an island for its CE / FATE and drops.
 - Fast `?` preview from a unique active-state match; cloud writes require confirmed instance evidence.
 - Optional ACT TTS alerts for every CE, FATE, and pot, with per-spawn deduplication.
-- South Horn demiatma filters; North Horn event-to-dispeller mappings remain intentionally unset.
+- South Horn demiatma filters; North Horn soul-shard and exploration-note drops.
+- North Horn event-to-dispeller mappings remain intentionally unset.
 - Only visible while you are in Occult Crescent.
 - Collapse mode to hide the map.
 - zh / en / ja.
