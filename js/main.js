@@ -20,7 +20,8 @@
     return found;
   }
   var CN_DCS = [101, 102, 103, 104];
-  var TRACKER_VERSION = 'OccultOverlay-v59';
+  var TRACKER_VERSION = 'OccultOverlay-v63';
+  var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
 
   var State = OC.State = { highlights: [], detail: null, detailId: null, detailLocating: false };
 
@@ -449,6 +450,7 @@
       this._uploadTimer = null; this._uploadChain = Promise.resolve();
       this._pendingUploadFingerprint = '';
       this._island = null; this._potAlertedFor = null; this._alerted = {};
+      this._highlightMissingSince = {};
       this._lastIslandFetch = 0;
       this._localPot = null;                 // 换本后本机观测的罐状态作废
       State.detail = null; State.detailId = null;
@@ -568,7 +570,7 @@
           if (mine.alive) { body += '<span class="s a">' + t('alive') + '</span> ' + side; ready = true; }
           else { body += '<b>' + OC.UI.fmtDur(Math.max(0, mine.etaSec)) + '</b> ' + side; ready = mine.etaSec <= 60; }
         } else {
-          body += '<span class="s">' + t('locating') + '</span>';
+          body += '<span class="s">' + t('island_unknown') + '</span>';
         }
         pot.classList.toggle('ready', ready);
         pot.innerHTML = body;
@@ -796,6 +798,27 @@
           if (isAlive(e) && id && ids.indexOf(id) < 0) ids.push(id);
         });
       }
+      // ACT directors and the shared tracker can each miss one transient sample.
+      // Show new encounters immediately, but require a continuous absence before
+      // removing an existing capsule so a Remove/Add resync cannot make it flash.
+      var activeNow = {};
+      ids.forEach(function (id) { activeNow[id] = true; });
+      var missingSince = this._highlightMissingSince = this._highlightMissingSince || {};
+      var timestamp = Date.now();
+      (OC.State.highlights || []).forEach(function (id) {
+        id = Number(id);
+        if (activeNow[id]) {
+          delete missingSince[id];
+          return;
+        }
+        if (!missingSince[id]) missingSince[id] = timestamp;
+        if (timestamp - missingSince[id] < HIGHLIGHT_REMOVE_GRACE_MS) ids.push(id);
+        else delete missingSince[id];
+      });
+      ids.forEach(function (id) {
+        if (activeNow[id]) delete missingSince[id];
+      });
+      ids.sort(function (a, b) { return a - b; });
       OC.State.highlights = ids;
       OC.Map.updateHighlights(document.getElementById('mapLayer'));
       this.updateActive();

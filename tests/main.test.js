@@ -148,10 +148,48 @@ sandbox.OC.App._island = {
 };
 sandbox.OC.App.refreshHighlights();
 assert.deepEqual(
-  Array.from(sandbox.OC.State.highlights).sort((a, b) => a - b),
+  Array.from(sandbox.OC.State.highlights),
   [49, 2074],
   'connected North Horn must merge strict-island cloud CE when CEDirector is unavailable',
 );
+sandbox.OC.Overlay.memActive = {};
+sandbox.OC.App._island = { ce: [], fate: [], pot: [] };
+const writesBeforeTransientDrop = writes;
+sandbox.OC.App.refreshHighlights();
+assert.deepEqual(
+  Array.from(sandbox.OC.State.highlights),
+  [49, 2074],
+  'one missing director/cloud sample must not remove active capsules',
+);
+assert.equal(writes, writesBeforeTransientDrop, 'a transient drop must not rebuild active capsules');
+sandbox.OC.Overlay.memActive = { 2074: true };
+sandbox.OC.App._island = {
+  ce: [{ fate_id: 49, spawn_time: 100, death_time: -1 }],
+  fate: [],
+  pot: [],
+};
+sandbox.OC.App.refreshHighlights();
+assert.deepEqual(Array.from(sandbox.OC.State.highlights), [49, 2074]);
+sandbox.OC.Overlay.memActive = {};
+sandbox.OC.App._island = { ce: [], fate: [], pot: [] };
+sandbox.OC.App._highlightMissingSince = {
+  49: Date.now() - 7001,
+  2074: Date.now() - 7001,
+};
+sandbox.OC.App.refreshHighlights();
+assert.deepEqual(
+  Array.from(sandbox.OC.State.highlights),
+  [],
+  'a continuously absent encounter must disappear after the grace period',
+);
+
+sandbox.OC.Overlay.memActive = { 2074: true };
+sandbox.OC.App._island = {
+  ce: [{ fate_id: 49, spawn_time: 100, death_time: -1 }],
+  fate: [{ fate_id: 2074, spawn_time: 100, death_time: -1 }],
+  pot: [{ fate_id: 2072, spawn_time: 100, death_time: -1 }],
+};
+sandbox.OC.App.refreshHighlights();
 sandbox.OC.Overlay.connected = false;
 sandbox.OC.App.refreshHighlights();
 assert.deepEqual(

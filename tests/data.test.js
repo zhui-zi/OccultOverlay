@@ -56,6 +56,7 @@ const i18nSandbox = {
 i18nSandbox.window = i18nSandbox;
 vm.runInNewContext(fs.readFileSync(require.resolve('../js/i18n.js'), 'utf8'), i18nSandbox, { filename: '../js/i18n.js' });
 assert.equal(i18nSandbox.OC.i18n.t('alert_dispeller_pending'), '各 FATE/CE 的消幻晶掉落对应关系尚无数据。');
+assert.equal(i18nSandbox.OC.i18n.t('island_unknown'), '未知');
 
 assert.equal(OC.selectMap(1346), true);
 assert.equal(OC.MAP.background, 'assets/map-north.png');
