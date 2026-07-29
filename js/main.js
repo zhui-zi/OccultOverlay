@@ -16,7 +16,7 @@
     return found;
   }
   var CN_DCS = [101, 102, 103, 104];
-  var TRACKER_VERSION = 'OccultOverlay-v63';
+  var TRACKER_VERSION = 'OccultOverlay-v64';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
 
   var State = OC.State = { highlights: [], detail: null, detailId: null, detailLocating: false };
@@ -130,16 +130,21 @@
       this.updateMapVisible();
     },
 
-    // 构造与 DR 相同的实例证据：大区 + 最新普通 FATE + Add 时间。
-    // 只有 Add 才有出生时间；悬浮窗重载后首先收到的 Update 不参与指纹。
-    // Add 证据在 FATE 结束后仍然有效，直至换区/断线时统一清空。
+    // 构造与 DR 相同的实例证据：大区 + 最新可信普通 FATE + Add 时间。
+    // 进岛/重连时 OverlayPlugin 重放的 Add 不是出生时间，不参与指纹。
+    // Remove 时间可用于稍后与云端历史唯一匹配。
     instanceEvidence: function () {
       var meta = OC.Overlay.memMeta || {};
       var events = [];
+      var ends = [];
       Object.keys(meta).forEach(function (key) {
         var id = Number(key), item = meta[key] || {};
-        if (!item.spawnEpoch || id === 48) return;
-        events.push({ fateId: id, spawnEpoch: Number(item.spawnEpoch) });
+        if (item.spawnTrusted && item.spawnEpoch && id !== 48) {
+          events.push({ fateId: id, spawnEpoch: Number(item.spawnEpoch) });
+        }
+        if (item.deathEpoch && (OC.FATES[id] || OC.POTS[id])) {
+          ends.push({ fateId: id, deathEpoch: Number(item.deathEpoch) });
+        }
       });
       var fateEvents = events.filter(function (item) {
         return !!OC.FATES[item.fateId];
@@ -161,8 +166,47 @@
         fingerprint: this._contextFingerprint || '',
         fingerprints: this._contextFingerprints || [],
         events: events,
+        ends: ends,
         territory: territory
       };
+    },
+
+    snapshotActiveIds: function () {
+      return Object.keys(OC.Overlay.memActive || {}).map(Number).filter(function (id) {
+        return !!OC.FATES[id] || !!OC.POTS[id];
+      }).sort(function (a, b) { return a - b; });
+    },
+
+    updatePreviewIsland: function () {
+      if (this.myIslandRowId) {
+        this._previewIsland = null;
+        return null;
+      }
+      var matched = OC.Pots.matchSnapshotIsland(
+        this._islands || [],
+        this.snapshotActiveIds(),
+        Number(OC.Overlay.playerDc) || 0,
+        Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0,
+        now()
+      );
+      if (!matched) {
+        this._previewIsland = null;
+        return null;
+      }
+      var record = (this._dcRows || []).filter(function (row) {
+        return Number(row.id) === Number(matched.rowId);
+      })[0];
+      if (!record) {
+        this._previewIsland = null;
+        return null;
+      }
+      this._previewIsland = {
+        id: matched.id,
+        rowId: matched.rowId,
+        pot: pj(record.pot_history),
+        record: record
+      };
+      return this._previewIsland;
     },
 
     trackerContext: function (fateId, spawnEpoch) {
@@ -192,6 +236,7 @@
       this.myIslandRowId = matched.rowId;
       this.myIslandFingerprint = matched.fingerprint || '';
       this.myIslandId = matched.id || ('row:' + matched.rowId);
+      this._previewIsland = null;
       if (changed) {
         this._island = null;
         this._potAlertedFor = null;
@@ -258,8 +303,8 @@
         .then(function (rows) {
           if (generation !== (App._locateGeneration || 0) || !rows || !rows.length) return false;
           if (!App.bindIslandRows(rows, evidence, dc)) return false;
-          App._missingTrackerChecks = 0;
-          App.queueIslandUpload(evidence.fingerprint);
+          App._missingTrackerChecks = {};
+          App.queueIslandUpload();
           App.updateChips();
           return true;
         })
@@ -286,7 +331,7 @@
         var spawn = Number(local.spawnEpoch) || -1;
         var death = Number(local.deathEpoch) || -1;
         var seen = Number(local.lastSeen) || -1;
-        if (spawn > 0 && spawn >= Number(entry.spawn_time || -1)) {
+        if (local.spawnTrusted && spawn > 0 && spawn >= Number(entry.spawn_time || -1)) {
           entry.spawn_time = spawn;
           entry.death_time = local.active ? -1 : (death > 0 ? death : -1);
         } else if (local.active && Number(entry.spawn_time) > 0) {
@@ -328,38 +373,37 @@
           context.generation !== (this._locateGeneration || 0)) {
         return Promise.resolve(false);
       }
-      if (this.myIslandRowId) {
-        this._missingTrackerChecks = 0;
-        this.queueIslandUpload(context.fingerprint, true);
-        return Promise.resolve(true);
-      }
+      var checkKey = String(context.fingerprint || '');
+      this._missingTrackerChecks = this._missingTrackerChecks || {};
       return OC.Api.fetchIslandByFingerprints(context.fingerprints, context.territory, context.dc)
         .then(function (rows) {
           if (context.generation !== (App._locateGeneration || 0)) return false;
           if (rows && rows.length) {
             var found = App.bindIslandRows(rows, context, context.dc);
             if (found) {
-              App._missingTrackerChecks = 0;
-              App.queueIslandUpload(context.fingerprint, true);
+              App._missingTrackerChecks[checkKey] = 0;
+              App.queueIslandUpload(null, true);
               App.updateChips();
               return true;
             }
+            context.stopRetry = true;
             return false;
           }
           if (App.myIslandRowId) {
-            App._missingTrackerChecks = 0;
+            App._missingTrackerChecks[checkKey] = 0;
             App.queueIslandUpload(context.fingerprint, true);
             return true;
           }
 
-          App._missingTrackerChecks = (App._missingTrackerChecks || 0) + 1;
-          if (App._missingTrackerChecks < 2) return false;
+          App._missingTrackerChecks[checkKey] =
+            Number(App._missingTrackerChecks[checkKey] || 0) + 1;
+          if (App._missingTrackerChecks[checkKey] < 2) return false;
           var record = App.buildLocalTrackerRecord(context.fingerprint);
           if (!record) return false;
           return OC.Api.createIslandTracker(record).then(function (created) {
             if (context.generation !== (App._locateGeneration || 0)) return false;
             if (created && App.bindIslandRows([created], context, context.dc)) {
-              App._missingTrackerChecks = 0;
+              App._missingTrackerChecks[checkKey] = 0;
               App.updateChips();
               return true;
             }
@@ -368,7 +412,7 @@
             ).then(function (createdRows) {
               var found = App.bindIslandRows(createdRows, context, context.dc);
               if (found) {
-                App._missingTrackerChecks = 0;
+                App._missingTrackerChecks[checkKey] = 0;
                 App.updateChips();
               }
               return !!found;
@@ -381,22 +425,31 @@
     scheduleTrackerCheck: function (fateId, spawnEpoch) {
       var context = this.trackerContext(fateId, spawnEpoch);
       if (!context) return;
-      if (this.myIslandRowId) {
-        this.queueIslandUpload(context.fingerprint, true);
-        return;
-      }
       var key = context.fingerprint;
       this._scheduledTrackerChecks = this._scheduledTrackerChecks || {};
       this._checkedTrackerKeys = this._checkedTrackerKeys || {};
       if (this._scheduledTrackerChecks[key] || this._checkedTrackerKeys[key]) return;
-      this._scheduledTrackerChecks[key] = setTimeout(function () {
+      function runCheck() {
         delete App._scheduledTrackerChecks[key];
         if (context.generation !== (App._locateGeneration || 0)) return;
-        App._checkedTrackerKeys[key] = true;
         App._trackerCheckChain = (App._trackerCheckChain || Promise.resolve())
           .catch(function () {})
-          .then(function () { return App.checkOrCreateIsland(context); });
-      }, 10000);
+          .then(function () { return App.checkOrCreateIsland(context); })
+          .then(function (found) {
+            if (found || context.stopRetry ||
+                context.generation !== (App._locateGeneration || 0)) {
+              App._checkedTrackerKeys[key] = true;
+              return;
+            }
+            var count = Number((App._missingTrackerChecks || {})[key] || 0);
+            if (count < 2) {
+              App._scheduledTrackerChecks[key] = setTimeout(runCheck, 3000);
+            } else {
+              App._checkedTrackerKeys[key] = true;
+            }
+          });
+      }
+      this._scheduledTrackerChecks[key] = setTimeout(runCheck, 8000);
     },
 
     scheduleKnownTrackerChecks: function () {
@@ -404,7 +457,7 @@
       Object.keys(meta).map(function (key) {
         return { id: Number(key), meta: meta[key] || {} };
       }).filter(function (item) {
-        return !!OC.FATES[item.id] && !!item.meta.spawnEpoch;
+        return !!OC.FATES[item.id] && !!item.meta.spawnTrusted && !!item.meta.spawnEpoch;
       }).sort(function (a, b) {
         return Number(a.meta.spawnEpoch) - Number(b.meta.spawnEpoch);
       }).forEach(function (item) {
@@ -414,7 +467,7 @@
 
     queueIslandUpload: function (fingerprint, immediate) {
       if (!this.myIslandRowId || !OC.Overlay.connected || !OC.Overlay.inOccult) return;
-      this._pendingUploadFingerprint = fingerprint || this.instanceEvidence().fingerprint || this.myIslandFingerprint;
+      this._pendingUploadFingerprint = fingerprint || this.myIslandFingerprint || this.instanceEvidence().fingerprint;
       if (this._uploadTimer) clearTimeout(this._uploadTimer);
       this._uploadTimer = setTimeout(function () {
         App._uploadTimer = null;
@@ -433,7 +486,7 @@
               Number(rowId) !== Number(App.myIslandRowId) ||
               !OC.Overlay.connected || !OC.Overlay.inOccult) return false;
           var fingerprint = App._pendingUploadFingerprint ||
-            App.instanceEvidence().fingerprint || App.myIslandFingerprint;
+            App.myIslandFingerprint || App.instanceEvidence().fingerprint;
           App._pendingUploadFingerprint = '';
           var record = App.buildLocalTrackerRecord(fingerprint);
           if (!record) return false;
@@ -468,9 +521,10 @@
       });
       if (this._uploadTimer) clearTimeout(this._uploadTimer);
       this._scheduledTrackerChecks = {}; this._checkedTrackerKeys = {};
-      this._missingTrackerChecks = 0; this._trackerCheckChain = Promise.resolve();
+      this._missingTrackerChecks = {}; this._trackerCheckChain = Promise.resolve();
       this._uploadTimer = null; this._uploadChain = Promise.resolve();
       this._pendingUploadFingerprint = '';
+      this._previewIsland = null;
       this._island = null; this._potAlertedFor = null; this._alerted = {};
       this._highlightMissingSince = {};
       this._lastIslandFetch = 0;
@@ -526,6 +580,8 @@
     showMyIsland: function () {
       var id = this.resolveMyIsland();
       if (id) return this.showIsland(id, this.myIslandRowId);
+      var preview = this.updatePreviewIsland();
+      if (preview) return this.showIsland(preview.id + '?', preview.rowId);
       State.detail = null; State.detailId = null; State.detailLocating = true;
       this.openPanel = 'battle';
       var pop = document.getElementById('popover');
@@ -584,6 +640,7 @@
         if (!mine && !this._dcLoaded) {
           body += '<span class="s">' + t('loading') + '</span>';
         } else if (mine) {
+          if (mine.unconfirmed) body += '<span class="s">?</span> ';
           var side = mine.side ? '<span class="side-' + mine.side + '">' + (mine.side === 'north' ? t('pot_north') : t('pot_south')) + '</span>' : '';
           var pdef = potForSide(mine.side, OC.Overlay.territoryId || (OC.MAP && OC.MAP.territory));
           if (pdef) side += OC.UI.rewardSuffixIfWanted(pdef.drops);
@@ -598,14 +655,19 @@
       this.updateActive();
     },
 
-    // 本机 Add/Remove 优先；云端只允许来自已用强证据绑定的数据库行。
+    // 本机可信 Add/Remove 优先；初始快照唯一候选只用于带 ? 的只读预览。
     localPotInfo: function () {
       var cloud = this._island && this._island.pot;
+      var unconfirmed = false;
       if ((!cloud || !cloud.length) && this.myIslandRowId) {
         var overview = (this._dc || []).filter(function (item) {
           return item.rowId === App.myIslandRowId;
         })[0];
         if (overview) cloud = overview.potHistory;
+      }
+      if ((!cloud || !cloud.length) && !this.myIslandRowId && this._previewIsland) {
+        cloud = this._previewIsland.pot;
+        unconfirmed = !!(cloud && cloud.length);
       }
 
       var local = this._localPot || {};
@@ -643,12 +705,14 @@
       if (activeId) {
         var side = (OC.POTS[activeId] || {}).side || null;
         if (!status) return {
-          alive: true, nextEpoch: null, etaSec: null, side: side, local: true
+          alive: true, nextEpoch: null, etaSec: null, side: side, local: true,
+          unconfirmed: unconfirmed
         };
         status.alive = true;
         status.side = side;
         status.local = true;
       }
+      if (status) status.unconfirmed = unconfirmed;
       return status;
     },
 
@@ -687,6 +751,7 @@
         }
         App.resetIsland();
         App.updateChips(); App.updateMapVisible();
+        if (OC.Overlay.inOccult) App.fetchDc();
       });
       OC.Overlay.on('position', function () {
         if (OC.selectMap && OC.selectMap(OC.Overlay.territoryId, OC.Overlay.playerPos)) {
@@ -715,16 +780,19 @@
           observation.lastSeen = observedAt;
           if (active) {
             observation.deathEpoch = null;
-            // FateWatcher 的 add 是实际刷新包；update 只证明当前仍存在。
-            if (detail.eventType === 'add') observation.spawnEpoch = observedAt;
+            if (detail.startTrusted && detail.startEpoch) {
+              observation.spawnEpoch = Number(detail.startEpoch);
+              observation.spawnTrusted = true;
+            }
           } else {
             observation.deathEpoch = observedAt;
           }
         }
         App.refreshHighlights();
+        if (!App.myIslandRowId) App.updatePreviewIsland();
         if (active) App.alertEncounter(id);
-        if (active && detail.eventType === 'add' && OC.FATES[id]) {
-          App.scheduleTrackerCheck(id, observedAt);
+        if (active && detail.startTrusted && detail.startEpoch && OC.FATES[id]) {
+          App.scheduleTrackerCheck(id, Number(detail.startEpoch));
         }
         if (!App.resolveMyIsland()) App.locateMyIslandFast(true).then(function (found) {
           if (!found) App.fetchDc(true);
@@ -732,6 +800,9 @@
         else {
           App.queueIslandUpload(null, detail.eventType === 'add');
           App.pollMyIsland(true);
+        }
+        if (!active && (OC.FATES[id] || OC.POTS[id])) {
+          setTimeout(function () { App.fetchDc(true); }, 3200);
         }
       });
     },
@@ -747,7 +818,10 @@
         App._dc = OC.Pots.dcOverview(rows);
         App._islands = OC.Pots.islandList(rows);  // 全部活跃岛（用于识别所在岛，不依赖罐数据）
         App._dcLoaded = true;
-        App.resolveMyIsland();
+        var boundBefore = App.myIslandRowId;
+        var resolved = App.resolveMyIsland();
+        if (resolved && !boundBefore) App.queueIslandUpload();
+        else App.updatePreviewIsland();
         App.pollMyIsland();
         App.updateChips();
         if (App.openPanel === 'dcpots') App.renderPanel();
@@ -893,7 +967,7 @@
     checkPotPreAlert: function () {
       if (!OC.Settings.get('alertPot')) return;
       var mine = this.localPotInfo();
-      if (!mine || mine.alive || !mine.nextEpoch) return;
+      if (!mine || mine.alive || mine.unconfirmed || !mine.nextEpoch) return;
       var eta = mine.nextEpoch - Math.floor(Date.now() / 1000);
       // 用“取整到 5 分钟”的窗口做标记，避免各上报者时间戳抖动导致重复提示
       var slot = Math.round(mine.nextEpoch / 300);

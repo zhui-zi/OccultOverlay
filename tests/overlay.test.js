@@ -110,6 +110,32 @@ memory.sandbox.dispatchOverlayEvent({
 assert.ok(memory.sandbox.OC.Overlay.memMeta[1962].spawnEpoch > firstSpawn);
 assert.equal(memory.sandbox.OC.Overlay.memMeta[1962].deathEpoch, null);
 
+const snapshot = loadOverlay('');
+let snapshotDetail = null;
+snapshot.sandbox.OC.Overlay.on('memActive', (_id, _active, detail) => {
+  snapshotDetail = detail;
+});
+snapshot.sandbox.dispatchOverlayEvent({
+  type: 'ChangeZone',
+  zoneID: 1346,
+  zoneName: 'North Horn',
+});
+snapshot.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: ['258', new Date().toISOString(), 'Add', '0000', '0000081A', '00000020'],
+});
+assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2074].spawnEpoch, null);
+assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2074].spawnTrusted, false);
+assert.equal(snapshotDetail.startTrusted, false, 'initial Add replay must remain read-only');
+snapshot.sandbox.dispatchOverlayEvent({
+  type: 'onFateEvent',
+  eventType: 'add',
+  fateID: 2074,
+  startTimeEpoch: 1785195089,
+});
+assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2074].spawnEpoch, 1785195089);
+assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2074].spawnTrusted, true);
+
 const player = loadOverlay('');
 let playerContext = null;
 player.sandbox.OC.Overlay.on('playerContext', (context) => { playerContext = context; });

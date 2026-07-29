@@ -165,4 +165,83 @@ assert.equal(
   null
 );
 
+const endedIslands = [
+  {
+    id: 'ended-mine',
+    rowId: 40,
+    dc: 101,
+    endEvents: [{ fateId: 1964, deathEpoch: 3000 }, { fateId: 1965, deathEpoch: 4000 }],
+  },
+  { id: 'ended-other', rowId: 41, dc: 101, endEvents: [{ fateId: 1964, deathEpoch: 3200 }] },
+];
+assert.equal(
+  Pots.matchIsland(
+    endedIslands,
+    {
+      ends: [
+        { fateId: 1964, deathEpoch: 3004 },
+        { fateId: 1965, deathEpoch: 3998 },
+      ],
+      events: [],
+    },
+    101,
+    15,
+  ).id,
+  'ended-mine',
+  'a unique Remove timestamp must confirm the cloud row',
+);
+
+const consistentRows = [{
+  id: 50,
+  tracker_id: 'snapshot-mine',
+  territory: 1252,
+  datacenter: 101,
+  last_fate: expectedFingerprint,
+  last_update: 1720000100,
+  encounter_history: '[]',
+  fate_history: JSON.stringify([pot(1962, 1720000000, -1)]),
+  pot_history: JSON.stringify([pot(1976, 1720000010, -1)]),
+}];
+const consistentIsland = Pots.islandList(consistentRows, 1720000100)[0];
+assert.equal(consistentIsland.fingerprintValid, true);
+assert.deepEqual(consistentIsland.activeDirectorIds, [1962, 1976]);
+assert.equal(
+  Pots.matchSnapshotIsland([consistentIsland], [1976, 1962], 101, 1252).id,
+  'snapshot-mine',
+);
+assert.equal(
+  Pots.matchSnapshotIsland(
+    [consistentIsland, { ...consistentIsland, id: 'ambiguous', rowId: 51 }],
+    [1962, 1976],
+    101,
+    1252,
+  ),
+  null,
+  'an ambiguous initial snapshot must remain unconfirmed',
+);
+assert.equal(
+  Pots.matchSnapshotIsland(
+    [{ ...consistentIsland, fingerprint: 'C'.repeat(64), fingerprintValid: false }],
+    [1962, 1976],
+    101,
+    1252,
+    1720000100,
+  ),
+  null,
+  'a malformed tracker fingerprint must not drive fast preview',
+);
+const recoveredIsland = {
+  ...consistentIsland,
+  fingerprintValid: false,
+  fingerprintFateId: undefined,
+  fingerprintSpawnEpoch: undefined,
+};
+assert.equal(
+  Pots.matchSnapshotIsland([recoveredIsland], [1962, 1976], 101, 1252, 1720000100).id,
+  'snapshot-mine',
+  'a unique active-state candidate may validate its fingerprint in a bounded local window',
+);
+assert.equal(recoveredIsland.fingerprintFateId, 1962);
+assert.equal(recoveredIsland.fingerprintSpawnEpoch, 1720000000);
+
 console.log('pots tests passed');

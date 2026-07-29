@@ -213,6 +213,7 @@ const cloudPot = { fate_id: 2072, spawn_time: 100, death_time: 110, last_seen: 1
 sandbox.OC.App._island = { ce: [], fate: [], pot: [cloudPot] };
 sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
 sandbox.OC.App.myIslandRowId = 1;
+sandbox.OC.App._previewIsland = null;
 sandbox.OC.App._localPot = null;
 sandbox.OC.Overlay.territoryId = 1346;
 assert.notEqual(sandbox.OC.App.localPotInfo(), null);
@@ -234,6 +235,20 @@ sandbox.OC.Overlay.territoryId = 1252;
 sandbox.OC.App._localPot = null;
 assert.notEqual(sandbox.OC.App.localPotInfo(), null);
 assert.equal(sandbox._lastPotMerge.shared.length, 1, 'South Horn keeps strict-island cloud fallback');
+
+sandbox.OC.App._island = null;
+sandbox.OC.App.myIslandRowId = null;
+sandbox.OC.App._previewIsland = { id: 'preview', rowId: 2, pot: [cloudPot] };
+sandbox.OC.App._localPot = null;
+const previewPot = sandbox.OC.App.localPotInfo();
+assert.equal(previewPot.unconfirmed, true);
+alertPot = true;
+let previewAlerted = false;
+sandbox.OC.App.fireAlert = function () { previewAlerted = true; };
+sandbox.OC.App.checkPotPreAlert();
+assert.equal(previewAlerted, false, 'read-only preview must never emit a pot pre-alert');
+sandbox.OC.App._previewIsland = null;
+alertPot = false;
 
 const alerts = [];
 sandbox.OC.App.fireAlert = function (kind, message, key) {

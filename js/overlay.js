@@ -61,6 +61,14 @@
   Overlay.inOccult = false;
   Overlay.playerName = '';
   Overlay.playerPos = null; // {x, y, z, h}; y is altitude, x/z are horizontal
+  Overlay.fateSnapshotUntil = 0;
+
+  // OverlayPlugin replays existing FATEs as Add events after a zone change or
+  // reconnect. Those timestamps are observation times, not StartTimeEpoch.
+  var INITIAL_FATE_SYNC_SEC = 12;
+  function beginFateSnapshot() {
+    Overlay.fateSnapshotUntil = Math.floor(Date.now() / 1000) + INITIAL_FATE_SYNC_SEC;
+  }
 
   // onFateEvent 由网络包解析产生（cactbot/IINACT FateWatcher），全岛可见、即时，
   // 与玩家距离无关；Add 可提供实例识别证据，Update 只证明当前仍存活。
@@ -75,6 +83,7 @@
     connected = !!connected;
     if (Overlay.connected === connected) return;
     Overlay.connected = connected;
+    if (connected) beginFateSnapshot();
     Overlay.emit(connected ? 'connected' : 'disconnected');
   }
 
@@ -132,6 +141,7 @@
       var api = global.OverlayPluginApi;
       if (api && api.ready) {
         clearInterval(legacyTimer); legacyTimer = null;
+        beginFateSnapshot();
         SUBSCRIBE.forEach(function (ev) {
           try { api.callHandler(JSON.stringify({ call: 'subscribe', events: [ev] }), function () {}); } catch (e) {}
         });
@@ -228,14 +238,24 @@
 
   // onFateEvent: { type, eventType:'add'|'remove'|'update', fateID:Number, progress:Number }
   // 由网络包解析（FateWatcher）产生，全岛可见且即时，与玩家距离无关。
-  // 撒娇罐(1976/1977)也是 FATE，会一并从这里得到，进岛立即用于识别所在岛。
+  // Some hosts expose a real start epoch. Otherwise Add is trusted only after
+  // the initial snapshot window has elapsed.
   function handleFateEvent(d) {
     var id = d.fateID != null ? Number(d.fateID) : (d.fateId != null ? Number(d.fateId) : 0);
     if (!id) return;
     var eventType = String(d.eventType || '').toLowerCase();
+    var rawStart =
+      d.startTimeEpoch != null ? d.startTimeEpoch :
+      d.startEpoch != null ? d.startEpoch :
+      d.startTime != null ? d.startTime : 0;
+    var explicitStart = Number(rawStart);
+    if (!isFinite(explicitStart) && rawStart) explicitStart = Date.parse(rawStart) / 1000;
+    if (explicitStart > 1000000000000) explicitStart = Math.floor(explicitStart / 1000);
+    if (explicitStart < 1000000000) explicitStart = 0;
     memChanged(id, eventType !== 'remove', {
       eventType: eventType,
       observedAt: Math.floor(Date.now() / 1000),
+      startEpoch: explicitStart > 0 ? Math.floor(explicitStart) : 0,
       source: 'onFateEvent'
     }); // add / update = 存在；remove = 结束
   }
@@ -250,6 +270,7 @@
     // the immediate duplicate; a later same-territory instance change must reset.
     if (lastZoneSignal && lastZoneSignal.key === signalKey && signalAt - lastZoneSignal.at < 1500) return;
     lastZoneSignal = { key: signalKey, at: signalAt };
+    beginFateSnapshot();
     Overlay.territoryId = territoryId;
     Overlay.zoneName = zoneName;
     var byId = OC.Settings && OC.Settings.get('occultTerritoryId')
@@ -331,8 +352,8 @@
   // ---- 内存态 FATE/CE（258/259 director 行）-----------------------------
   // Overlay.memActive: { id: true } 当前岛上正在进行的 FATE/CE（与距离无关）
   Overlay.memActive = {};
-  // Overlay.memMeta preserves exact local Add evidence. Update only proves that
-  // the event is alive and must never be treated as its spawn time.
+  // Overlay.memMeta preserves trusted live Add evidence. Initial snapshot Add
+  // events and Update events only prove that the event is alive.
   Overlay.memMeta = {};
 
   function memChanged(id, active, detail) {
@@ -348,9 +369,20 @@
     meta.active = !!active;
     meta.lastSeen = observedAt;
     meta.source = detail.source || meta.source || '';
-    if (active && detail.eventType === 'add' && (!was || !meta.spawnEpoch)) {
-      gainedExactStart = Number(meta.spawnEpoch) !== observedAt;
-      meta.spawnEpoch = observedAt;
+    if (active && detail.eventType === 'add') {
+      var explicitStart = Number(detail.startEpoch) || 0;
+      var trustedStart = explicitStart > 0 || observedAt > Number(Overlay.fateSnapshotUntil || 0);
+      detail.startTrusted = trustedStart;
+      detail.startEpoch = trustedStart ? (explicitStart || observedAt) : 0;
+      meta.snapshot = !trustedStart;
+      if (trustedStart && (!was || !meta.spawnEpoch || !meta.spawnTrusted)) {
+        gainedExactStart = Number(meta.spawnEpoch) !== detail.startEpoch || !meta.spawnTrusted;
+        meta.spawnEpoch = detail.startEpoch;
+        meta.spawnTrusted = true;
+      } else if (!trustedStart && !was) {
+        meta.spawnEpoch = null;
+        meta.spawnTrusted = false;
+      }
       meta.deathEpoch = null;
     }
     if (!active) meta.deathEpoch = observedAt;

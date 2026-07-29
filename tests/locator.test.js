@@ -30,8 +30,9 @@ const sandbox = {
       connected: true,
       inOccult: true,
       memMeta: {
-        2074: { active: false, spawnEpoch: 123456, deathEpoch: 123500 },
+        2074: { active: false, spawnEpoch: 123456, spawnTrusted: true, deathEpoch: 123500 },
       },
+      memActive: {},
     },
     Pots: {
       contextFingerprint(dc, fateId, epoch) {
@@ -57,6 +58,9 @@ const sandbox = {
           item.territory === evidence.territory &&
           evidence.fingerprints.includes(item.fingerprint)
         ) || null;
+      },
+      matchSnapshotIsland() {
+        return sandbox._previewMatch || null;
       },
     },
     Api: {
@@ -107,6 +111,10 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
   const evidence = sandbox.OC.App.instanceEvidence();
   assert.deepEqual(Array.from(evidence.events, event => event.fateId), [2074],
     'completed Add evidence must survive until an instance reset');
+  assert.deepEqual(
+    Array.from(evidence.ends, event => [event.fateId, event.deathEpoch]),
+    [[2074, 123500]],
+  );
 
   const found = await sandbox.OC.App.locateMyIslandFast(true);
   assert.equal(found, true);
@@ -145,13 +153,53 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
   assert.equal(applied, appliedBeforeMismatch);
   assert.equal(sandbox.OC.App.myIslandRowId, 42);
 
+  sandbox.OC.App.myIslandId = null;
+  sandbox.OC.App.myIslandRowId = null;
+  sandbox.OC.App.myIslandFingerprint = '';
+  sandbox.OC.Overlay.memActive = { 2074: true };
+  sandbox.OC.App._dcRows = [{
+    id: 55,
+    tracker_id: 'preview-only',
+    pot_history: '[{"fate_id":2072,"spawn_time":100,"death_time":110}]',
+  }];
+  sandbox._previewMatch = { id: 'preview-only', rowId: 55 };
+  const preview = sandbox.OC.App.updatePreviewIsland();
+  assert.equal(preview.id, 'preview-only');
+  assert.equal(sandbox.OC.App.myIslandRowId, null, 'snapshot preview must never authorize writes');
+  sandbox._previewMatch = null;
+  sandbox.OC.Overlay.memActive = {};
+
+  sandbox.OC.App._island = {
+    ce: [],
+    fate: [{ fate_id: 2074, spawn_time: 123456, death_time: -1, last_seen: 123500 }],
+    pot: [],
+  };
+  sandbox.OC.Overlay.memMeta[2074] = {
+    active: true,
+    spawnEpoch: 999999,
+    spawnTrusted: false,
+    lastSeen: 1000000,
+  };
+  const snapshotRecord = sandbox.OC.App.buildLocalTrackerRecord(secondFingerprint);
+  assert.equal(
+    JSON.parse(snapshotRecord.fate_history)[0].spawn_time,
+    123456,
+    'initial Add replay must not overwrite a shared StartTimeEpoch',
+  );
+  sandbox.OC.Overlay.memMeta[2074] = {
+    active: false,
+    spawnEpoch: 123456,
+    spawnTrusted: true,
+    deathEpoch: 123500,
+  };
+
   let createCalls = 0;
   sandbox.OC.App.myIslandId = null;
   sandbox.OC.App.myIslandRowId = null;
   sandbox.OC.App.myIslandFingerprint = '';
   sandbox.OC.App._island = null;
   sandbox.OC.App._islands = [];
-  sandbox.OC.App._missingTrackerChecks = 0;
+  sandbox.OC.App._missingTrackerChecks = {};
   sandbox.OC.Api.fetchIslandByFingerprints = function () {
     return Promise.resolve([]);
   };
@@ -175,9 +223,17 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
       pot_history: record.pot_history,
     });
   };
-  const firstMissing = {
+  const unrelatedMissing = {
     fingerprint: 'C'.repeat(64),
     fingerprints: ['C'.repeat(64)],
+    events: [],
+    territory: 1346,
+    dc: 103,
+    generation: 0,
+  };
+  const firstMissing = {
+    fingerprint: secondFingerprint,
+    fingerprints: [secondFingerprint],
     events: [],
     territory: 1346,
     dc: 103,
@@ -191,6 +247,7 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
     dc: 103,
     generation: 0,
   };
+  assert.equal(await sandbox.OC.App.checkOrCreateIsland(unrelatedMissing), false);
   assert.equal(await sandbox.OC.App.checkOrCreateIsland(firstMissing), false);
   assert.equal(createCalls, 0, 'one missing check must not create a duplicate island');
   assert.equal(await sandbox.OC.App.checkOrCreateIsland(secondMissing), true);

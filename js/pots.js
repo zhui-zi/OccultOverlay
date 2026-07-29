@@ -172,6 +172,47 @@
     return sha256Hex(bytes);
   }
 
+  function sortedIds(values) {
+    var seen = {};
+    return (values || []).map(function (value) { return number(value, 0); })
+      .filter(function (value) {
+        if (!value || seen[value]) return false;
+        seen[value] = true;
+        return true;
+      }).sort(function (a, b) { return a - b; });
+  }
+
+  function sameIds(left, right) {
+    left = sortedIds(left);
+    right = sortedIds(right);
+    if (left.length !== right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (left[i] !== right[i]) return false;
+    }
+    return true;
+  }
+
+  function fingerprintMatchesWindow(item, fateIds, now, lookbackSec) {
+    if (item.fingerprintValid) return true;
+    var target = String(item.fingerprint || '').toUpperCase();
+    var dc = number(item.dc, 0);
+    if (!/^[0-9A-F]{64}$/.test(target) || !dc) return false;
+    fateIds = sortedIds(fateIds).filter(isContextFate);
+    if (!fateIds.length) return false;
+    now = number(now, Math.floor(Date.now() / 1000));
+    lookbackSec = Math.max(0, number(lookbackSec, 3600));
+    for (var i = 0; i < fateIds.length; i++) {
+      for (var epoch = now + 15; epoch >= now - lookbackSec; epoch--) {
+        if (contextFingerprint(dc, fateIds[i], epoch) !== target) continue;
+        item.fingerprintValid = true;
+        item.fingerprintFateId = fateIds[i];
+        item.fingerprintSpawnEpoch = epoch;
+        return true;
+      }
+    }
+    return false;
+  }
+
   var Pots = OC.Pots = {
     respawnSec: RESPAWN,
 
@@ -262,7 +303,9 @@
       }
       var groups = {};
       (rows || []).forEach(function (tracker) {
-        var ces = parse(tracker.encounter_history), fates = parse(tracker.fate_history);
+        var ces = parse(tracker.encounter_history);
+        var fates = parse(tracker.fate_history);
+        var pots = parse(tracker.pot_history);
         var ids = [], activeEvents = [];
         ces.concat(fates).forEach(function (entry) {
           if (!alive(entry)) return;
@@ -275,16 +318,42 @@
             lastSeen: seenAt(entry)
           });
         });
+        var activeDirectorIds = [];
+        fates.concat(pots).forEach(function (entry) {
+          var fateId = number(entry.fate_id, 0);
+          var entryAlive = POT_IDS.indexOf(fateId) >= 0 ? isOpen(entry, now) : alive(entry);
+          if (entryAlive) activeDirectorIds.push(fateId);
+        });
+        var endEvents = [];
+        fates.concat(pots).forEach(function (entry) {
+          var deathEpoch = number(entry && entry.death_time, -1);
+          if (deathEpoch <= 0) return;
+          endEvents.push({
+            fateId: number(entry.fate_id, 0),
+            deathEpoch: deathEpoch
+          });
+        });
+        var fingerprint = tracker.last_fate || '';
+        var fingerprintValid = !!fingerprint && fates.some(function (entry) {
+          var fateId = number(entry && entry.fate_id, 0);
+          var spawnEpoch = number(entry && entry.spawn_time, 0);
+          return isContextFate(fateId) && spawnEpoch > 0 &&
+            contextFingerprint(number(tracker.datacenter, 0), fateId, spawnEpoch) ===
+              String(fingerprint).toUpperCase();
+        });
         var item = {
           id: tracker.tracker_id,
           rowId: number(tracker.id, 0),
-          fingerprint: tracker.last_fate || '',
+          fingerprint: fingerprint,
+          fingerprintValid: fingerprintValid,
           territory: number(tracker.territory, 0),
           dc: tracker.datacenter,
           lastUpdate: tracker.last_update,
           ago: now - tracker.last_update,
           aliveIds: ids,
           activeEvents: activeEvents,
+          activeDirectorIds: sortedIds(activeDirectorIds),
+          endEvents: endEvents,
           ceId: Pots.currentId(ces),
           fateId: Pots.currentId(fates)
         };
@@ -333,6 +402,28 @@
         if (fingerprintMatches.length > 1) return null;
       }
 
+      var ends = evidence.ends || [];
+      if (ends.length) {
+        var bestEndScore = 0;
+        var endMatches = [];
+        scoped.forEach(function (item) {
+          var score = ends.filter(function (signal) {
+            return (item.endEvents || []).some(function (remote) {
+              return number(remote.fateId, 0) === number(signal.fateId, 0) &&
+                Math.abs(number(remote.deathEpoch, 0) - number(signal.deathEpoch, 0)) <= tolerance;
+            });
+          }).length;
+          if (!score || score < bestEndScore) return;
+          if (score > bestEndScore) {
+            bestEndScore = score;
+            endMatches = [];
+          }
+          endMatches.push(item);
+        });
+        if (endMatches.length === 1) return endMatches[0];
+        if (endMatches.length > 1) return null;
+      }
+
       var signals = evidence.events || [];
       var candidates = scoped.filter(function (item) {
         return signals.some(function (signal) {
@@ -343,6 +434,26 @@
         });
       });
       return candidates.length === 1 ? candidates[0] : null;
+    },
+
+    /**
+     * Fast read-only candidate used during OverlayPlugin's initial FATE replay.
+     * Require a self-consistent tracker fingerprint and an exact match of the
+     * active 258-director FATE/pot set. This candidate is never used for writes.
+     */
+    matchSnapshotIsland: function (islands, activeIds, dc, territory, timestamp) {
+      activeIds = sortedIds(activeIds);
+      if (!activeIds.length) return null;
+      var stateMatches = (islands || []).filter(function (item) {
+        return (!dc || number(item.dc, 0) === number(dc, 0)) &&
+          (!territory || number(item.territory, 0) === number(territory, 0)) &&
+          sameIds(item.activeDirectorIds, activeIds);
+      });
+      if (stateMatches.length !== 1) return null;
+      var matches = stateMatches.filter(function (item) {
+        return fingerprintMatchesWindow(item, activeIds, timestamp, 3600);
+      });
+      return matches.length === 1 ? matches[0] : null;
     },
 
     /**
