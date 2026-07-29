@@ -217,7 +217,8 @@ sandbox.OC.App._previewIsland = null;
 sandbox.OC.App._localPot = null;
 sandbox.OC.Overlay.territoryId = 1346;
 assert.notEqual(sandbox.OC.App.localPotInfo(), null);
-assert.deepEqual(sandbox._lastPotMerge.shared, [cloudPot], 'North Horn accepts strict-island cloud pot history');
+assert.equal(sandbox._lastPotMerge.shared.length, 1, 'North Horn accepts strict-island cloud pot history');
+assert.equal(sandbox._lastPotMerge.shared[0].death_time, cloudPot.death_time);
 
 sandbox.OC.App._localPot = { 2072: { active: true, lastSeen: 120 } };
 const updateOnlyPot = sandbox.OC.App.localPotInfo();
@@ -231,13 +232,39 @@ sandbox.OC.App._localPot = { 2072: { active: false, spawnEpoch: 100, deathEpoch:
 assert.equal(sandbox.OC.App.localPotInfo().side, 'north');
 assert.equal(sandbox._lastPotMerge.local.length, 1, 'an exact local Add must drive North Horn timing');
 
+sandbox.OC.App._island = {
+  ce: [],
+  fate: [],
+  pot: [{ fate_id: 2072, spawn_time: Math.floor(Date.now() / 1000) - 300, death_time: -1, last_seen: Math.floor(Date.now() / 1000) - 60 }],
+};
+sandbox.OC.App._localPot = null;
+sandbox.OC.Overlay.connected = true;
+sandbox.OC.Overlay.inOccult = true;
+const staleCloudPot = sandbox.OC.App.localPotInfo();
+assert.equal(staleCloudPot.alive, false, 'local director absence must close a stale cloud pot');
+assert.ok(
+  sandbox._lastPotMerge.shared[0].death_time >= sandbox._lastPotMerge.shared[0].spawn_time,
+  'the stale cloud record must be treated as ended without mutating the source',
+);
+assert.equal(sandbox.OC.App._island.pot[0].death_time, -1);
+const closedForUpload = sandbox.OC.App.localTrackerHistory(
+  [2072],
+  sandbox.OC.App._island.pot,
+  true,
+);
+assert.ok(
+  closedForUpload[0].death_time >= closedForUpload[0].spawn_time,
+  'a completed local snapshot must close the stale pot before the next upload',
+);
+
 sandbox.OC.App._island = null;
 sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
 sandbox.OC.App._localPot = null;
 assert.notEqual(sandbox.OC.App.localPotInfo(), null);
-assert.deepEqual(
-  sandbox._lastPotMerge.shared,
-  [cloudPot],
+assert.equal(sandbox._lastPotMerge.shared.length, 1);
+assert.equal(
+  sandbox._lastPotMerge.shared[0].death_time,
+  cloudPot.death_time,
   'a strict ID match must expose the cached ETA without waiting for another row fetch',
 );
 

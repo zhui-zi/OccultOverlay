@@ -16,7 +16,7 @@
     return found;
   }
   var CN_DCS = [101, 102, 103, 104];
-  var TRACKER_VERSION = 'OccultOverlay-v67';
+  var TRACKER_VERSION = 'OccultOverlay-v68';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
 
   var State = OC.State = { highlights: [], detail: null, detailId: null, detailLocating: false };
@@ -320,18 +320,28 @@
       return request;
     },
 
-    localTrackerHistory: function (ids, shared) {
+    localTrackerHistory: function (ids, shared, closeMissingDirectors) {
       var byId = {};
       (shared || []).forEach(function (entry) {
         if (!entry || !entry.fate_id) return;
         byId[Number(entry.fate_id)] = JSON.parse(JSON.stringify(entry));
       });
       var meta = OC.Overlay.memMeta || {};
+      var snapshotComplete = !!closeMissingDirectors &&
+        OC.Overlay.connected && OC.Overlay.inOccult &&
+        now() > Number(OC.Overlay.fateSnapshotUntil || 0);
+      var observedNow = now();
       return (ids || []).map(function (id) {
         id = Number(id);
         var entry = byId[id] || OC.Api.blankEntry(id);
         var local = meta[id];
-        if (!local) return entry;
+        if (!local) {
+          if (snapshotComplete && isAlive(entry)) {
+            entry.death_time = observedNow;
+            entry.last_seen = Math.max(Number(entry.last_seen) || -1, observedNow);
+          }
+          return entry;
+        }
         var spawn = Number(local.spawnEpoch) || -1;
         var death = Number(local.deathEpoch) || -1;
         var seen = Number(local.lastSeen) || -1;
@@ -366,7 +376,7 @@
         last_update: now(),
         encounter_history: JSON.stringify(this.localTrackerHistory(def.ceIds, shared.ce)),
         fate_history: JSON.stringify(this.localTrackerHistory(def.fateIds, shared.fate)),
-        pot_history: JSON.stringify(this.localTrackerHistory(def.potIds, shared.pot))
+        pot_history: JSON.stringify(this.localTrackerHistory(def.potIds, shared.pot, true))
       };
     },
 
@@ -667,6 +677,18 @@
       }
 
       var local = this._localPot || {};
+      var localDirectorsAreAuthoritative = OC.Overlay.connected && OC.Overlay.inOccult;
+      var observedNow = now();
+      cloud = (cloud || []).map(function (entry) {
+        var copy = JSON.parse(JSON.stringify(entry));
+        var observation = local[Number(copy.fate_id)];
+        if (localDirectorsAreAuthoritative && isAlive(copy) &&
+            !(observation && observation.active)) {
+          copy.death_time = observedNow;
+          copy.last_seen = Math.max(Number(copy.last_seen) || -1, observedNow);
+        }
+        return copy;
+      });
       var localHistory = [];
       var activeId = 0, activeSeen = -1;
       var cloudById = {};
