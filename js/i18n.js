@@ -19,7 +19,7 @@
       alive: '存活', gone: '已消失', unknown: '—', last_seen: '上次',
       drops: '掉落', demiatma: '半魂晶', dispeller: '消幻晶', notes: '调查记录', soulshard: '灵魂碎晶', accessory: '饰品', misc: '其他',
       trigger_mob: '触发怪', loc: '位置',
-      layer_bronze: '铜宝箱', layer_silver: '银宝箱', layer_potN: '北罐', layer_potS: '南罐', layer_potAny: 'Pot coffer',
+      layer_bronze: '铜宝箱', layer_silver: '银宝箱', layer_potN: '北罐', layer_potS: '南罐', layer_potAny: '魔法罐宝箱',
       layer_reroll: '额外机会', layer_bunny: '胡萝卜',
       panel_battle: '战斗', panel_settings: '设置', close: '关闭',
       set_lang: '语言', set_tracker: '共享 Tracker', set_tracker_id: 'Tracker ID', set_password: '密码',
@@ -36,7 +36,7 @@
       alert_title: '提示', alert_all: '播报所有 CE / FATE / 魔法罐',
       alert_pot_opt: '魔法罐出现前3分钟提示', alert_demiatma: '出现掉落以下半魂晶的 CE/FATE 时提示：',
       alert_dispeller: '出现掉落以下消幻晶的 CE/FATE 时提示：',
-      alert_dispeller_pending: 'Per-event Phantom Dispeller drop mappings are not available yet.',
+      alert_dispeller_pending: '各 FATE/CE 的消幻晶掉落对应关系尚无数据。',
       alert_tts: '语音提示', alert_pot: '魔法罐出现', pot_pre_alert: '魔法罐即将出现',
       my_island_hint: '点击查看你所在岛的 CE/FATE（?=同大区多岛未能确认）', set_show_chips: '显示当前 FATE/CE 胶囊', chips_hidden: '已隐藏（可在设置中重新打开）'
     },

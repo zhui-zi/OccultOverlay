@@ -3,7 +3,7 @@
  *
  * FATE / CE / 撒娇罐 / 掉落物 定义。
  * 数据源：EurekaTrackerAutoPopper 与 OccultTrackerV3。
- * North Horn 新内容先保留英文，等待人工补充中文。
+ * North Horn names include zh-CN, English, and Japanese runtime fallbacks.
  * ========================================================================= */
 (function (global) {
   'use strict';
@@ -21,7 +21,7 @@
     },
     1346: {
       key: 'northHorn',
-      name: { en: 'Occult Crescent: North Horn', ja: '北征編' },
+      name: { zh: '蜃景幻界新月岛 北征之章', en: 'Occult Crescent: North Horn', ja: '北征編' },
       mapId: 1135,
       fateIds: [2074, 2075, 2076, 2077, 2078, 2079, 2080, 2081, 2082, 2083, 2084],
       potIds: [2072, 2073],
@@ -144,25 +144,25 @@
     1972: { name: { zh: '凶恶使魔——生命收割者', en: 'Serving Darkness', ja: '命の収奪者「ライフギャザラー」' }, drops: [47748], encounter_id: 24 },
 
     // North Horn. Per-event Phantom Dispeller mappings are not available yet.
-    2074: { name: { en: 'Raging Thrall', ja: '暴力の牛魔「ミノタウロス・マキア」' }, drops: [], encounter_id: 0 },
-    2075: { name: { en: 'Eye to Eye', ja: '呪いの宝珠「イビルシーア」' }, drops: [], encounter_id: 0 },
-    2076: { name: { en: 'Shoreline Showdown', ja: '水辺の暴君「レグナントキマイラ」' }, drops: [], encounter_id: 0 },
-    2077: { name: { en: 'Waved Away', ja: '歴戦水馬「アーチケルピー」' }, drops: [], encounter_id: 0 },
-    2078: { name: { en: 'Allure of the Occult', ja: 'ため息モルボル「センシュアル・サンディ」' }, drops: [], encounter_id: 0 },
-    2079: { name: { en: 'Inconstant Gardener', ja: '自滅の歌い手「イアムベー」' }, drops: [], encounter_id: 0 },
-    2080: { name: { en: 'Territorial Dispute', ja: '遺跡荒らしの氷狼「ルーインハウンド」' }, drops: [], encounter_id: 0 },
-    2081: { name: { en: 'A Rotten Affair', ja: '腐都の守護者「ペイシェント・クリブ」' }, drops: [], encounter_id: 0 },
-    2082: { name: { en: 'Gale-force Encounter', ja: '暴風の操者「ストームコーラー」' }, drops: [], encounter_id: 0 },
-    2083: { name: { en: 'Scale Model', ja: '模造の蛇人形「デミメデューサ」' }, drops: [], encounter_id: 0 },
-    2084: { name: { en: 'Thunderregnum', ja: '気高き雷獣「クレセントレギナ」' }, drops: [], encounter_id: 0 }
+    2074: { name: { zh: '暴力牛魔——好战弥诺陶洛斯', en: 'Raging Thrall', ja: '暴力の牛魔「ミノタウロス・マキア」' }, drops: [], encounter_id: 0 },
+    2075: { name: { zh: '诅咒宝珠——邪瞳', en: 'Eye to Eye', ja: '呪いの宝珠「イビルシーア」' }, drops: [], encounter_id: 0 },
+    2076: { name: { zh: '水边暴君——统领奇美拉', en: 'Shoreline Showdown', ja: '水辺の暴君「レグナントキマイラ」' }, drops: [], encounter_id: 0 },
+    2077: { name: { zh: '历战水马——凯尔派总领', en: 'Waved Away', ja: '歴戦水馬「アーチケルピー」' }, drops: [], encounter_id: 0 },
+    2078: { name: { zh: '魔界的叹息——妖艳魔花珊迪', en: 'Allure of the Occult', ja: 'ため息モルボル「センシュアル・サンディ」' }, drops: [], encounter_id: 0 },
+    2079: { name: { zh: '自怨自艾的歌手——伊阿姆柏', en: 'Inconstant Gardener', ja: '自滅の歌い手「イアムベー」' }, drops: [], encounter_id: 0 },
+    2080: { name: { zh: '狼占狗窝——遗迹冰狼', en: 'Territorial Dispute', ja: '遺跡荒らしの氷狼「ルーインハウンド」' }, drops: [], encounter_id: 0 },
+    2081: { name: { zh: '腐坏街道的守护者——忍耐基路伯', en: 'A Rotten Affair', ja: '腐都の守護者「ペイシェント・クリブ」' }, drops: [], encounter_id: 0 },
+    2082: { name: { zh: '驾驭自然的巨兽——呼风狮鹫', en: 'Gale-force Encounter', ja: '暴風の操者「ストームコーラー」' }, drops: [], encounter_id: 0 },
+    2083: { name: { zh: '仿制的蛇人偶——半灵美杜莎', en: 'Scale Model', ja: '模造の蛇人形「デミメデューサ」' }, drops: [], encounter_id: 0 },
+    2084: { name: { zh: '高傲的雷兽——新月女王', en: 'Thunderregnum', ja: '気高き雷獣「クレセントレギナ」' }, drops: [], encounter_id: 0 }
   };
 
   // --- 撒娇罐 Pots（fate_id -> 定义） -----------------------------------
   OC.POTS = {
     1976: { name: { zh: '幸福的魔法罐（北）', en: 'Pleading Pots (North)', ja: 'しあわせのマジックポット(北)' }, territory: 1252, side: 'north', drops: [47749, 47738], encounter_id: 40 },
     1977: { name: { zh: '瑟瑟发抖的魔法罐（南）', en: 'Persistent Pots (South)', ja: 'カチカチのマジックポット(南)' }, territory: 1252, side: 'south', drops: [47745, 47737], encounter_id: 18 },
-    2072: { name: { en: 'Daylight Pottery (North)', ja: '隠されのマジックポット（北）' }, territory: 1346, side: 'north', drops: [], encounter_id: 0 },
-    2073: { name: { en: 'In a Pot of Bother (South)', ja: '飛ばされのマジックポット（南）' }, territory: 1346, side: 'south', drops: [], encounter_id: 0 }
+    2072: { name: { zh: '被欺负的魔法罐(北)', en: 'Daylight Pottery (North)', ja: '隠されのマジックポット（北）' }, territory: 1346, side: 'north', drops: [], encounter_id: 0 },
+    2073: { name: { zh: '被吹飞的魔法罐(南)', en: 'In a Pot of Bother (South)', ja: '飛ばされのマジックポット（南）' }, territory: 1346, side: 'south', drops: [], encounter_id: 0 }
   };
 
   // --- 危命任务 CE（encounter_id -> 定义） -------------------------------
@@ -186,23 +186,23 @@
     48: { name: { zh: '两歧塔 力之塔', en: 'The Forked Tower: Blood', ja: 'フォークタワー：力の塔' }, drops: [47868, 47734, 47735, 47736, 47737], spawn_type: false, type: 'tower' },
 
     // North Horn. Per-event Phantom Dispeller mappings are not available yet.
-    49: { name: { en: 'Many Mouths to Feed', ja: '四つ顎の魔樹「ペレキュス」' }, drops: [], spawn_type: true, monster: { en: 'Pelekys', ja: 'ペレキュス' } },
-    50: { name: { en: 'Doubled Trouble', ja: '魔女の複製体「カロフィステリ・ダブル」' }, drops: [], spawn_type: true, monster: { en: 'Crescent Blackguard', ja: 'クレセント・ブラックガード' } },
-    51: { name: { en: 'Quarried Away', ja: '白の守護者「アラバスターブレード」' }, drops: [], spawn_type: false },
-    52: { name: { en: 'Forbidden Folios', ja: '禁忌の魔道書「アルバテル」' }, drops: [], spawn_type: false },
-    53: { name: { en: 'Cursed Resurgence', ja: '暗紅の屍竜「ルブルムドラゴン」' }, drops: [], spawn_type: true, monster: { en: 'Crescent Big Horn', ja: 'クレセント・ビッグホーン' } },
-    54: { name: { en: 'Imbalanced Diet', ja: '大食の呪鬼「アルゴル」' }, drops: [], spawn_type: false },
-    55: { name: { en: 'Web of Terror', ja: '猟奇の母蜘蛛「クレセント・アルケニー」' }, drops: [], spawn_type: false },
-    56: { name: { en: 'A Beast Unleashed', ja: '反逆の使い魔「アトラス・カーバンクル」' }, drops: [], spawn_type: false },
-    57: { name: { en: 'Dark Artistry', ja: '死霊使いの亡霊「マギ・ネクロマンサー」' }, drops: [], spawn_type: false },
-    58: { name: { en: 'Familiar Tactics', ja: '求道の人造人間「エルムギガース」' }, drops: [], spawn_type: false },
-    59: { name: { en: 'Appalling Behavior', ja: '呪いを継ぐ者「ペイルマギア」' }, drops: [], spawn_type: false },
-    60: { name: { en: 'Tiny Terror', ja: '魔道兵団「タイニーメイジ」' }, drops: [], spawn_type: false },
-    61: { name: { en: 'Lost on the Wind', ja: '絶島の誘拐者「アブダクター」' }, drops: [], spawn_type: true, monster: { en: 'Crescent Wraith', ja: 'クレセント・レイス' } },
-    62: { name: { en: 'Ahead of the Competition', ja: '覚醒の多頭竜「マギ・ヒュドラ」' }, drops: [], spawn_type: false },
-    63: { name: { en: 'Accept No Imitators', ja: '変化の使い魔「メタモルファ」' }, drops: [], spawn_type: false },
-    64: { name: { en: 'The Forked Tower: Magic', ja: 'フォークタワー：魔の塔' }, drops: [], spawn_type: false, type: 'tower' },
-    65: { name: { en: 'The Forked Tower: Magic (Extreme)', ja: '極フォークタワー：魔の塔' }, drops: [], spawn_type: false, type: 'tower-extreme' }
+    49: { name: { zh: '四颚斧花——提蔛', en: 'Many Mouths to Feed', ja: '四つ顎の魔樹「ペレキュス」' }, drops: [], spawn_type: true, monster: { zh: '提蔛', en: 'Pelekys', ja: 'ペレキュス' } },
+    50: { name: { zh: '魔女复制体——卡洛菲斯提莉二重身', en: 'Doubled Trouble', ja: '魔女の複製体「カロフィステリ・ダブル」' }, drops: [], spawn_type: true, monster: { zh: '新月黑卫', en: 'Crescent Blackguard', ja: 'クレセント・ブラックガード' } },
+    51: { name: { zh: '纯白守护者——雪石膏之剑', en: 'Quarried Away', ja: '白の守護者「アラバスターブレード」' }, drops: [], spawn_type: false },
+    52: { name: { zh: '禁书化形——古术魔典', en: 'Forbidden Folios', ja: '禁忌の魔道書「アルバテル」' }, drops: [], spawn_type: false },
+    53: { name: { zh: '暗红尸骸——赤龙', en: 'Cursed Resurgence', ja: '暗紅の屍竜「ルブルムドラゴン」' }, drops: [], spawn_type: true, monster: { zh: '新月大角牛', en: 'Crescent Big Horn', ja: 'クレセント・ビッグホーン' } },
+    54: { name: { zh: '暴食咒鬼——阿尔戈尔', en: 'Imbalanced Diet', ja: '大食の呪鬼「アルゴル」' }, drops: [], spawn_type: false },
+    55: { name: { zh: '残暴的母蜘蛛——新月阿剌克涅', en: 'Web of Terror', ja: '猟奇の母蜘蛛「クレセント・アルケニー」' }, drops: [], spawn_type: false },
+    56: { name: { zh: '叛逆使魔——负隅宝石兽', en: 'A Beast Unleashed', ja: '反逆の使い魔「アトラス・カーバンクル」' }, drops: [], spawn_type: false },
+    57: { name: { zh: '天道好轮回——魔亡灵法师', en: 'Dark Artistry', ja: '死霊使いの亡霊「マギ・ネクロマンサー」' }, drops: [], spawn_type: false },
+    58: { name: { zh: '求道的人造人——神木巨人', en: 'Familiar Tactics', ja: '求道の人造人間「エルムギガース」' }, drops: [], spawn_type: false },
+    59: { name: { zh: '诅咒的继承者——惨白魔人', en: 'Appalling Behavior', ja: '呪いを継ぐ者「ペイルマギア」' }, drops: [], spawn_type: false },
+    60: { name: { zh: '魔法军团——小小法师', en: 'Tiny Terror', ja: '魔道兵団「タイニーメイジ」' }, drops: [], spawn_type: false },
+    61: { name: { zh: '孤岛的绑架犯——诱拐魔', en: 'Lost on the Wind', ja: '絶島の誘拐者「アブダクター」' }, drops: [], spawn_type: true, monster: { zh: '新月幽灵', en: 'Crescent Wraith', ja: 'クレセント・レイス' } },
+    62: { name: { zh: '苏醒的多头龙——魔许德拉', en: 'Ahead of the Competition', ja: '覚醒の多頭竜「マギ・ヒュドラ」' }, drops: [], spawn_type: false },
+    63: { name: { zh: '拟态使魔——变形法师', en: 'Accept No Imitators', ja: '変化の使い魔「メタモルファ」' }, drops: [], spawn_type: false },
+    64: { name: { zh: '两岐塔 魔之塔', en: 'The Forked Tower: Magic', ja: 'フォークタワー：魔の塔' }, drops: [], spawn_type: false, type: 'tower' },
+    65: { name: { zh: '两歧塔 超魔之塔', en: 'The Forked Tower: Magic (Extreme)', ja: '極フォークタワー：魔の塔' }, drops: [], spawn_type: false, type: 'tower-extreme' }
   };
 
   // --- 撒娇罐时刻表常量（分钟），取自社区实测 ----------------------------
