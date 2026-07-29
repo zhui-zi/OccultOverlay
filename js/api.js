@@ -158,6 +158,35 @@
       });
     },
 
+    /** 创建 AutoPopper 兼容的实例 tracker，并返回数据库生成的完整记录。 */
+    createIslandTracker: function (record) {
+      return fetch(OC.BACKEND.url, {
+        method: 'POST',
+        headers: headers({ 'Content-Type': 'application/json', Prefer: 'return=representation' }),
+        body: JSON.stringify(record)
+      }).then(function (r) {
+        if (!r.ok) throw new Error('新建实例失败 HTTP ' + r.status);
+        return r.json();
+      }).then(function (rows) {
+        return rows && rows.length ? rows[0] : null;
+      });
+    },
+
+    /** 只更新已经严格绑定的数据库主键，避免 tracker_id 重复记录串岛。 */
+    updateIslandTracker: function (rowId, record) {
+      var url = OC.BACKEND.url + '?id=eq.' + encodeURIComponent(rowId);
+      return fetch(url, {
+        method: 'PATCH',
+        headers: headers({ 'Content-Type': 'application/json', Prefer: 'return=representation' }),
+        body: JSON.stringify(record)
+      }).then(function (r) {
+        if (!r.ok) throw new Error('更新实例失败 HTTP ' + r.status);
+        return r.json();
+      }).then(function (rows) {
+        return rows && rows.length ? rows[0] : null;
+      });
+    },
+
     /** 新建一个 tracker，返回 tracker_id */
     create: function (password, datacenter) {
       var rec = defaultRecord(password, datacenter);

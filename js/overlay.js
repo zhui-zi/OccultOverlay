@@ -377,9 +377,10 @@
     meta.active = !!active;
     meta.lastSeen = observedAt;
     meta.source = detail.source || meta.source || '';
-    if (active && detail.eventType === 'add' && !meta.spawnEpoch) {
+    if (active && detail.eventType === 'add' && (!was || !meta.spawnEpoch)) {
+      gainedExactStart = Number(meta.spawnEpoch) !== observedAt;
       meta.spawnEpoch = observedAt;
-      gainedExactStart = true;
+      meta.deathEpoch = null;
     }
     if (!active) meta.deathEpoch = observedAt;
     if (active) Overlay.memActive[id] = true; else delete Overlay.memActive[id];

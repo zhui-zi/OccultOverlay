@@ -123,6 +123,20 @@ assert.equal(
   Pots.matchIsland(fingerprintIslands, { fingerprints: [expectedFingerprint], events: [] }, 102, 15),
   null
 );
+assert.equal(
+  Pots.matchIsland(
+    fingerprintIslands,
+    {
+      fingerprint: expectedFingerprint,
+      fingerprints: [expectedFingerprint, fingerprintIslands[1].fingerprint],
+      events: []
+    },
+    101,
+    15
+  ).id,
+  'mine',
+  'the exact AutoPopper fingerprint must win over tolerance candidates'
+);
 
 const territoryIslands = [
   { id: 'south', rowId: 30, territory: 1252, dc: 101, fingerprint: expectedFingerprint, activeEvents: [] },

@@ -326,6 +326,14 @@
 
       var hashes = evidence.fingerprints || [];
       if (hashes.length) {
+        var exact = String(evidence.fingerprint || '').toUpperCase();
+        if (exact) {
+          var exactMatches = scoped.filter(function (item) {
+            return String(item.fingerprint || '').toUpperCase() === exact;
+          });
+          if (exactMatches.length === 1) return exactMatches[0];
+          if (exactMatches.length > 1) return null;
+        }
         var fingerprintMatches = scoped.filter(function (item) {
           return item.fingerprint && hashes.indexOf(String(item.fingerprint).toUpperCase()) >= 0;
         });

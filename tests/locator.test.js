@@ -17,6 +17,9 @@ const sandbox = {
     getElementById() { return null; },
   },
   OC: {
+    TERRITORIES: {
+      1346: { fateIds: [2074], potIds: [2072], ceIds: [49] },
+    },
     CES: {},
     FATES: { 2074: { name: { en: 'Test FATE' } } },
     POTS: {},
@@ -24,11 +27,17 @@ const sandbox = {
     Overlay: {
       playerDc: 103,
       territoryId: 1346,
+      connected: true,
+      inOccult: true,
       memMeta: {
         2074: { active: false, spawnEpoch: 123456, deathEpoch: 123500 },
       },
     },
     Pots: {
+      contextFingerprint(dc, fateId, epoch) {
+        assert.deepEqual([dc, fateId, epoch], [103, 2074, 123456]);
+        return fingerprint;
+      },
       contextFingerprints(dc, fateId, epoch) {
         assert.deepEqual([dc, fateId, epoch], [103, 2074, 123456]);
         return [fingerprint];
@@ -51,6 +60,17 @@ const sandbox = {
       },
     },
     Api: {
+      blankEntry(id) {
+        return {
+          fate_id: id,
+          spawn_time: -1,
+          death_time: -1,
+          last_seen: -1,
+          respawn_times: [],
+          killed_fates: 0,
+          killed_ces: 0,
+        };
+      },
       fetchIslandByFingerprints(fingerprints, territory, dc) {
         requested = { fingerprints: Array.from(fingerprints), territory, dc };
         return Promise.resolve([{
@@ -64,6 +84,9 @@ const sandbox = {
           fate_history: '[]',
           pot_history: '[]',
         }]);
+      },
+      updateIslandTracker() {
+        return Promise.resolve(null);
       },
     },
     Settings: { get() { return null; } },
@@ -96,6 +119,104 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
   assert.equal(sandbox.OC.App.myIslandId, 'mine');
   assert.equal(applied.id, 'mine');
   assert.equal(applied.record.id, 42);
+  clearTimeout(sandbox.OC.App._uploadTimer);
+  sandbox.OC.App._uploadTimer = null;
+  sandbox.OC.App._pendingUploadFingerprint = '';
+
+  const secondFingerprint = 'B'.repeat(64);
+  const appliedBeforeMismatch = applied;
+  const mismatched = sandbox.OC.App.bindIslandRows([{
+    id: 99,
+    tracker_id: 'other-island',
+    territory: 1346,
+    datacenter: 103,
+    last_fate: secondFingerprint,
+    last_update: 123501,
+    encounter_history: '[]',
+    fate_history: '[]',
+    pot_history: '[]',
+  }], {
+    fingerprint: secondFingerprint,
+    fingerprints: [secondFingerprint],
+    events: [],
+    territory: 1346,
+  }, 103);
+  assert.equal(mismatched, null, 'a bound instance must reject a different row');
+  assert.equal(applied, appliedBeforeMismatch);
+  assert.equal(sandbox.OC.App.myIslandRowId, 42);
+
+  let createCalls = 0;
+  sandbox.OC.App.myIslandId = null;
+  sandbox.OC.App.myIslandRowId = null;
+  sandbox.OC.App.myIslandFingerprint = '';
+  sandbox.OC.App._island = null;
+  sandbox.OC.App._islands = [];
+  sandbox.OC.App._missingTrackerChecks = 0;
+  sandbox.OC.Api.fetchIslandByFingerprints = function () {
+    return Promise.resolve([]);
+  };
+  sandbox.OC.Api.createIslandTracker = function (record) {
+    createCalls += 1;
+    assert.equal(record.last_fate, secondFingerprint);
+    assert.equal(record.territory, 1346);
+    assert.equal(record.datacenter, 103);
+    assert.equal(record.tracker_type, 1);
+    const fates = JSON.parse(record.fate_history);
+    assert.equal(fates[0].spawn_time, 123456);
+    return Promise.resolve({
+      id: 77,
+      tracker_id: 'new-island',
+      territory: 1346,
+      datacenter: 103,
+      last_fate: secondFingerprint,
+      last_update: 123501,
+      encounter_history: record.encounter_history,
+      fate_history: record.fate_history,
+      pot_history: record.pot_history,
+    });
+  };
+  const firstMissing = {
+    fingerprint: 'C'.repeat(64),
+    fingerprints: ['C'.repeat(64)],
+    events: [],
+    territory: 1346,
+    dc: 103,
+    generation: 0,
+  };
+  const secondMissing = {
+    fingerprint: secondFingerprint,
+    fingerprints: [secondFingerprint],
+    events: [],
+    territory: 1346,
+    dc: 103,
+    generation: 0,
+  };
+  assert.equal(await sandbox.OC.App.checkOrCreateIsland(firstMissing), false);
+  assert.equal(createCalls, 0, 'one missing check must not create a duplicate island');
+  assert.equal(await sandbox.OC.App.checkOrCreateIsland(secondMissing), true);
+  assert.equal(createCalls, 1);
+  assert.equal(sandbox.OC.App.myIslandRowId, 77);
+  assert.equal(sandbox.OC.App.myIslandId, 'new-island');
+
+  let updatedRowId = 0;
+  sandbox.OC.Api.updateIslandTracker = function (rowId, record) {
+    updatedRowId = rowId;
+    assert.equal(record.last_fate, secondFingerprint);
+    return Promise.resolve({
+      id: rowId,
+      tracker_id: 'new-island',
+      territory: 1346,
+      datacenter: 103,
+      last_fate: record.last_fate,
+      last_update: 123502,
+      encounter_history: record.encounter_history,
+      fate_history: record.fate_history,
+      pot_history: record.pot_history,
+    });
+  };
+  sandbox.OC.App._pendingUploadFingerprint = secondFingerprint;
+  assert.equal(await sandbox.OC.App.flushIslandUpload(), true);
+  assert.equal(updatedRowId, 77, 'updates must target the bound database row');
   console.log('locator tests passed');
 })().catch(function (error) {
   console.error(error);
