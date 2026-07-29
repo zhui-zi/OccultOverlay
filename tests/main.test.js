@@ -112,6 +112,12 @@ sandbox.window = sandbox;
 const source = fs.readFileSync(require.resolve('../js/main.js'), 'utf8');
 vm.runInNewContext(source, sandbox, { filename: 'main.js' });
 
+assert.equal(sandbox.OC.App.displayScale(1920, 1080, 1), 1);
+assert.equal(sandbox.OC.App.displayScale(3840, 2160, 1), 1.5);
+assert.equal(sandbox.OC.App.displayScale(3072, 1728, 1.25), 1, 'OS DPI scaling must not be applied twice');
+assert.equal(sandbox.OC.App.effectiveUiScale(1, 3840, 2160, 1), 1.5);
+assert.equal(sandbox.OC.App.effectiveUiScale(2, 3840, 2160, 1), 2, 'combined scaling must remain bounded');
+
 const styles = fs.readFileSync(require.resolve('../css/style.css'), 'utf8');
 const activeChipRule = styles.match(/\.chip\.chip-act\s*\{([^}]*)\}/);
 assert.ok(activeChipRule, 'active capsule style must exist');

@@ -27,10 +27,37 @@
     _dc: [],        // 撒娇罐总览数据（去重排序后）
     _dcTick: 0,
 
+    displayScale: function (width, height, pixelRatio) {
+      width = Number(width) || 0;
+      height = Number(height) || 0;
+      pixelRatio = Number(pixelRatio) || 1;
+      if (pixelRatio > 1.1) return 1;
+      return width >= 3000 && height >= 1700 ? 1.5 : 1;
+    },
+
+    effectiveUiScale: function (manual, width, height, pixelRatio) {
+      manual = Number(manual) || 1;
+      return Math.max(0.8, Math.min(2, manual * this.displayScale(width, height, pixelRatio)));
+    },
+
+    applyUiScale: function () {
+      var effective = this.effectiveUiScale(
+        OC.Settings.get('uiScale'),
+        global.innerWidth,
+        global.innerHeight,
+        global.devicePixelRatio
+      );
+      document.documentElement.style.setProperty('--ui-scale', effective);
+      return effective;
+    },
+
     init: function () {
       this.collapsed = !!OC.Settings.get('collapsed');
       document.documentElement.style.setProperty('--app-opacity', OC.Settings.get('opacity'));
-      document.documentElement.style.setProperty('--ui-scale', OC.Settings.get('uiScale') || 1);
+      this.applyUiScale();
+      if (global.addEventListener) {
+        global.addEventListener('resize', function () { App.applyUiScale(); });
+      }
       this.renderShell();
       this.wireOverlay();
       OC.Overlay.start();
@@ -963,7 +990,7 @@
       var sc = pop.querySelector('#s-scale');
       sc.addEventListener('input', function () {
         OC.Settings.set('uiScale', Number(sc.value));
-        document.documentElement.style.setProperty('--ui-scale', sc.value);
+        App.applyUiScale();
       });
       bindChk(pop, 'a-pot', 'alertPot');
       bindChk(pop, 'a-all', 'alertAllEncounters');

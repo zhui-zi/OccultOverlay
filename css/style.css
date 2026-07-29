@@ -77,11 +77,16 @@ html, body {
 
 /* ---- 右侧圆形按钮 ---- */
 .rail {
-  position: absolute; top: 8px; right: 8px; z-index: 6;
+  position: absolute; top: 8px; right: 8px; bottom: 8px; z-index: 6;
   display: flex; flex-direction: column; gap: 7px; align-items: center;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
+  padding-right: 4px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.25) transparent;
 }
+.rail::-webkit-scrollbar { width: 4px; }
+.rail::-webkit-scrollbar-track { background: transparent; }
+.rail::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 2px; }
 .rbtn {
-  width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+  width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; cursor: pointer;
   background: var(--glass); border: 1.5px solid var(--line); color: var(--fg-dim);
   font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center;
   backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.4); transition: .15s;
@@ -92,7 +97,7 @@ html, body {
   border-color: var(--rc, var(--accent)); box-shadow: 0 0 12px var(--rc, var(--accent));
 }
 .rbtn.panel { font-size: 17px; }
-.rail-div { width: 22px; height: 1px; background: var(--line); margin: 3px 0; }
+.rail-div { width: 22px; height: 1px; flex: 0 0 1px; background: var(--line); margin: 3px 0; }
 
 /* ---- 面板（战斗 / 设置）---- */
 .popover {
