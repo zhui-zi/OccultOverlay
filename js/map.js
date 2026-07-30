@@ -21,9 +21,14 @@
       var tex = map.texSize || 2048;
       var center = map.center || tex / 2;
       var pts = map.points;
+      var background = map.background || 'assets/map.png';
+      var fallbackBackground = map.fallbackBackground || '';
       var s = '<svg viewBox="0 0 ' + tex + ' ' + tex + '" class="map-svg" preserveAspectRatio="xMidYMid meet">';
       s += '<g class="map-bg">';
-      s += '<image href="' + esc(map.background || 'assets/map.png') + '" x="0" y="0" width="' + tex + '" height="' + tex + '" onerror="this.remove()"/>';
+      s += '<image href="' + esc(background) + '"' +
+        (fallbackBackground ? ' data-fallback="' + esc(fallbackBackground) + '"' : '') +
+        ' x="0" y="0" width="' + tex + '" height="' + tex +
+        '" onerror="var f=this.getAttribute(\'data-fallback\');if(f&&this.getAttribute(\'href\')!==f){this.setAttribute(\'href\',f)}else{this.remove()}"/>';
       s += '<rect x="0" y="0" width="' + tex + '" height="' + tex + '" fill="#0a1018" opacity="0.15"/>';
       s += '</g>';
 
