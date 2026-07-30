@@ -372,15 +372,17 @@ const settingsPop = {
 sandbox.OC.Overlay.territoryId = 1346;
 sandbox.OC.App.renderSettings(settingsPop);
 assert.doesNotMatch(settingsPop.innerHTML, /id="s-auto"/);
-assert.match(settingsPop.innerHTML, /alert_dispeller_pending/);
-assert.doesNotMatch(settingsPop.innerHTML, /Test Dispeller/);
+assert.match(settingsPop.innerHTML, /alert_dispeller/);
+assert.match(settingsPop.innerHTML, /Test Dispeller/);
+assert.match(settingsPop.innerHTML, /Test Dispeller Beta/);
+assert.match(settingsPop.innerHTML, /Test Dispeller Gamma/);
 assert.doesNotMatch(settingsPop.innerHTML, /Test Demiatma/);
 
 sandbox.OC.Overlay.territoryId = 1252;
 sandbox.OC.App.renderSettings(settingsPop);
 assert.match(settingsPop.innerHTML, /alert_demiatma/);
 assert.match(settingsPop.innerHTML, /Test Demiatma 1/);
-assert.doesNotMatch(settingsPop.innerHTML, /alert_dispeller_pending/);
+assert.doesNotMatch(settingsPop.innerHTML, /Test Dispeller/);
 
 let shownIsland = null;
 sandbox.OC.App.resolveMyIsland = function () { return 'mine'; };

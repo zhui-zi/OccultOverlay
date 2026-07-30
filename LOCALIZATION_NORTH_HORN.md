@@ -46,7 +46,6 @@ All current North Horn runtime strings are localized.
 | CE | 62 | Ahead of the Competition | 苏醒的多头龙—魔许德拉 |
 | CE | 63 | Accept No Imitators | 拟态使魔—变形法师 |
 | Tower | 64 | The Forked Tower: Magic | 两岐塔 魔之塔 |
-| Extreme Tower | 65 | The Forked Tower: Magic (Extreme) | 两歧塔 超魔之塔 |
 
 ## Trigger Monsters
 
@@ -75,12 +74,6 @@ All current North Horn runtime strings are localized.
 | 51987 | Notes on the Alabaster Blade | 调查记录：雪石膏之剑 |
 | 51988 | Notes on Conjured Calofisteri | 调查记录：卡洛菲斯提莉二重身 |
 
-## UI Text
-
-| Key | English | zh-CN |
-| --- | --- | --- |
-| `alert_dispeller_pending` | Per-event Phantom Dispeller drop mappings are not available yet. | 各 FATE/CE 的消幻晶掉落对应关系尚无数据。 |
-
 ## Confirmed Terms
 
 These terms are already localized and require no action.
@@ -91,4 +84,4 @@ These terms are already localized and require no action.
 | 50975 | Phantom Dispeller β | 消幻晶β |
 | 50976 | Phantom Dispeller γ | 消幻晶γ |
 
-Per-event Phantom Dispeller drops are still unavailable. Soul-shard, exploration-note, surface coffer, north/south pot coffer, reroll, carrot, trigger-monster, and trigger-location data are integrated.
+Per-event Phantom Dispeller, soul-shard, exploration-note, surface coffer, north/south pot coffer, reroll, carrot, trigger-monster, and trigger-location data are integrated.

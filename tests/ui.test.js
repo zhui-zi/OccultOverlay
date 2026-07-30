@@ -31,10 +31,10 @@ sandbox.OC.UI.renderBattlePanel(host, {
   pot: [],
 }, 'north-test');
 
-assert.equal((host.innerHTML.match(/class="p-row ce/g) || []).length, 17);
+assert.equal((host.innerHTML.match(/class="p-row ce/g) || []).length, 16);
 assert.equal((host.innerHTML.match(/class="p-row fate/g) || []).length, 11);
 assert.equal((host.innerHTML.match(/class="p-row pot/g) || []).length, 2);
-assert.match(host.innerHTML, /The Forked Tower: Magic \(Extreme\)/);
+assert.doesNotMatch(host.innerHTML, /The Forked Tower: Magic \(Extreme\)/);
 assert.match(host.innerHTML, /Thunderregnum/);
 assert.match(host.innerHTML, /In a Pot of Bother \(South\)/);
 assert.match(host.innerHTML, /data-monster-image="assets\/trigger-monsters\/49\.png"/);

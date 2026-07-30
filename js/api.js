@@ -14,7 +14,7 @@
   }
 
   function blankEntry(id) {
-    return { fate_id: id, spawn_time: -1, death_time: -1, last_seen: -1, respawn_times: [], killed_fates: 0, killed_ces: 0 };
+    return { fate_id: id, spawn_time: -1, death_time: -1, last_seen: -1, respawn_times: [], killed_fates: 0, killed_ces: 0, state: 0 };
   }
 
   function defaultRecord(password, datacenter) {
@@ -36,7 +36,7 @@
     fetchTracker: function (id) {
       var url = OC.BACKEND.url + '?tracker_id=eq.' + encodeURIComponent(id) +
         '&order=last_update.desc,id.desc&limit=1';
-      return fetch(url, { headers: headers() }).then(function (r) {
+      return fetch(url, { headers: headers(), cache: 'no-store' }).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       }).then(function (rows) {
@@ -47,7 +47,7 @@
     /** 按数据库主键读取已确认的实例，避免同 tracker_id 的旧/重复行串岛。 */
     fetchTrackerRow: function (rowId) {
       var url = OC.BACKEND.url + '?id=eq.' + encodeURIComponent(rowId) + '&limit=1';
-      return fetch(url, { headers: headers() }).then(function (r) {
+      return fetch(url, { headers: headers(), cache: 'no-store' }).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       }).then(function (rows) {
@@ -58,7 +58,7 @@
     fetchLastUpdate: function (id) {
       var url = OC.BACKEND.url + '?tracker_id=eq.' + encodeURIComponent(id) +
         '&select=last_update&order=last_update.desc,id.desc&limit=1';
-      return fetch(url, { headers: headers() }).then(function (r) {
+      return fetch(url, { headers: headers(), cache: 'no-store' }).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       }).then(function (rows) {
@@ -107,7 +107,7 @@
         '&last_update=gt.' + (now - sinceSec) +
         (territory ? '&territory=eq.' + encodeURIComponent(territory) : '') +
         '&select=id,tracker_id,territory,datacenter,last_fate,last_update,pot_history,encounter_history,fate_history';
-      return fetch(url, { headers: headers() }).then(function (r) {
+      return fetch(url, { headers: headers(), cache: 'no-store' }).then(function (r) {
         return r.ok ? r.json() : [];
       });
     },
@@ -124,7 +124,7 @@
         '&datacenter=eq.' + encodeURIComponent(datacenter) +
         '&select=id,tracker_id,territory,datacenter,last_fate,last_update,pot_history,encounter_history,fate_history' +
         '&order=last_update.desc,id.desc';
-      return fetch(url, { headers: headers() }).then(function (r) {
+      return fetch(url, { headers: headers(), cache: 'no-store' }).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       });

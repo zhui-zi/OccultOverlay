@@ -46,7 +46,7 @@ function loadOverlay(search) {
     WebSocket: FakeWebSocket,
     OC: {
       Settings: { get() { return ''; } },
-      CES: { 49: { name: {} }, 64: { name: {} }, 65: { name: {} } },
+      CES: { 49: { name: {} }, 64: { name: {} } },
       FATES: { 1962: { name: {} }, 2074: { name: {} } },
       POTS: {
         1976: { name: {}, side: 'north' },
@@ -156,7 +156,7 @@ assert.equal(playerContext.dc, 103);
 assert.equal(player.sandbox.OC.ceKeyToId(0, 1252), 48);
 assert.equal(player.sandbox.OC.ceKeyToId(1, 1346), 49);
 assert.equal(player.sandbox.OC.ceKeyToId(0, 1346), 64);
-assert.equal(player.sandbox.OC.ceKeyToId(16, 1346), 65);
+assert.equal(player.sandbox.OC.ceKeyToId(16, 1346), 0);
 
 const position = loadOverlay('');
 let observedPosition = null;

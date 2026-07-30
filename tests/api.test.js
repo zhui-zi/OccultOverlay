@@ -35,11 +35,14 @@ vm.runInContext(fs.readFileSync('js/api.js', 'utf8'), sandbox);
   assert.match(requestedUrl, /territory=eq\.1346/);
   assert.match(requestedUrl, /datacenter=eq\.103/);
   assert.match(requestedUrl, /order=last_update\.desc,id\.desc/);
+  assert.equal(requestedOptions.cache, 'no-store');
 
   requestedUrl = '';
   const empty = await sandbox.OC.Api.fetchIslandByFingerprints(['invalid'], 1346, 103);
   assert.deepEqual(Array.from(empty), []);
   assert.equal(requestedUrl, '');
+
+  assert.equal(sandbox.OC.Api.blankEntry(49).state, 0);
 
   const record = {
     territory: 1346,

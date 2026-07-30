@@ -12,7 +12,7 @@ Everything is automatic — no setup, no tracker id. Data comes from the shared 
 - Optional ACT TTS alerts for every CE, FATE, and pot, with per-spawn deduplication.
 - South Horn demiatma filters; North Horn soul-shard and exploration-note drops.
 - On-demand North Horn trigger-monster location maps.
-- North Horn event-to-dispeller mappings remain intentionally unset.
+- North Horn Phantom Dispeller mappings and filtered spawn alerts.
 - Only visible while you are in Occult Crescent.
 - Collapse mode to hide the map.
 - zh / en / ja.

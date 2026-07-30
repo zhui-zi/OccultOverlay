@@ -31,7 +31,6 @@
       alert_title: '提示', alert_all: '播报所有 CE / FATE / 魔法罐',
       alert_pot_opt: '魔法罐出现前3分钟提示', alert_demiatma: '出现掉落以下半魂晶的 CE/FATE 时提示：',
       alert_dispeller: '出现掉落以下消幻晶的 CE/FATE 时提示：',
-      alert_dispeller_pending: '各 FATE/CE 的消幻晶掉落对应关系尚无数据。',
       alert_tts: '语音提示', alert_pot: '魔法罐出现', pot_pre_alert: '魔法罐即将出现',
       my_island_hint: '点击查看你所在岛的 CE/FATE', set_show_chips: '显示当前 FATE/CE 胶囊', chips_hidden: '已隐藏（可在设置中重新打开）'
     },
@@ -63,7 +62,6 @@
       alert_title: 'Alerts', alert_all: 'Alert on every CE / FATE / pot',
       alert_pot_opt: 'Alert 3 min before a pot', alert_demiatma: 'Alert on CE/FATE dropping these demiatma:',
       alert_dispeller: 'Alert on CE/FATE dropping these Phantom Dispellers:',
-      alert_dispeller_pending: 'Per-event Phantom Dispeller drop mappings are not available yet.',
       alert_tts: 'Voice', alert_pot: 'Pot spawned', pot_pre_alert: 'Pot spawning soon',
       my_island_hint: 'Click to see your island CE/FATE', set_show_chips: 'Show active FATE/CE chips', chips_hidden: 'Hidden (re-enable in settings)'
     },
@@ -95,7 +93,6 @@
       alert_title: '通知', alert_all: 'すべてのCE / FATE / ポットを通知',
       alert_pot_opt: 'ポット出現3分前に通知', alert_demiatma: '以下のデミアートマをドロップするCE/FATE出現で通知：',
       alert_dispeller: '以下のファントムディスペラーをドロップするCE/FATE出現で通知：',
-      alert_dispeller_pending: 'Per-event Phantom Dispeller drop mappings are not available yet.',
       alert_tts: '音声通知', alert_pot: 'ポット出現', pot_pre_alert: 'ポットまもなく出現',
       my_island_hint: 'クリックで自分の島のCE/FATE', set_show_chips: '現在のFATE/CEを表示', chips_hidden: '非表示にしました（設定で再表示）'
     }

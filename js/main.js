@@ -16,7 +16,7 @@
     return found;
   }
   var CN_DCS = [101, 102, 103, 104];
-  var TRACKER_VERSION = 'OccultOverlay-v68';
+  var TRACKER_VERSION = 'OccultOverlay-v69';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
 
   var State = OC.State = { highlights: [], detail: null, detailId: null, detailLocating: false };
@@ -1042,27 +1042,26 @@
       var colors = g('alertColors') || {};
       var swatch = {
         47744: '#4aa3ff', 47745: '#2ec4b6', 47746: '#3ddb63',
-        47747: '#ff8a3c', 47748: '#b061ff', 47749: '#ffce4d'
+        47747: '#ff8a3c', 47748: '#b061ff', 47749: '#ffce4d',
+        50974: '#5cb9ff', 50975: '#d58cff', 50976: '#ff83b6'
       };
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 1252;
-      var rewardIds = [47744, 47745, 47746, 47747, 47748, 47749];
+      var rewardIds = territory === 1346
+        ? [50974, 50975, 50976]
+        : [47744, 47745, 47746, 47747, 47748, 47749];
       var h = '<div class="panel-head">' + t('panel_settings') + '<button class="pclose" data-close>' + t('close') + '</button></div>';
       h += '<div class="panel-body settings">';
       h += '<div class="s-grp">' + t('alert_title') + '</div>';
       h += rowChk('a-all', t('alert_all'), g('alertAllEncounters'));
       h += rowChk('a-pot', t('alert_pot_opt'), g('alertPot'));
-      if (territory === 1346) {
-        h += '<div class="s-sub">' + t('alert_dispeller_pending') + '</div>';
-      } else {
-        h += '<div class="s-sub">' + t('alert_demiatma') + '</div><div class="color-grid">';
-        rewardIds.forEach(function (id) {
-          var it = OC.ITEMS[id], on = !!colors[id];
-          h += '<label class="color-chk' + (on ? ' on' : '') + '" data-cid="' + id + '" style="--sc:' + swatch[id] + '">' +
-            '<input type="checkbox" data-color="' + id + '"' + (on ? ' checked' : '') + '>' +
-            '<span class="sw"></span>' + esc(OC.localName(it.name, g('lang'))) + '</label>';
-        });
-        h += '</div>';
-      }
+      h += '<div class="s-sub">' + t(territory === 1346 ? 'alert_dispeller' : 'alert_demiatma') + '</div><div class="color-grid">';
+      rewardIds.forEach(function (id) {
+        var it = OC.ITEMS[id], on = !!colors[id];
+        h += '<label class="color-chk' + (on ? ' on' : '') + '" data-cid="' + id + '" style="--sc:' + swatch[id] + '">' +
+          '<input type="checkbox" data-color="' + id + '"' + (on ? ' checked' : '') + '>' +
+          '<span class="sw"></span>' + esc(OC.localName(it.name, g('lang'))) + '</label>';
+      });
+      h += '</div>';
       h += rowChk('a-tts', t('alert_tts'), g('useTts'));
       h += '<div class="s-grp">' + t('panel_settings') + '</div>';
       h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'));

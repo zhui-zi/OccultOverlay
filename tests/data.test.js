@@ -18,7 +18,7 @@ assert.equal(OC.TERRITORIES[1346].mapId, 1135);
 assert.deepEqual(Array.from(OC.TERRITORIES[1346].mapIds), [1135, 1244]);
 assert.equal(OC.TERRITORIES[1346].fateIds.length, 11);
 assert.equal(OC.TERRITORIES[1346].potIds.length, 2);
-assert.equal(OC.TERRITORIES[1346].ceIds.length, 17);
+assert.equal(OC.TERRITORIES[1346].ceIds.length, 16);
 assert.equal(OC.TERRITORIES[1346].name.zh, '蜃景幻界新月岛 北征之章');
 
 assert.equal(OC.FATES[2074].name.en, 'Raging Thrall');
@@ -28,9 +28,7 @@ assert.equal(OC.POTS[1976].name.en, 'Persistent Pots (North)');
 assert.equal(OC.POTS[1977].name.en, 'Pleading Pots (South)');
 assert.equal(OC.POTS[2072].name.en, 'Daylight Pottery (North)');
 assert.equal(OC.POTS[2073].name.zh, '被吹飞的魔法罐(南)');
-assert.equal(OC.CES[65].name.en, 'The Forked Tower: Magic (Extreme)');
-assert.equal(OC.CES[65].name.zh, '两歧塔 超魔之塔');
-assert.equal(OC.CES[65].type, 'tower-extreme');
+assert.equal(OC.CES[65], undefined);
 assert.equal(OC.CES[49].spawn_type, true);
 assert.equal(OC.CES[49].monster.en, 'Crescent Wamoura');
 assert.equal(OC.CES[49].monster.zh, '新月瓦魔蛾');
@@ -56,13 +54,14 @@ assert.equal(OC.ITEMS[51988].cat, 'notes');
 for (const item of Object.values(OC.ITEMS)) {
   if (item.cat === 'notes') assert.match(item.name.zh, /^调查记录：/);
 }
-assert.deepEqual(Array.from(OC.FATES[2074].drops), []);
-assert.deepEqual(Array.from(OC.POTS[2072].drops), []);
-assert.deepEqual(Array.from(OC.CES[49].drops), []);
-assert.deepEqual(Array.from(OC.CES[50].drops), [51988]);
-assert.deepEqual(Array.from(OC.CES[57].drops), [51974, 51984]);
-assert.deepEqual(Array.from(OC.CES[59].drops), [51972, 51983]);
-assert.deepEqual(Array.from(OC.CES[63].drops), [51982]);
+assert.deepEqual(Array.from(OC.FATES[2074].drops), [50974]);
+assert.deepEqual(Array.from(OC.POTS[2072].drops), [50976]);
+assert.deepEqual(Array.from(OC.POTS[2073].drops), [50975]);
+assert.deepEqual(Array.from(OC.CES[49].drops), [50974]);
+assert.deepEqual(Array.from(OC.CES[50].drops), [51988, 50976]);
+assert.deepEqual(Array.from(OC.CES[57].drops), [51974, 51984, 50975]);
+assert.deepEqual(Array.from(OC.CES[59].drops), [51972, 51983, 50974]);
+assert.deepEqual(Array.from(OC.CES[63].drops), [51982, 50976]);
 assert.deepEqual(Array.from(OC.CES[64].drops), []);
 
 const north = OC.TERRITORIES[1346];
@@ -78,7 +77,7 @@ const i18nSandbox = {
 };
 i18nSandbox.window = i18nSandbox;
 vm.runInNewContext(fs.readFileSync(require.resolve('../js/i18n.js'), 'utf8'), i18nSandbox, { filename: '../js/i18n.js' });
-assert.equal(i18nSandbox.OC.i18n.t('alert_dispeller_pending'), '各 FATE/CE 的消幻晶掉落对应关系尚无数据。');
+assert.equal(i18nSandbox.OC.i18n.t('alert_dispeller'), '出现掉落以下消幻晶的 CE/FATE 时提示：');
 assert.equal(i18nSandbox.OC.i18n.t('island_unknown'), '未知');
 
 assert.equal(OC.selectMap(1346), true);
@@ -87,10 +86,14 @@ assert.equal(OC.MAP.points.bronze.length, 55);
 assert.equal(OC.MAP.points.silver.length, 7);
 assert.equal(OC.MAP.points.potNorth.length, 30);
 assert.equal(OC.MAP.points.potSouth.length, 30);
+assert.equal(OC.MAP.points.potNorth.some(([x, z]) => x === 889.2178 && z === 155.9825), true);
+assert.equal(OC.MAP.points.potNorth.some(([x, z]) => x === -269.6122 && z === 875.6997), false);
+assert.equal(OC.MAP.points.potSouth.some(([x, z]) => x === -269.6122 && z === 875.6997), true);
+assert.equal(OC.MAP.points.potSouth.some(([x, z]) => x === 889.2178 && z === 155.9825), false);
 assert.equal(OC.MAP.points.reroll.length, 20);
 assert.equal(OC.MAP.points.bunny.length, 25);
+assert.deepEqual(Array.from(OC.MAP.encounters[64]), [-320.06552, 422.0136]);
 assert.deepEqual(Array.from(OC.MAP.encounters[2084]), [140, -708]);
-assert.equal(OC.MAP.encounters[64], undefined);
 assert.equal(OC.MAP.encounters[65], undefined);
 
 assert.equal(OC.selectMap(1346, { y: -100 }), true);

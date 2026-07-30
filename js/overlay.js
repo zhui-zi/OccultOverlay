@@ -410,12 +410,12 @@
 
   // CEDirector uses a territory-local sequence instead of the DynamicEvent row.
   // South: 0=tower 48, 1-15 => 33-47.
-  // North: 0=tower 64, 1-15 => 49-63, 16=extreme tower 65.
+  // North: 0=tower 64, 1-15 => 49-63. Key 16 is not shared by the tracker.
   function ceKeyToId(k, territoryId) {
     if (Number(territoryId) === 1346) {
       if (k === 0) return 64;
       if (k >= 1 && k <= 15) return 48 + k;
-      return k === 16 ? 65 : 0;
+      return 0;
     }
     return k === 0 ? 48 : (k >= 1 && k <= 15) ? 32 + k : 0;
   }
