@@ -225,6 +225,7 @@ assert.deepEqual(
 
 const cloudPot = { fate_id: 2072, spawn_time: 100, death_time: 110, last_seen: 110 };
 const originalInstanceEvidence = sandbox.OC.App.instanceEvidence;
+const originalTrackerContext = sandbox.OC.App.trackerContext;
 sandbox.OC.App._island = { ce: [], fate: [], pot: [cloudPot] };
 sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
 sandbox.OC.App.myIslandRowId = 1;
@@ -284,6 +285,24 @@ assert.equal(
   cloudPot.death_time,
   'a strict ID match must expose the cached ETA without waiting for another row fetch',
 );
+
+sandbox.OC.App.myIslandFingerprint = 'PREVIOUS-FATE';
+sandbox.OC.App.trackerContext = () => ({ fingerprint: 'CURRENT-INSTANCE' });
+assert.equal(
+  sandbox.OC.App.adoptTrustedFateContext(2074, 123456).fingerprint,
+  'CURRENT-INSTANCE',
+);
+assert.equal(
+  sandbox.OC.App.myIslandFingerprint,
+  'CURRENT-INSTANCE',
+  'a trusted new FATE must advance the fingerprint of an already bound island',
+);
+assert.notEqual(
+  sandbox.OC.App.localPotInfo(),
+  null,
+  'the newly advanced fingerprint must keep the bound island countdown visible',
+);
+sandbox.OC.App.trackerContext = originalTrackerContext;
 
 sandbox.OC.App.myIslandFingerprint = 'OTHER-INSTANCE';
 assert.equal(

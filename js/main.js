@@ -227,6 +227,14 @@
       };
     },
 
+    // 已经严格绑定本岛后，后续可信 FATE Add 仍属于同一实例。
+    // 立即推进绑定指纹，避免等待共享记录回写期间把本岛罐时误判为未知。
+    adoptTrustedFateContext: function (fateId, spawnEpoch) {
+      var context = this.trackerContext(fateId, spawnEpoch);
+      if (context && this.myIslandRowId) this.myIslandFingerprint = context.fingerprint;
+      return context;
+    },
+
     bindMatchedIsland: function (matched, record) {
       if (!matched) return null;
       if (this.myIslandRowId && Number(this.myIslandRowId) !== Number(matched.rowId)) {
@@ -481,7 +489,7 @@
 
     queueIslandUpload: function (fingerprint, immediate) {
       if (!this.myIslandRowId || !OC.Overlay.connected || !OC.Overlay.inOccult) return;
-      this._pendingUploadFingerprint = fingerprint || this.myIslandFingerprint || this.instanceEvidence().fingerprint;
+      this._pendingUploadFingerprint = fingerprint || this.instanceEvidence().fingerprint || this.myIslandFingerprint;
       if (this._uploadTimer) clearTimeout(this._uploadTimer);
       this._uploadTimer = setTimeout(function () {
         App._uploadTimer = null;
@@ -500,7 +508,7 @@
               Number(rowId) !== Number(App.myIslandRowId) ||
               !OC.Overlay.connected || !OC.Overlay.inOccult) return false;
           var fingerprint = App._pendingUploadFingerprint ||
-            App.myIslandFingerprint || App.instanceEvidence().fingerprint;
+            App.instanceEvidence().fingerprint || App.myIslandFingerprint;
           App._pendingUploadFingerprint = '';
           var record = App.buildLocalTrackerRecord(fingerprint);
           if (!record) return false;
@@ -815,14 +823,17 @@
         App.refreshHighlights();
         if (!App.myIslandRowId) App.updatePreviewIsland();
         if (active) App.alertEncounter(id);
+        var trustedFateContext = null;
         if (active && detail.startTrusted && detail.startEpoch && OC.FATES[id]) {
+          trustedFateContext = App.adoptTrustedFateContext(id, Number(detail.startEpoch));
           App.scheduleTrackerCheck(id, Number(detail.startEpoch));
         }
         if (!App.resolveMyIsland()) App.locateMyIslandFast(true).then(function (found) {
           if (!found) App.fetchDc(true);
         });
         else {
-          App.queueIslandUpload(null, detail.eventType === 'add');
+          App.queueIslandUpload(trustedFateContext && trustedFateContext.fingerprint,
+            detail.eventType === 'add');
           App.pollMyIsland(true);
         }
         if (!active && (OC.FATES[id] || OC.POTS[id])) {
