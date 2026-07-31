@@ -129,6 +129,20 @@ assert.ok(activeChipRule, 'active capsule style must exist');
 assert.match(activeChipRule[1], /backdrop-filter:\s*none/);
 assert.match(activeChipRule[1], /background:\s*rgb\(14,\s*20,\s*30\)/);
 
+const resizeAnchorRule = styles.match(/\.resize-anchor\s*\{([^}]*)\}/);
+assert.ok(resizeAnchorRule, 'ACT resize anchors must exist');
+assert.match(resizeAnchorRule[1], /width:\s*16px/);
+assert.match(resizeAnchorRule[1], /height:\s*16px/);
+assert.match(resizeAnchorRule[1], /rgba\(0,\s*0,\s*0,\s*0\.01\)/, 'resize anchors must paint a nonzero alpha');
+assert.match(resizeAnchorRule[1], /pointer-events:\s*none/, 'resize anchors must not block overlay controls');
+const resizeAnchorsRule = styles.match(/\.resize-anchors\s*\{([^}]*)\}/);
+assert.ok(resizeAnchorsRule, 'ACT resize anchor layer must exist');
+assert.match(resizeAnchorsRule[1], /position:\s*fixed/);
+assert.match(resizeAnchorsRule[1], /inset:\s*0/, 'resize anchors must follow every viewport resize');
+assert.match(resizeAnchorsRule[1], /pointer-events:\s*none/, 'resize anchor layer must not block overlay controls');
+const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
+assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
+
 sandbox.OC.State.highlights = [49, 2074];
 sandbox.OC.App.updateActive();
 assert.equal(writes, 1);
