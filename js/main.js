@@ -668,8 +668,16 @@
 
     // 本机可信 Add/Remove 不等待实例匹配；云端时间只允许来自严格确认的实例。
     localPotInfo: function () {
-      var cloud = this.myIslandRowId && this._island && this._island.pot;
-      if ((!cloud || !cloud.length) && this.myIslandRowId) {
+      var evidence = this.instanceEvidence();
+      var currentFingerprint = String(evidence.fingerprint || '').toUpperCase();
+      var boundFingerprint = String(this.myIslandFingerprint || '').toUpperCase();
+      // 结束时间和 director 快照足以辅助定位，但不能授权精确罐子时间。
+      // 只有当前本机 Add 生成的实例指纹仍与绑定记录一致时，才采用云端锚点。
+      // 否则与 OccultPotNotifier 一样保持未知，避免弱绑定把其它岛的罐时带进来。
+      var cloudTimingAuthorized = !!this.myIslandRowId && !!currentFingerprint &&
+        currentFingerprint === boundFingerprint;
+      var cloud = cloudTimingAuthorized && this._island && this._island.pot;
+      if ((!cloud || !cloud.length) && cloudTimingAuthorized) {
         var overview = (this._dc || []).filter(function (item) {
           return item.rowId === App.myIslandRowId;
         })[0];

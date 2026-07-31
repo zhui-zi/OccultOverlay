@@ -224,9 +224,12 @@ assert.deepEqual(
 );
 
 const cloudPot = { fate_id: 2072, spawn_time: 100, death_time: 110, last_seen: 110 };
+const originalInstanceEvidence = sandbox.OC.App.instanceEvidence;
 sandbox.OC.App._island = { ce: [], fate: [], pot: [cloudPot] };
 sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
 sandbox.OC.App.myIslandRowId = 1;
+sandbox.OC.App.myIslandFingerprint = 'CURRENT-INSTANCE';
+sandbox.OC.App.instanceEvidence = () => ({ fingerprint: 'CURRENT-INSTANCE' });
 sandbox.OC.App._previewIsland = null;
 sandbox.OC.App._localPot = null;
 sandbox.OC.Overlay.territoryId = 1346;
@@ -282,6 +285,14 @@ assert.equal(
   'a strict ID match must expose the cached ETA without waiting for another row fetch',
 );
 
+sandbox.OC.App.myIslandFingerprint = 'OTHER-INSTANCE';
+assert.equal(
+  sandbox.OC.App.localPotInfo(),
+  null,
+  'a weak or stale island binding must not authorize a cloud pot prediction',
+);
+sandbox.OC.App.myIslandFingerprint = 'CURRENT-INSTANCE';
+
 sandbox.OC.Overlay.territoryId = 1252;
 sandbox.OC.App._island = { ce: [], fate: [], pot: [cloudPot] };
 assert.notEqual(sandbox.OC.App.localPotInfo(), null);
@@ -289,6 +300,7 @@ assert.equal(sandbox._lastPotMerge.shared.length, 1, 'South Horn keeps strict-is
 
 sandbox.OC.App._island = null;
 sandbox.OC.App.myIslandRowId = null;
+sandbox.OC.App.myIslandFingerprint = '';
 sandbox.OC.App._dc = [];
 sandbox.OC.App._localPot = {
   2072: {
@@ -307,6 +319,7 @@ sandbox.OC.App._localPot = null;
 sandbox.OC.App._previewIsland = { id: 'preview', rowId: 2, pot: [cloudPot] };
 const previewPot = sandbox.OC.App.localPotInfo();
 assert.equal(previewPot, null, 'an unconfirmed island must never provide a pot time');
+sandbox.OC.App.instanceEvidence = originalInstanceEvidence;
 alertPot = true;
 let previewAlerted = false;
 sandbox.OC.App.fireAlert = function () { previewAlerted = true; };
