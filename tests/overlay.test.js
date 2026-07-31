@@ -10,6 +10,11 @@ function loadOverlay(search) {
   const intervals = [];
   const timeouts = [];
   let websocketCount = 0;
+  let nowMs = Date.now();
+
+  class ClockDate extends Date {
+    static now() { return nowMs; }
+  }
 
   class FakeWebSocket {
     constructor(url) {
@@ -34,7 +39,7 @@ function loadOverlay(search) {
 
   const sandbox = {
     console,
-    Date,
+    Date: ClockDate,
     JSON,
     Math,
     Promise,
@@ -62,6 +67,7 @@ function loadOverlay(search) {
     sandbox,
     intervals,
     timeouts,
+    advanceTime(ms) { nowMs += ms; },
     get websocketCount() { return websocketCount; }
   };
 }
@@ -135,6 +141,40 @@ snapshot.sandbox.dispatchOverlayEvent({
 });
 assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2074].spawnEpoch, 1785195089);
 assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2074].spawnTrusted, true);
+
+const duplicateZone = loadOverlay('');
+let zoneEvents = 0;
+duplicateZone.sandbox.OC.Overlay.on('zone', () => { zoneEvents++; });
+duplicateZone.sandbox.dispatchOverlayEvent({
+  type: 'ChangeZone',
+  zoneID: 1346,
+  zoneName: '蜃景幻界新月岛 北征之章',
+});
+const firstSnapshotUntil = duplicateZone.sandbox.OC.Overlay.fateSnapshotUntil;
+duplicateZone.advanceTime(3000);
+duplicateZone.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: ['01', '2026-07-31T18:58:37.374+08:00', '542', '蜃景幻界新月岛 北征之章'],
+});
+assert.equal(zoneEvents, 1, 'a delayed duplicate zone signal must not reset the matched island');
+assert.equal(
+  duplicateZone.sandbox.OC.Overlay.fateSnapshotUntil,
+  firstSnapshotUntil,
+  'a delayed duplicate must not restart the initial FATE snapshot window',
+);
+duplicateZone.advanceTime(1000);
+duplicateZone.sandbox.dispatchOverlayEvent({
+  type: 'ChangeZone',
+  zoneID: 1278,
+  zoneName: '幻境村',
+});
+duplicateZone.advanceTime(1000);
+duplicateZone.sandbox.dispatchOverlayEvent({
+  type: 'ChangeZone',
+  zoneID: 1346,
+  zoneName: '蜃景幻界新月岛 北征之章',
+});
+assert.equal(zoneEvents, 3, 'leaving and re-entering through another territory must still reset');
 
 const player = loadOverlay('');
 let playerContext = null;

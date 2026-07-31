@@ -8,6 +8,7 @@
   // 官方 territoryId 若与默认不符，可在设置里覆盖；同时用区域名兜底匹配。
   var OCCULT_TERRITORY_IDS = [1252, 1346];
   var OCCULT_NAME_RE = /occult|crescent|south horn|north horn|新月|南征|北征|隠世|クレセント|południ|kreszent/i;
+  var DUPLICATE_ZONE_SIGNAL_MS = 10000;
 
   function EventBus() { this._h = {}; }
   EventBus.prototype.on = function (name, cb) {
@@ -264,12 +265,17 @@
   function setZone(id, name) {
     var territoryId = id != null ? Number(id) : null;
     var zoneName = name || '';
-    var signalKey = territoryId + ':' + zoneName;
     var signalAt = Date.now();
-    // ChangeZone and LogLine 01 can describe the same transition. Suppress only
-    // the immediate duplicate; a later same-territory instance change must reset.
-    if (lastZoneSignal && lastZoneSignal.key === signalKey && signalAt - lastZoneSignal.at < 1500) return;
-    lastZoneSignal = { key: signalKey, at: signalAt };
+    // ChangeZone and LogLine 01 can describe the same transition, but legacy
+    // OverlayPlugin may deliver the second copy several seconds later. Do not
+    // let that delayed duplicate erase a freshly matched island. Real exits and
+    // re-entries pass through another territory and therefore still reset.
+    if (lastZoneSignal && lastZoneSignal.territoryId === territoryId &&
+        signalAt - lastZoneSignal.at < DUPLICATE_ZONE_SIGNAL_MS) {
+      if (!Overlay.zoneName && zoneName) Overlay.zoneName = zoneName;
+      return;
+    }
+    lastZoneSignal = { territoryId: territoryId, at: signalAt };
     beginFateSnapshot();
     Overlay.territoryId = territoryId;
     Overlay.zoneName = zoneName;
