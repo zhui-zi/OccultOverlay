@@ -140,7 +140,11 @@ html, body {
 .p-row.tower { border-left: 3px solid #d64b4b; background: rgba(120,30,30,0.16); }
 .p-row.alive { box-shadow: 0 0 0 1px var(--alive) inset; background: rgba(255,207,77,0.08); }
 .p-row-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.p-name { font-weight: 600; font-size: 12.5px; }
+.p-name { display: inline-flex; align-items: center; min-width: 0; font-weight: 600; font-size: 12.5px; }
+.weaknesses { display: inline-flex; flex: 0 0 auto; margin-right: 4px; }
+.weakness-ic { width: 18px; height: 18px; object-fit: contain; }
+.weakness-ic + .weakness-ic { margin-left: -4px; }
+.weakness-ic.noimg { display: none; }
 .bdg { font-size: 10.5px; padding: 1px 6px; border-radius: 8px; white-space: nowrap; }
 .bdg.alive { background: var(--alive); color: #1a1200; font-weight: 700; }
 .bdg.gone { background: rgba(255,255,255,0.06); color: var(--fg-dim); }

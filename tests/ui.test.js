@@ -14,7 +14,7 @@ const sandbox = {
     Overlay: { territoryId: 1346 },
     MAP: { territory: 1346 },
     Pots: { status() { return null; } },
-    i18n: { t(key) { return key; } },
+    i18n: { t(key) { return key === 'weakness' ? (currentLang === 'zh' ? '弱点' : 'Weakness') : key; } },
   },
 };
 sandbox.window = sandbox;
@@ -38,11 +38,15 @@ assert.equal((host.innerHTML.match(/class="p-row pot/g) || []).length, 2);
 assert.doesNotMatch(host.innerHTML, /The Forked Tower: Magic \(Extreme\)/);
 assert.match(host.innerHTML, /Thunderregnum/);
 assert.match(host.innerHTML, /In a Pot of Bother \(South\)/);
+assert.match(host.innerHTML, /title="Weakness: Ice"/);
+assert.match(host.innerHTML, /alt="Ice"/);
 assert.match(host.innerHTML, /data-monster-image="assets\/trigger-monsters\/49\.png"/);
 assert.match(host.innerHTML, />▸ Crescent Wamoura<\/button>/);
 assert.doesNotMatch(host.innerHTML, /src="assets\/trigger-monsters\/49\.png"/, 'monster location images must load on demand');
 
 currentLang = 'zh';
+assert.match(sandbox.OC.UI.weaknessIcons(['fire']), /title="弱点: 火"/);
+assert.match(sandbox.OC.UI.weaknessIcons(['fire']), /alt="火"/);
 const southHost = { innerHTML: '' };
 sandbox.OC.UI.renderBattlePanel(southHost, {
   territory: 1252,
@@ -52,6 +56,7 @@ sandbox.OC.UI.renderBattlePanel(southHost, {
 }, 'south-test');
 assert.match(southHost.innerHTML, /data-monster-image="assets\/trigger-monsters\/33\.png"/);
 assert.match(southHost.innerHTML, />▸ 新月鬼鱼<\/button>/);
+assert.doesNotMatch(southHost.innerHTML, /class="weaknesses"/, 'South Horn rows must not gain unverified weaknesses');
 assert.doesNotMatch(southHost.innerHTML, /src="assets\/trigger-monsters\/33\.png"/, 'south monster location images must load on demand');
 
 const locatingHost = { innerHTML: '' };

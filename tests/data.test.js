@@ -51,13 +51,11 @@ assert.equal(OC.CES[49].monster.ja, 'クレセント・ワモーラ');
 assert.equal(OC.CES[50].monster.en, 'Crescent Blackguard');
 assert.equal(OC.CES[53].monster.en, 'Crescent Big Horn');
 assert.equal(OC.CES[55].monster.en, 'Crescent Hellhound');
-assert.equal(OC.CES[59].spawn_type, true);
-assert.equal(OC.CES[59].monster.en, 'Crescent Bile');
-assert.equal(OC.CES[59].monster.zh, '新月胆汁');
-assert.equal(OC.CES[59].monster.ja, 'クレセント・バイル');
+assert.equal(OC.CES[59].spawn_type, false);
+assert.equal(OC.CES[59].monster, undefined);
 assert.equal(OC.CES[61].spawn_type, false);
 assert.equal(OC.CES[61].monster, undefined);
-for (const id of [49, 50, 53, 55, 59]) {
+for (const id of [49, 50, 53, 55]) {
   assert.equal(OC.CES[id].monster_image, `assets/trigger-monsters/${id}.png`);
   const image = fs.readFileSync(require.resolve(`../${OC.CES[id].monster_image}`));
   assert.equal(image.toString('ascii', 1, 4), 'PNG');
@@ -71,17 +69,24 @@ assert.equal(OC.ITEMS[51972].name.en, "Blue Mage's Soul Shard");
 assert.equal(OC.ITEMS[51974].name.zh, '灵魂碎晶：死灵法师');
 assert.equal(OC.ITEMS[51979].name.ja, '探査記録:アルバテル');
 assert.equal(OC.ITEMS[51988].cat, 'notes');
+assert.equal(OC.WEAKNESS.fire.name.zh, '火');
+assert.equal(OC.WEAKNESS.ice.img, 'ui/icon/229000/229984_hr1.tex');
 for (const item of Object.values(OC.ITEMS)) {
   if (item.cat === 'notes') assert.match(item.name.zh, /^调查记录：/);
 }
 assert.deepEqual(Array.from(OC.FATES[2074].drops), [50974]);
+assert.deepEqual(Array.from(OC.FATES[2074].weakness), ['fire']);
+assert.deepEqual(Array.from(OC.FATES[2081].weakness), ['wind', 'lightning']);
 assert.deepEqual(Array.from(OC.POTS[2072].drops), [50976]);
+assert.deepEqual(Array.from(OC.POTS[2072].weakness), ['fire']);
 assert.deepEqual(Array.from(OC.POTS[2073].drops), [50975]);
 assert.deepEqual(Array.from(OC.CES[49].drops), [50974]);
-assert.deepEqual(Array.from(OC.CES[50].drops), [51988, 50976]);
-assert.deepEqual(Array.from(OC.CES[57].drops), [51974, 51984, 50975]);
-assert.deepEqual(Array.from(OC.CES[59].drops), [51972, 51983, 50974]);
-assert.deepEqual(Array.from(OC.CES[63].drops), [51982, 50976]);
+assert.deepEqual(Array.from(OC.CES[50].drops), [49832, 49827, 51988, 50976]);
+assert.deepEqual(Array.from(OC.CES[57].drops), [49832, 49827, 51974, 51984, 50975]);
+assert.deepEqual(Array.from(OC.CES[59].drops), [49831, 49826, 51972, 51983, 50974]);
+assert.deepEqual(Array.from(OC.CES[63].drops), [49831, 49826, 51982, 50976]);
+assert.deepEqual(Array.from(OC.CES[49].weakness), ['ice']);
+assert.deepEqual(Array.from(OC.CES[58].weakness), ['lightning']);
 assert.deepEqual(Array.from(OC.CES[64].drops), []);
 
 const north = OC.TERRITORIES[1346];

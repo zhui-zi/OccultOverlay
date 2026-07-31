@@ -55,7 +55,15 @@ All current North Horn runtime strings are localized.
 | 50 | Crescent Blackguard | 新月黑卫 |
 | 53 | Crescent Big Horn | 新月大角牛 |
 | 55 | Crescent Hellhound | 新月地狱犬 |
-| 59 | Crescent Bile | 新月胆汁 |
+
+## Elemental Weaknesses
+
+| English | zh-CN |
+| --- | --- |
+| Fire | 火 |
+| Ice | 冰 |
+| Lightning | 雷 |
+| Wind | 风 |
 
 ## Items
 
@@ -84,4 +92,4 @@ These terms are already localized and require no action.
 | 50975 | Phantom Dispeller β | 消幻晶β |
 | 50976 | Phantom Dispeller γ | 消幻晶γ |
 
-Per-event Phantom Dispeller, soul-shard, exploration-note, surface coffer, north/south pot coffer, reroll, carrot, trigger-monster, and trigger-location data are integrated.
+Per-event weaknesses, Phantom Dispeller, soul-shard, exploration-note, surface coffer, north/south pot coffer, reroll, carrot, trigger-monster, and trigger-location data are integrated.

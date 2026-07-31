@@ -58,6 +58,20 @@
       .map(function (c) { return '<span class="cat-tag" style="--c:' + OC.DROP_CAT[c].color + '">' + t(c) + '</span>'; }).join('');
   };
 
+  UI.weaknessIcons = function (weaknesses) {
+    if (!weaknesses || !weaknesses.length) return '';
+    var names = weaknesses.map(function (key) {
+      return OC.WEAKNESS[key] ? nm(OC.WEAKNESS[key].name) : key;
+    });
+    var h = '<span class="weaknesses" title="' + esc(t('weakness') + ': ' + names.join(' / ')) + '">';
+    weaknesses.forEach(function (key) {
+      var weakness = OC.WEAKNESS[key];
+      if (!weakness) return;
+      h += '<img class="weakness-ic" src="' + OC.iconUrl(weakness.img) + '" alt="' + esc(nm(weakness.name)) + '" onerror="this.classList.add(\'noimg\')">';
+    });
+    return h + '</span>';
+  };
+
   // ---- 撒娇罐总览（国服四大区）----
   UI.renderDcPots = function (host, list, loading) {
     var current = now();
@@ -158,7 +172,7 @@
       ? !!(potStatus && potStatus.alive && potStatus.side === def.side)
       : e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time);
     var cls = 'p-row ' + type + (alive ? ' alive' : '') + (def.type === 'tower' ? ' tower' : '');
-    var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + esc(nm(def.name)) + '</span>' + badge(e, def, n, alive, type, potStatus) + '</div>';
+    var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + UI.weaknessIcons(def.weakness) + esc(nm(def.name)) + '</span>' + badge(e, def, n, alive, type, potStatus) + '</div>';
     var tags = '';
     if (def.type === 'tower') tags += '<span class="tag tw">' + t('tower') + '</span>';
     var monsterMap = '';
