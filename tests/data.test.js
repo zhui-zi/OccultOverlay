@@ -36,8 +36,13 @@ assert.equal(OC.CES[49].monster.ja, 'クレセント・ワモーラ');
 assert.equal(OC.CES[50].monster.en, 'Crescent Blackguard');
 assert.equal(OC.CES[53].monster.en, 'Crescent Big Horn');
 assert.equal(OC.CES[55].monster.en, 'Crescent Hellhound');
-assert.equal(OC.CES[61].monster.en, 'Crescent Wraith');
-for (const id of [49, 50, 53, 55, 61]) {
+assert.equal(OC.CES[59].spawn_type, true);
+assert.equal(OC.CES[59].monster.en, 'Crescent Bile');
+assert.equal(OC.CES[59].monster.zh, '新月胆汁');
+assert.equal(OC.CES[59].monster.ja, 'クレセント・バイル');
+assert.equal(OC.CES[61].spawn_type, false);
+assert.equal(OC.CES[61].monster, undefined);
+for (const id of [49, 50, 53, 55, 59]) {
   assert.equal(OC.CES[id].monster_image, `assets/trigger-monsters/${id}.png`);
   const image = fs.readFileSync(require.resolve(`../${OC.CES[id].monster_image}`));
   assert.equal(image.toString('ascii', 1, 4), 'PNG');

@@ -199,9 +199,9 @@
     56: { name: { zh: '叛逆使魔—负隅宝石兽', en: 'A Beast Unleashed', ja: '反逆の使い魔「アトラス・カーバンクル」' }, drops: [50976], spawn_type: false },
     57: { name: { zh: '天道好轮回—魔亡灵法师', en: 'Dark Artistry', ja: '死霊使いの亡霊「マギ・ネクロマンサー」' }, drops: [51974, 51984, 50975], spawn_type: false },
     58: { name: { zh: '求道的人造人—神木巨人', en: 'Familiar Tactics', ja: '求道の人造人間「エルムギガース」' }, drops: [50976], spawn_type: false },
-    59: { name: { zh: '诅咒的继承者—惨白魔人', en: 'Appalling Behavior', ja: '呪いを継ぐ者「ペイルマギア」' }, drops: [51972, 51983, 50974], spawn_type: false },
+    59: { name: { zh: '诅咒的继承者—惨白魔人', en: 'Appalling Behavior', ja: '呪いを継ぐ者「ペイルマギア」' }, drops: [51972, 51983, 50974], spawn_type: true, monster: { zh: '新月胆汁', en: 'Crescent Bile', ja: 'クレセント・バイル' }, monster_image: 'assets/trigger-monsters/59.png' },
     60: { name: { zh: '魔法军团—小小法师', en: 'Tiny Terror', ja: '魔道兵団「タイニーメイジ」' }, drops: [51980, 50975], spawn_type: false },
-    61: { name: { zh: '孤岛的绑架犯—诱拐魔', en: 'Lost on the Wind', ja: '絶島の誘拐者「アブダクター」' }, drops: [51985, 50976], spawn_type: true, monster: { zh: '新月幽灵', en: 'Crescent Wraith', ja: 'クレセント・レイス' }, monster_image: 'assets/trigger-monsters/61.png' },
+    61: { name: { zh: '孤岛的绑架犯—诱拐魔', en: 'Lost on the Wind', ja: '絶島の誘拐者「アブダクター」' }, drops: [51985, 50976], spawn_type: false },
     62: { name: { zh: '苏醒的多头龙—魔许德拉', en: 'Ahead of the Competition', ja: '覚醒の多頭竜「マギ・ヒュドラ」' }, drops: [50974], spawn_type: false },
     63: { name: { zh: '拟态使魔—变形法师', en: 'Accept No Imitators', ja: '変化の使い魔「メタモルファ」' }, drops: [51982, 50976], spawn_type: false },
     64: { name: { zh: '两岐塔 魔之塔', en: 'The Forked Tower: Magic', ja: 'フォークタワー：魔の塔' }, drops: [], spawn_type: false, type: 'tower' }

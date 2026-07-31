@@ -55,7 +55,7 @@ All current North Horn runtime strings are localized.
 | 50 | Crescent Blackguard | 新月黑卫 |
 | 53 | Crescent Big Horn | 新月大角牛 |
 | 55 | Crescent Hellhound | 新月地狱犬 |
-| 61 | Crescent Wraith | 新月幽灵 |
+| 59 | Crescent Bile | 新月胆汁 |
 
 ## Items
 
