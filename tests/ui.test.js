@@ -4,12 +4,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
+let currentLang = 'en';
 const sandbox = {
   console,
   Date,
   Math,
   OC: {
-    Settings: { get(key) { return key === 'lang' ? 'en' : null; } },
+    Settings: { get(key) { return key === 'lang' ? currentLang : null; } },
     Overlay: { territoryId: 1346 },
     MAP: { territory: 1346 },
     Pots: { status() { return null; } },
@@ -40,6 +41,18 @@ assert.match(host.innerHTML, /In a Pot of Bother \(South\)/);
 assert.match(host.innerHTML, /data-monster-image="assets\/trigger-monsters\/49\.png"/);
 assert.match(host.innerHTML, />▸ Crescent Wamoura<\/button>/);
 assert.doesNotMatch(host.innerHTML, /src="assets\/trigger-monsters\/49\.png"/, 'monster location images must load on demand');
+
+currentLang = 'zh';
+const southHost = { innerHTML: '' };
+sandbox.OC.UI.renderBattlePanel(southHost, {
+  territory: 1252,
+  ce: [{ fate_id: 33, spawn_time: 100, death_time: -1, last_seen: 100 }],
+  fate: [],
+  pot: [],
+}, 'south-test');
+assert.match(southHost.innerHTML, /data-monster-image="assets\/trigger-monsters\/33\.png"/);
+assert.match(southHost.innerHTML, />▸ 新月鬼鱼<\/button>/);
+assert.doesNotMatch(southHost.innerHTML, /src="assets\/trigger-monsters\/33\.png"/, 'south monster location images must load on demand');
 
 const locatingHost = { innerHTML: '' };
 sandbox.OC.UI.renderBattlePanel(locatingHost, null, null, true);

@@ -29,6 +29,21 @@ assert.equal(OC.POTS[1977].name.en, 'Pleading Pots (South)');
 assert.equal(OC.POTS[2072].name.en, 'Daylight Pottery (North)');
 assert.equal(OC.POTS[2073].name.zh, '被吹飞的魔法罐(南)');
 assert.equal(OC.CES[65], undefined);
+const southTriggerNames = {
+  33: '新月鬼鱼',
+  37: '新月墨渍',
+  39: '新月比布鲁斯',
+  41: '新月小瓣齿鲨',
+  42: '新月风扇',
+  44: '新月加鲁拉',
+};
+for (const [id, name] of Object.entries(southTriggerNames)) {
+  assert.equal(OC.CES[id].spawn_type, true);
+  assert.equal(OC.CES[id].monster.zh, name);
+  assert.equal(OC.CES[id].monster_image, `assets/trigger-monsters/${id}.png`);
+  const image = fs.readFileSync(require.resolve(`../${OC.CES[id].monster_image}`));
+  assert.equal(image.toString('ascii', 1, 4), 'PNG');
+}
 assert.equal(OC.CES[49].spawn_type, true);
 assert.equal(OC.CES[49].monster.en, 'Crescent Wamoura');
 assert.equal(OC.CES[49].monster.zh, '新月瓦魔蛾');
