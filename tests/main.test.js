@@ -238,6 +238,19 @@ assert.notEqual(sandbox.OC.App.localPotInfo(), null);
 assert.equal(sandbox._lastPotMerge.shared.length, 1, 'North Horn accepts strict-island cloud pot history');
 assert.equal(sandbox._lastPotMerge.shared[0].death_time, cloudPot.death_time);
 
+sandbox.OC.App.myIslandFingerprint = 'BOUND-WITHIN-WINDOW';
+sandbox.OC.App.instanceEvidence = () => ({
+  fingerprint: 'LOCAL-EXACT',
+  fingerprints: ['LOCAL-EXACT', 'BOUND-WITHIN-WINDOW'],
+});
+assert.notEqual(
+  sandbox.OC.App.localPotInfo(),
+  null,
+  'a strictly matched fingerprint within the local Add tolerance window must authorize the countdown',
+);
+sandbox.OC.App.instanceEvidence = () => ({ fingerprint: 'CURRENT-INSTANCE' });
+sandbox.OC.App.myIslandFingerprint = 'CURRENT-INSTANCE';
+
 sandbox.OC.App._localPot = { 2072: { active: true, lastSeen: 120 } };
 const updateOnlyPot = sandbox.OC.App.localPotInfo();
 assert.equal(updateOnlyPot.alive, true);

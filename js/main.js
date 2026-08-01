@@ -679,11 +679,18 @@
       var evidence = this.instanceEvidence();
       var currentFingerprint = String(evidence.fingerprint || '').toUpperCase();
       var boundFingerprint = String(this.myIslandFingerprint || '').toUpperCase();
+      var currentFingerprints = (evidence.fingerprints || []).map(function (fingerprint) {
+        return String(fingerprint || '').toUpperCase();
+      });
+      if (currentFingerprint && currentFingerprints.indexOf(currentFingerprint) < 0) {
+        currentFingerprints.push(currentFingerprint);
+      }
       // 结束时间和 director 快照足以辅助定位，但不能授权精确罐子时间。
-      // 只有当前本机 Add 生成的实例指纹仍与绑定记录一致时，才采用云端锚点。
+      // 只有绑定记录的指纹仍在当前本机 Add 的 ±15 秒严格证据窗口内，
+      // 才采用云端锚点。ACT 观测时间与 tracker StartTimeEpoch 可能有数秒偏差。
       // 否则与 OccultPotNotifier 一样保持未知，避免弱绑定把其它岛的罐时带进来。
-      var cloudTimingAuthorized = !!this.myIslandRowId && !!currentFingerprint &&
-        currentFingerprint === boundFingerprint;
+      var cloudTimingAuthorized = !!this.myIslandRowId && !!boundFingerprint &&
+        currentFingerprints.indexOf(boundFingerprint) >= 0;
       var cloud = cloudTimingAuthorized && this._island && this._island.pot;
       if ((!cloud || !cloud.length) && cloudTimingAuthorized) {
         var overview = (this._dc || []).filter(function (item) {
