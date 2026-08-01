@@ -271,6 +271,10 @@
       var record = rows.filter(function (row) {
         return Number(row.id) === Number(matched.rowId);
       })[0];
+      if (!this.myIslandRowId && this.cloudIslandEvidenceCount(this.instanceEvidence(), record && {
+        fate: pj(record.fate_history),
+        pot: pj(record.pot_history)
+      }) < 2) return null;
       var id = this.bindMatchedIsland(matched, record);
       if (!id) return null;
       return id;
@@ -281,8 +285,22 @@
     resolveMyIsland: function () {
       var all = this._islands || [];
       var pdc = OC.Overlay.playerDc;
-      var matched = OC.Pots.matchIsland(all, this.instanceEvidence(), pdc, 15);
+      var evidence = this.instanceEvidence();
+      var matched = OC.Pots.matchIsland(all, evidence, pdc, 15);
       if (matched) {
+        if (!this.myIslandRowId) {
+          var record = (this._dcRows || []).filter(function (row) {
+            return Number(row.id) === Number(matched.rowId);
+          })[0];
+          if (!record && this._previewIsland &&
+              Number(this._previewIsland.rowId) === Number(matched.rowId)) {
+            record = this._previewIsland.record;
+          }
+          if (this.cloudIslandEvidenceCount(evidence, record && {
+            fate: pj(record.fate_history),
+            pot: pj(record.pot_history)
+          }) < 2) return null;
+        }
         var bound = this.bindMatchedIsland(matched);
         if (bound) return bound;
       }
@@ -415,6 +433,11 @@
             App._missingTrackerChecks[checkKey] = 0;
             App.queueIslandUpload(context.fingerprint, true);
             return true;
+          }
+
+          if (App.localInstanceSignalCount(App.instanceEvidence()) < 2) {
+            context.stopRetry = true;
+            return false;
           }
 
           App._missingTrackerChecks[checkKey] =
@@ -674,6 +697,55 @@
       this.updateActive();
     },
 
+    localInstanceSignalCount: function (evidence) {
+      var ids = {};
+      (evidence && evidence.events || []).forEach(function (signal) {
+        if (Number(signal.fateId)) ids[Number(signal.fateId)] = true;
+      });
+      (evidence && evidence.ends || []).forEach(function (signal) {
+        if (Number(signal.fateId)) ids[Number(signal.fateId)] = true;
+      });
+      return Object.keys(ids).length;
+    },
+
+    cloudIslandEvidenceCount: function (evidence, history) {
+      evidence = evidence || {};
+      history = history || this._island;
+      if (!history && this._dcRows && this.myIslandRowId) {
+        var row = this._dcRows.filter(function (item) {
+          return Number(item.id) === Number(App.myIslandRowId);
+        })[0];
+        if (row) {
+          history = {
+            fate: pj(row.fate_history),
+            pot: pj(row.pot_history)
+          };
+        }
+      }
+      if (!history) return 0;
+      var remote = (history.fate || []).concat(history.pot || []);
+      var matchedIds = {};
+      (evidence.events || []).forEach(function (signal) {
+        var id = Number(signal.fateId) || 0;
+        var epoch = Number(signal.spawnEpoch) || 0;
+        if (!id || !epoch) return;
+        if (remote.some(function (entry) {
+          return Number(entry.fate_id) === id && Number(entry.spawn_time) > 0 &&
+            Math.abs(Number(entry.spawn_time) - epoch) <= 15;
+        })) matchedIds[id] = true;
+      });
+      (evidence.ends || []).forEach(function (signal) {
+        var id = Number(signal.fateId) || 0;
+        var epoch = Number(signal.deathEpoch) || 0;
+        if (!id || !epoch) return;
+        if (remote.some(function (entry) {
+          return Number(entry.fate_id) === id && Number(entry.death_time) > 0 &&
+            Math.abs(Number(entry.death_time) - epoch) <= 15;
+        })) matchedIds[id] = true;
+      });
+      return Object.keys(matchedIds).length;
+    },
+
     // 本机可信 Add/Remove 不等待实例匹配；云端时间只允许来自严格确认的实例。
     localPotInfo: function () {
       var evidence = this.instanceEvidence();
@@ -686,11 +758,13 @@
         currentFingerprints.push(currentFingerprint);
       }
       // 结束时间和 director 快照足以辅助定位，但不能授权精确罐子时间。
-      // 只有绑定记录的指纹仍在当前本机 Add 的 ±15 秒严格证据窗口内，
-      // 才采用云端锚点。ACT 观测时间与 tracker StartTimeEpoch 可能有数秒偏差。
+      // 只有绑定记录的指纹仍在当前本机 Add 的 ±15 秒严格证据窗口内，且该行
+      // 至少与两个不同的本机 Add/Remove 信号一致，才采用云端锚点。单个 FATE
+      // 可能与其它岛时间碰撞；ACT 观测时间与 tracker StartTimeEpoch 也可有数秒偏差。
       // 否则与 OccultPotNotifier 一样保持未知，避免弱绑定把其它岛的罐时带进来。
       var cloudTimingAuthorized = !!this.myIslandRowId && !!boundFingerprint &&
-        currentFingerprints.indexOf(boundFingerprint) >= 0;
+        currentFingerprints.indexOf(boundFingerprint) >= 0 &&
+        this.cloudIslandEvidenceCount(evidence) >= 2;
       var cloud = cloudTimingAuthorized && this._island && this._island.pot;
       if ((!cloud || !cloud.length) && cloudTimingAuthorized) {
         var overview = (this._dc || []).filter(function (item) {

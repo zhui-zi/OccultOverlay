@@ -19,10 +19,13 @@ const sandbox = {
   },
   OC: {
     TERRITORIES: {
-      1346: { fateIds: [2074], potIds: [2072], ceIds: [49] },
+      1346: { fateIds: [2074, 2075], potIds: [2072], ceIds: [49] },
     },
     CES: {},
-    FATES: { 2074: { name: { en: 'Test FATE' } } },
+    FATES: {
+      2074: { name: { en: 'Test FATE' } },
+      2075: { name: { en: 'Earlier Test FATE' } },
+    },
     POTS: {},
     MAP: { territory: 1346 },
     Overlay: {
@@ -32,6 +35,7 @@ const sandbox = {
       inOccult: true,
       memMeta: {
         2074: { active: false, spawnEpoch: 123456, spawnTrusted: true, deathEpoch: 123500 },
+        2075: { active: false, spawnEpoch: 123000, spawnTrusted: true, deathEpoch: 123100 },
       },
       memActive: {},
     },
@@ -87,7 +91,10 @@ const sandbox = {
           last_fate: fingerprint,
           last_update: 123500,
           encounter_history: '[]',
-          fate_history: '[]',
+          fate_history: JSON.stringify([
+            { fate_id: 2074, spawn_time: 123456, death_time: 123500, last_seen: 123500 },
+            { fate_id: 2075, spawn_time: 123000, death_time: 123100, last_seen: 123100 },
+          ]),
           pot_history: '[]',
         }]);
       },
@@ -110,12 +117,34 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
   };
   sandbox.OC.App.updateChips = function () {};
 
+  const corroboratingMeta = sandbox.OC.Overlay.memMeta[2075];
+  delete sandbox.OC.Overlay.memMeta[2075];
+  const oneSignalEvidence = sandbox.OC.App.instanceEvidence();
+  assert.equal(
+    sandbox.OC.App.bindIslandRows([{
+      id: 41,
+      tracker_id: 'single-signal-collision',
+      territory: 1346,
+      datacenter: 103,
+      last_fate: fingerprint,
+      last_update: 123500,
+      encounter_history: '[]',
+      fate_history: JSON.stringify([
+        { fate_id: 2074, spawn_time: 123456, death_time: 123500, last_seen: 123500 },
+      ]),
+      pot_history: '[{"fate_id":2072,"spawn_time":122000,"death_time":122100}]',
+    }], oneSignalEvidence, 103),
+    null,
+    'one matching FATE must remain a candidate and must not bind a writable island row',
+  );
+  sandbox.OC.Overlay.memMeta[2075] = corroboratingMeta;
+
   const evidence = sandbox.OC.App.instanceEvidence();
-  assert.deepEqual(Array.from(evidence.events, event => event.fateId), [2074],
+  assert.deepEqual(Array.from(evidence.events, event => event.fateId), [2074, 2075],
     'completed Add evidence must survive until an instance reset');
   assert.deepEqual(
     Array.from(evidence.ends, event => [event.fateId, event.deathEpoch]),
-    [[2074, 123500]],
+    [[2074, 123500], [2075, 123100]],
   );
 
   const found = await sandbox.OC.App.locateMyIslandFast(true);

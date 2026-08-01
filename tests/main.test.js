@@ -226,11 +226,21 @@ assert.deepEqual(
 const cloudPot = { fate_id: 2072, spawn_time: 100, death_time: 110, last_seen: 110 };
 const originalInstanceEvidence = sandbox.OC.App.instanceEvidence;
 const originalTrackerContext = sandbox.OC.App.trackerContext;
-sandbox.OC.App._island = { ce: [], fate: [], pot: [cloudPot] };
+const strictFateHistory = [
+  { fate_id: 2074, spawn_time: 1000, death_time: 1100, last_seen: 1100 },
+  { fate_id: 2075, spawn_time: 1200, death_time: 1300, last_seen: 1300 },
+];
+const strictEvidence = {
+  fingerprint: 'CURRENT-INSTANCE',
+  fingerprints: ['CURRENT-INSTANCE'],
+  events: [{ fateId: 2074, spawnEpoch: 1000 }],
+  ends: [{ fateId: 2075, deathEpoch: 1300 }],
+};
+sandbox.OC.App._island = { ce: [], fate: strictFateHistory, pot: [cloudPot] };
 sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
 sandbox.OC.App.myIslandRowId = 1;
 sandbox.OC.App.myIslandFingerprint = 'CURRENT-INSTANCE';
-sandbox.OC.App.instanceEvidence = () => ({ fingerprint: 'CURRENT-INSTANCE' });
+sandbox.OC.App.instanceEvidence = () => strictEvidence;
 sandbox.OC.App._previewIsland = null;
 sandbox.OC.App._localPot = null;
 sandbox.OC.Overlay.territoryId = 1346;
@@ -242,14 +252,29 @@ sandbox.OC.App.myIslandFingerprint = 'BOUND-WITHIN-WINDOW';
 sandbox.OC.App.instanceEvidence = () => ({
   fingerprint: 'LOCAL-EXACT',
   fingerprints: ['LOCAL-EXACT', 'BOUND-WITHIN-WINDOW'],
+  events: strictEvidence.events,
+  ends: strictEvidence.ends,
 });
 assert.notEqual(
   sandbox.OC.App.localPotInfo(),
   null,
   'a strictly matched fingerprint within the local Add tolerance window must authorize the countdown',
 );
-sandbox.OC.App.instanceEvidence = () => ({ fingerprint: 'CURRENT-INSTANCE' });
+sandbox.OC.App.instanceEvidence = () => strictEvidence;
 sandbox.OC.App.myIslandFingerprint = 'CURRENT-INSTANCE';
+
+sandbox.OC.App.instanceEvidence = () => ({
+  fingerprint: 'CURRENT-INSTANCE',
+  fingerprints: ['CURRENT-INSTANCE'],
+  events: [{ fateId: 2074, spawnEpoch: 1000 }, { fateId: 2082, spawnEpoch: 1400 }],
+  ends: [],
+});
+assert.equal(
+  sandbox.OC.App.localPotInfo(),
+  null,
+  'one coincidental FATE match must not authorize another island pot prediction',
+);
+sandbox.OC.App.instanceEvidence = () => strictEvidence;
 
 sandbox.OC.App._localPot = { 2072: { active: true, lastSeen: 120 } };
 const updateOnlyPot = sandbox.OC.App.localPotInfo();
@@ -265,7 +290,7 @@ assert.equal(sandbox._lastPotMerge.local.length, 1, 'an exact local Add must dri
 
 sandbox.OC.App._island = {
   ce: [],
-  fate: [],
+  fate: strictFateHistory,
   pot: [{ fate_id: 2072, spawn_time: Math.floor(Date.now() / 1000) - 300, death_time: -1, last_seen: Math.floor(Date.now() / 1000) - 60 }],
 };
 sandbox.OC.App._localPot = null;
@@ -289,6 +314,11 @@ assert.ok(
 );
 
 sandbox.OC.App._island = null;
+sandbox.OC.App._dcRows = [{
+  id: 1,
+  fate_history: JSON.stringify(strictFateHistory),
+  pot_history: JSON.stringify([cloudPot]),
+}];
 sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
 sandbox.OC.App._localPot = null;
 assert.notEqual(sandbox.OC.App.localPotInfo(), null);
@@ -326,11 +356,12 @@ assert.equal(
 sandbox.OC.App.myIslandFingerprint = 'CURRENT-INSTANCE';
 
 sandbox.OC.Overlay.territoryId = 1252;
-sandbox.OC.App._island = { ce: [], fate: [], pot: [cloudPot] };
+sandbox.OC.App._island = { ce: [], fate: strictFateHistory, pot: [cloudPot] };
 assert.notEqual(sandbox.OC.App.localPotInfo(), null);
 assert.equal(sandbox._lastPotMerge.shared.length, 1, 'South Horn keeps strict-island cloud fallback');
 
 sandbox.OC.App._island = null;
+sandbox.OC.App._dcRows = [];
 sandbox.OC.App.myIslandRowId = null;
 sandbox.OC.App.myIslandFingerprint = '';
 sandbox.OC.App._dc = [];
