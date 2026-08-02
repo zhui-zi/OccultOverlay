@@ -236,8 +236,25 @@ assert.deepEqual(
   [49, 2074],
   'connected North Horn must merge strict-island cloud CE when CEDirector is unavailable',
 );
+sandbox.OC.State.highlights = [];
+sandbox.OC.App._highlightMissingSince = {};
+sandbox.OC.Overlay.memActive = {};
+sandbox.OC.App._island = {
+  ce: [{ fate_id: 64, spawn_time: 0, death_time: 0, state: 3 }],
+  fate: [],
+  pot: [],
+};
+sandbox.OC.App.refreshHighlights();
+assert.deepEqual(
+  Array.from(sandbox.OC.State.highlights),
+  [64],
+  'a non-inactive tracker state must mark a Forked Tower active without spawn_time',
+);
+sandbox.OC.State.highlights = [49, 2074];
+sandbox.OC.App._highlightMissingSince = {};
 sandbox.OC.Overlay.memActive = {};
 sandbox.OC.App._island = { ce: [], fate: [], pot: [] };
+sandbox.OC.App.updateActive();
 const writesBeforeTransientDrop = writes;
 sandbox.OC.App.refreshHighlights();
 assert.deepEqual(

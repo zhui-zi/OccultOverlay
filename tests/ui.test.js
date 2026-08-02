@@ -8,11 +8,13 @@ let currentLang = 'en';
 const uiStrings = {
   en: {
     weakness: 'Weakness', tower: 'Forked Tower', last_seen: 'Last', tower_predicted: 'Predicted',
+    ce_active: 'Active', pot_active: 'Active',
     tower_window: 'Expected window reached', tower_reduced: 'Reduced',
     tower_upcoming: 'More after completion', tower_history: 'Previous intervals',
   },
   zh: {
     weakness: '弱点', tower: '两歧塔', last_seen: '上次', tower_predicted: '预计',
+    ce_active: '进行中', pot_active: '进行中',
     tower_window: '预计可出现', tower_reduced: '已缩短',
     tower_upcoming: '完成后再缩短', tower_history: '历史间隔',
   },
@@ -84,6 +86,25 @@ assert.match(towerHost.innerHTML, /Predicted/);
 assert.match(towerHost.innerHTML, /Reduced 13:00 · CE×2 \/ FATE×3/);
 assert.match(towerHost.innerHTML, /More after completion CE -5:00 \/ FATE -1:00/);
 assert.match(towerHost.innerHTML, /Previous intervals 1:00:00 \/ 55:00/);
+
+const activeTowerHost = { innerHTML: '' };
+sandbox.OC.UI.renderBattlePanel(activeTowerHost, {
+  territory: 1346,
+  ce: [{
+    fate_id: 64,
+    spawn_time: 0,
+    death_time: 0,
+    last_seen: current,
+    state: 3,
+    killed_ces: 6,
+    killed_fates: 20,
+  }],
+  fate: [],
+  pot: [],
+}, 'active-tower-test');
+assert.match(activeTowerHost.innerHTML, /class="p-row ce alive tower"/);
+assert.match(activeTowerHost.innerHTML, />● Active<\/span>/);
+assert.doesNotMatch(activeTowerHost.innerHTML, /Predicted/, 'an active tracker state must replace the stale tower ETA');
 
 currentLang = 'zh';
 assert.match(sandbox.OC.UI.weaknessIcons(['fire']), /title="弱点: 火"/);

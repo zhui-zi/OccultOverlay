@@ -175,7 +175,7 @@
   function rowHtml(e, def, type, n, potStatus, territory, hist) {
     var alive = type === 'pot'
       ? !!(potStatus && potStatus.alive && potStatus.side === def.side)
-      : e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time);
+      : historyAlive(e);
     var cls = 'p-row ' + type + (alive ? ' alive' : '') + (def.type === 'tower' ? ' tower' : '');
     var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + UI.weaknessIcons(def.weakness) + esc(nm(def.name)) + '</span>' + badge(e, def, n, alive, type, potStatus, territory) + '</div>';
     var tags = '';
@@ -217,7 +217,8 @@
     return base + timer;
   }
   function historyAlive(entry) {
-    return entry && entry.spawn_time > 0 && (entry.death_time <= 0 || entry.death_time < entry.spawn_time);
+    return !!(entry && (Number(entry.state) > 0 ||
+      (entry.spawn_time > 0 && (entry.death_time <= 0 || entry.death_time < entry.spawn_time))));
   }
   function towerTags(e, hist, n) {
     hist = hist || {};
@@ -251,7 +252,10 @@
     return tags;
   }
   function badge(e, def, n, alive, type, potStatus, territory) {
-    if (alive) return span('bdg alive', 'alive', e.spawn_time);
+    if (alive) {
+      if (e.spawn_time > 0) return span('bdg alive', 'alive', e.spawn_time);
+      return '<span class="bdg alive">● ' + t(type === 'pot' ? 'pot_active' : 'ce_active') + '</span>';
+    }
     if (type === 'ce') {
       if (def.type === 'tower') {
         var predicted = towerPrediction(e, territory);

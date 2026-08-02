@@ -1293,7 +1293,10 @@
   }
 
   function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }
-  function isAlive(e) { return e && e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time); }
+  function isAlive(e) {
+    return !!(e && (Number(e.state) > 0 ||
+      (e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time))));
+  }
 
   function rewardSuffix(drops) { return OC.UI.rewardSuffix(drops); }
   function row(l, c) { return '<div class="s-row"><label>' + l + '</label>' + c + '</div>'; }
