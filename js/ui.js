@@ -116,9 +116,9 @@
       var territory = Number(hist.territory) ||
         Number(OC.Overlay && OC.Overlay.territoryId) ||
         Number(OC.MAP && OC.MAP.territory) || 0;
-      h += section(t('ce'), hist.ce, 'ce', n, null, territory);
-      h += section(t('fate'), hist.fate, 'fate', n, null, territory);
-      h += section(t('pot'), hist.pot, 'pot', n, OC.Pots.status(hist.pot, n), territory);
+      h += section(t('ce'), hist.ce, 'ce', n, null, territory, hist);
+      h += section(t('fate'), hist.fate, 'fate', n, null, territory, hist);
+      h += section(t('pot'), hist.pot, 'pot', n, OC.Pots.status(hist.pot, n), territory, hist);
     }
     h += '</div>';
     host.innerHTML = h;
@@ -159,22 +159,25 @@
     });
   }
 
-  function section(title, arr, type, n, potStatus, territory) {
+  function section(title, arr, type, n, potStatus, territory, hist) {
     var h = '<div class="p-sec"><div class="p-sec-h">' + title + '</div>';
     completeHistory(arr, type, territory).forEach(function (e) {
       var def = type === 'ce' ? OC.CES[e.fate_id] : type === 'pot' ? OC.POTS[e.fate_id] : OC.FATES[e.fate_id];
-      if (def) h += rowHtml(e, def, type, n, potStatus);
+      if (def) h += rowHtml(e, def, type, n, potStatus, territory, hist);
     });
     return h + '</div>';
   }
-  function rowHtml(e, def, type, n, potStatus) {
+  function rowHtml(e, def, type, n, potStatus, territory, hist) {
     var alive = type === 'pot'
       ? !!(potStatus && potStatus.alive && potStatus.side === def.side)
       : e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time);
     var cls = 'p-row ' + type + (alive ? ' alive' : '') + (def.type === 'tower' ? ' tower' : '');
-    var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + UI.weaknessIcons(def.weakness) + esc(nm(def.name)) + '</span>' + badge(e, def, n, alive, type, potStatus) + '</div>';
+    var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + UI.weaknessIcons(def.weakness) + esc(nm(def.name)) + '</span>' + badge(e, def, n, alive, type, potStatus, territory) + '</div>';
     var tags = '';
-    if (def.type === 'tower') tags += '<span class="tag tw">' + t('tower') + '</span>';
+    if (def.type === 'tower') {
+      tags += '<span class="tag tw">' + t('tower') + '</span>';
+      tags += towerTags(e, hist, n);
+    }
     var monsterMap = '';
     if (def.spawn_type && def.monster) {
       if (def.monster_image) {
@@ -199,9 +202,56 @@
   function span(cls, kind, val) {
     return '<span class="' + cls + '" data-tk="' + kind + '" data-tv="' + val + '">' + UI.timerText(kind, val) + '</span>';
   }
-  function badge(e, def, n, alive, type, potStatus) {
+  function towerPrediction(e, territory) {
+    var zone = OC.TERRITORIES && OC.TERRITORIES[territory];
+    var base = e.last_seen > 0 ? Number(e.last_seen) : (e.death_time > 0 ? Number(e.death_time) : 0);
+    if (!zone || Number(zone.towerId) !== Number(e.fate_id) || !base) return 0;
+    var killedCes = Math.max(0, Number(e.killed_ces) || 0);
+    var killedFates = Math.max(0, Number(e.killed_fates) || 0);
+    var timer = Math.max(0, Number(zone.towerSpawnTimer) - 300 * killedCes - 60 * killedFates);
+    return base + timer;
+  }
+  function historyAlive(entry) {
+    return entry && entry.spawn_time > 0 && (entry.death_time <= 0 || entry.death_time < entry.spawn_time);
+  }
+  function towerTags(e, hist, n) {
+    hist = hist || {};
+    var tags = '';
+    var last = e.last_seen > 0 ? Number(e.last_seen) : (e.death_time > 0 ? Number(e.death_time) : 0);
+    if (last > 0) tags += '<span class="tag tower-stat">' + UI.timerText('last', last, n) + '</span>';
+    var killedCes = Math.max(0, Number(e.killed_ces) || 0);
+    var killedFates = Math.max(0, Number(e.killed_fates) || 0);
+    var reduced = killedCes * 300 + killedFates * 60;
+    if (reduced > 0) {
+      tags += '<span class="tag tower-stat">' + t('tower_reduced') + ' ' + UI.fmtClock(reduced) +
+        ' · CE×' + killedCes + ' / FATE×' + killedFates + '</span>';
+    }
+    if (!historyAlive(e)) {
+      var activeCe = (hist.ce || []).some(function (entry) {
+        var def = OC.CES[entry.fate_id];
+        return def && def.type !== 'tower' && historyAlive(entry);
+      });
+      var activeFate = (hist.fate || []).some(historyAlive) || (hist.pot || []).some(historyAlive);
+      if (activeCe || activeFate) {
+        var upcoming = [];
+        if (activeCe) upcoming.push('CE -5:00');
+        if (activeFate) upcoming.push('FATE -1:00');
+        tags += '<span class="tag tower-next">' + t('tower_upcoming') + ' ' + upcoming.join(' / ') + '</span>';
+      }
+    }
+    var intervals = Array.isArray(e.respawn_times) ? e.respawn_times.slice(-3) : [];
+    if (intervals.length) {
+      tags += '<span class="tag tower-stat">' + t('tower_history') + ' ' + intervals.map(UI.fmtClock).join(' / ') + '</span>';
+    }
+    return tags;
+  }
+  function badge(e, def, n, alive, type, potStatus, territory) {
     if (alive) return span('bdg alive', 'alive', e.spawn_time);
     if (type === 'ce') {
+      if (def.type === 'tower') {
+        var predicted = towerPrediction(e, territory);
+        return predicted ? span('bdg tower-eta', 'tower_eta', predicted) : '<span class="bdg unk">' + t('unknown') + '</span>';
+      }
       var base = e.last_seen > 0 ? e.last_seen : (e.death_time > 0 ? e.death_time : 0);
       if (base > 0) { var na = base + avgInterval(e); return span('bdg ' + (n >= na ? 'canpop' : 'gone'), 'cd', na); }
       return span('bdg canpop', 'canpop', 0); // 从未出现视为可触发
@@ -227,6 +277,7 @@
       case 'cd': return now >= val ? t('ce_can_trigger') : t('ce_cooldown') + ' ' + UI.fmtClock(val - now);
       case 'canpop': return t('ce_can_trigger');
       case 'eta': return now >= val ? t('pot_soon') : UI.fmtDur(val - now);
+      case 'tower_eta': return now >= val ? t('tower_window') : t('tower_predicted') + ' ' + UI.fmtClock(val - now);
     }
     return '';
   };
