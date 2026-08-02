@@ -22,15 +22,50 @@
     });
   };
 
-  // 国服 WorldID -> 大区(tracker dc id 101-104)，用于判断玩家所在大区
-  var WORLD2DC = { 160: 101, 161: 101, 165: 101, 166: 101, 168: 102, 170: 101, 171: 101, 186: 102, 187: 102, 190: 102, 1042: 101, 1043: 103, 1044: 101, 1045: 103, 1060: 101, 1076: 102, 1081: 101, 1106: 103, 1113: 102, 1121: 102, 1166: 102, 1167: 101, 1169: 103, 1170: 102, 1171: 102, 1172: 102, 1173: 101, 1174: 101, 1175: 101, 1176: 102, 1177: 103, 1178: 103, 1179: 103, 1180: 104, 1183: 104, 1186: 104, 1192: 104, 1200: 104, 1201: 104 };
+  // Public WorldID -> shared tracker datacenter ID.
+  // Global IDs follow the client World sheet; CN IDs follow the current CN world list.
+  var WORLD2DC = {
+    // Elemental
+    45: 1, 49: 1, 50: 1, 58: 1, 68: 1, 72: 1, 90: 1, 94: 1,
+    // Gaia
+    43: 2, 46: 2, 51: 2, 59: 2, 69: 2, 76: 2, 92: 2, 98: 2,
+    // Mana
+    23: 3, 28: 3, 44: 3, 47: 3, 48: 3, 61: 3, 70: 3, 96: 3,
+    // Aether
+    40: 4, 54: 4, 57: 4, 63: 4, 65: 4, 73: 4, 79: 4, 99: 4,
+    // Primal
+    35: 5, 53: 5, 55: 5, 64: 5, 77: 5, 78: 5, 93: 5, 95: 5,
+    // Chaos
+    39: 6, 71: 6, 80: 6, 83: 6, 85: 6, 97: 6, 400: 6, 401: 6,
+    // Light
+    33: 7, 36: 7, 42: 7, 56: 7, 66: 7, 67: 7, 402: 7, 403: 7,
+    // Crystal
+    34: 8, 37: 8, 41: 8, 62: 8, 74: 8, 75: 8, 81: 8, 91: 8,
+    // Materia
+    21: 9, 22: 9, 86: 9, 87: 9, 88: 9,
+    // Meteor
+    24: 10, 29: 10, 30: 10, 31: 10, 32: 10, 52: 10, 60: 10, 82: 10,
+    // Dynamis
+    404: 11, 405: 11, 406: 11, 407: 11, 408: 11, 409: 11, 410: 11, 411: 11,
+    // China
+    160: 101, 161: 101, 165: 101, 166: 101, 168: 102, 170: 101, 171: 101,
+    186: 102, 187: 102, 190: 102, 1042: 101, 1043: 103, 1044: 101, 1045: 103,
+    1060: 101, 1076: 102, 1081: 101, 1106: 103, 1113: 102, 1121: 102,
+    1166: 102, 1167: 101, 1169: 103, 1170: 102, 1171: 102, 1172: 102,
+    1173: 101, 1174: 101, 1175: 101, 1176: 102, 1177: 103, 1178: 103,
+    1179: 103, 1180: 104, 1183: 104, 1186: 104, 1192: 104, 1200: 104, 1201: 104
+  };
   OC.WORLD2DC = WORLD2DC;
 
   // OverlayPlugin getCombatants normally returns decimal world IDs, while
   // ACT LogLine 03 encodes the same value as an unprefixed hexadecimal string.
-  function normalizeWorldId(value) {
+  function normalizeWorldId(value, unprefixedHex) {
     if (value == null || value === '') return 0;
     var text = String(value).trim();
+    if (unprefixedHex) {
+      var logWorld = parseInt(text.replace(/^0x/i, ''), 16);
+      if (isFinite(logWorld) && WORLD2DC[logWorld]) return logWorld;
+    }
     var decimal = Number(text);
     if (isFinite(decimal) && WORLD2DC[decimal]) return decimal;
     var hexadecimal = parseInt(text.replace(/^0x/i, ''), 16);
@@ -38,8 +73,8 @@
     return isFinite(decimal) ? decimal : 0;
   }
 
-  function setPlayerWorld(value) {
-    var worldId = normalizeWorldId(value);
+  function setPlayerWorld(value, unprefixedHex) {
+    var worldId = normalizeWorldId(value, unprefixedHex);
     var dc = WORLD2DC[worldId] || 0;
     if (!worldId || !dc) return false;
     var changed = Overlay.playerWorld !== worldId || Overlay.playerDc !== dc;
@@ -303,7 +338,7 @@
     if (type === 3) {
       var sameId = Overlay.playerId != null && actorId(line[2]) === actorId(Overlay.playerId);
       var sameName = Overlay.playerName && line[3] === Overlay.playerName;
-      if (sameId || sameName) setPlayerWorld(line[7]);
+      if (sameId || sameName) setPlayerWorld(line[7], true);
       return;
     }
 

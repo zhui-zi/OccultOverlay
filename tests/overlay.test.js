@@ -217,6 +217,31 @@ assert.equal(player.sandbox.OC.Overlay.playerDc, 103);
 assert.equal(playerContext.worldId, 1177);
 assert.equal(playerContext.dc, 103);
 
+const globalWorlds = {
+  45: 1, 69: 2, 70: 3, 73: 4, 78: 5, 400: 6,
+  402: 7, 91: 8, 21: 9, 24: 10, 408: 11,
+};
+Object.keys(globalWorlds).forEach((worldId) => {
+  assert.equal(
+    player.sandbox.OC.WORLD2DC[worldId],
+    globalWorlds[worldId],
+    `global world ${worldId} must map to its tracker datacenter`,
+  );
+});
+
+const globalPlayer = loadOverlay('');
+globalPlayer.sandbox.dispatchOverlayEvent({
+  type: 'ChangePrimaryPlayer',
+  charID: '1002AC16',
+  charName: 'Global Player'
+});
+globalPlayer.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: ['03', '2026-08-02T12:00:00.000+08:00', '1002AC16', 'Global Player', '00', '00', '00000000', '45']
+});
+assert.equal(globalPlayer.sandbox.OC.Overlay.playerWorld, 69, 'LogLine world IDs must be decoded as hexadecimal');
+assert.equal(globalPlayer.sandbox.OC.Overlay.playerDc, 2, 'Bahamut must resolve to Gaia instead of decimal world 45');
+
 assert.equal(player.sandbox.OC.ceKeyToId(0, 1252), 48);
 assert.equal(player.sandbox.OC.ceKeyToId(1, 1346), 49);
 assert.equal(player.sandbox.OC.ceKeyToId(0, 1346), 64);
