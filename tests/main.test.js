@@ -54,6 +54,7 @@ const sandbox = {
     },
     Overlay: {
       territoryId: 1346,
+      playerDc: 103,
       connected: true,
       inOccult: true,
       memActive: {},
@@ -305,21 +306,25 @@ const originalTrackerContext = sandbox.OC.App.trackerContext;
 const strictFateHistory = [
   { fate_id: 2074, spawn_time: 1000, death_time: 1100, last_seen: 1100 },
   { fate_id: 2075, spawn_time: 1200, death_time: 1300, last_seen: 1300 },
+  { fate_id: 2076, spawn_time: 800, death_time: 900, last_seen: 900 },
 ];
 const strictEvidence = {
   fingerprint: 'CURRENT-INSTANCE',
   fingerprints: ['CURRENT-INSTANCE'],
   events: [{ fateId: 2074, spawnEpoch: 1000 }],
-  ends: [{ fateId: 2075, deathEpoch: 1300 }],
+  ends: [{ fateId: 2075, deathEpoch: 1300 }, { fateId: 2076, deathEpoch: 900 }],
 };
 sandbox.OC.App._island = { ce: [], fate: strictFateHistory, pot: [cloudPot] };
 sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
 sandbox.OC.App.myIslandRowId = 1;
 sandbox.OC.App.myIslandFingerprint = 'CURRENT-INSTANCE';
+sandbox.OC.App.myIslandDatacenter = 103;
+sandbox.OC.App.myIslandTerritory = 1346;
 sandbox.OC.App.instanceEvidence = () => strictEvidence;
 sandbox.OC.App._previewIsland = null;
 sandbox.OC.App._localPot = null;
 sandbox.OC.Overlay.territoryId = 1346;
+sandbox.OC.Overlay.playerDc = 103;
 assert.notEqual(sandbox.OC.App.localPotInfo(), null);
 assert.equal(sandbox._lastPotMerge.shared.length, 1, 'North Horn accepts strict-island cloud pot history');
 assert.equal(sandbox._lastPotMerge.shared[0].death_time, cloudPot.death_time);
@@ -353,6 +358,14 @@ assert.equal(
 );
 sandbox.OC.App.myIslandRowId = 1;
 sandbox.OC.App.instanceEvidence = () => strictEvidence;
+
+sandbox.OC.App._island = { ce: [], fate: strictFateHistory.slice(0, 2), pot: [cloudPot] };
+assert.equal(
+  sandbox.OC.App.localPotInfo(),
+  null,
+  'a bound row with only two accumulated matches must not authorize a cloud prediction',
+);
+sandbox.OC.App._island = { ce: [], fate: strictFateHistory, pot: [cloudPot] };
 
 sandbox.OC.App._localPot = { 2072: { active: true, lastSeen: 120 } };
 const updateOnlyPot = sandbox.OC.App.localPotInfo();
@@ -434,6 +447,7 @@ assert.notEqual(
 sandbox.OC.App.myIslandFingerprint = 'CURRENT-INSTANCE';
 
 sandbox.OC.Overlay.territoryId = 1252;
+sandbox.OC.App.myIslandTerritory = 1252;
 sandbox.OC.App._island = { ce: [], fate: strictFateHistory, pot: [cloudPot] };
 assert.notEqual(sandbox.OC.App.localPotInfo(), null);
 assert.equal(sandbox._lastPotMerge.shared.length, 1, 'South Horn keeps strict-island cloud fallback');
@@ -442,6 +456,8 @@ sandbox.OC.App._island = null;
 sandbox.OC.App._dcRows = [];
 sandbox.OC.App.myIslandRowId = null;
 sandbox.OC.App.myIslandFingerprint = '';
+sandbox.OC.App.myIslandDatacenter = 0;
+sandbox.OC.App.myIslandTerritory = 0;
 sandbox.OC.App._dc = [];
 sandbox.OC.App._localPot = {
   2072: {

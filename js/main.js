@@ -19,6 +19,7 @@
   var GLOBAL_DCS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   var TRACKER_VERSION = 'OccultOverlay-v69';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
+  var MIN_ISLAND_EVIDENCE = 3;
 
   var State = OC.State = { highlights: [], detail: null, detailId: null, detailLocating: false };
 
@@ -293,6 +294,10 @@
       this.myIslandRowId = matched.rowId;
       this.myIslandFingerprint = matched.fingerprint || '';
       this.myIslandId = matched.id || ('row:' + matched.rowId);
+      this.myIslandDatacenter = Number(matched.dc) || Number(record && record.datacenter) ||
+        Number(OC.Overlay.playerDc) || 0;
+      this.myIslandTerritory = Number(matched.territory) || Number(record && record.territory) ||
+        Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
       this._previewIsland = null;
       if (changed) {
         this._island = null;
@@ -319,7 +324,7 @@
       if (!this.myIslandRowId && this.cloudIslandEvidenceCount(this.instanceEvidence(), record && {
         fate: pj(record.fate_history),
         pot: pj(record.pot_history)
-      }) < 2) return null;
+      }) < MIN_ISLAND_EVIDENCE) return null;
       var id = this.bindMatchedIsland(matched, record);
       if (!id) return null;
       return id;
@@ -331,6 +336,15 @@
       var all = this._islands || [];
       var pdc = OC.Overlay.playerDc;
       var evidence = this.instanceEvidence();
+      if (this.myIslandRowId && !this.boundIslandScopeMatches()) {
+        this.releaseIslandBinding();
+      } else if (this.myIslandRowId) {
+        var boundStatus = this.boundIslandEvidenceStatus(evidence);
+        if (boundStatus.available && boundStatus.local >= MIN_ISLAND_EVIDENCE &&
+            boundStatus.matched < MIN_ISLAND_EVIDENCE) {
+          this.releaseIslandBinding();
+        }
+      }
       var matched = OC.Pots.matchIsland(all, evidence, pdc, 15);
       if (matched) {
         if (!this.myIslandRowId) {
@@ -344,7 +358,7 @@
           if (this.cloudIslandEvidenceCount(evidence, record && {
             fate: pj(record.fate_history),
             pot: pj(record.pot_history)
-          }) < 2) return null;
+          }) < MIN_ISLAND_EVIDENCE) return null;
         }
         var bound = this.bindMatchedIsland(matched);
         if (bound) return bound;
@@ -480,7 +494,7 @@
             return true;
           }
 
-          if (App.localInstanceSignalCount(App.instanceEvidence()) < 2) {
+          if (App.localInstanceSignalCount(App.instanceEvidence()) < MIN_ISLAND_EVIDENCE) {
             context.stopRetry = true;
             return false;
           }
@@ -575,6 +589,17 @@
           if (generation !== (App._locateGeneration || 0) ||
               Number(rowId) !== Number(App.myIslandRowId) ||
               !OC.Overlay.connected || !OC.Overlay.inOccult) return false;
+          if (!App.boundIslandScopeMatches()) {
+            App.releaseIslandBinding();
+            return false;
+          }
+          var boundStatus = App.boundIslandEvidenceStatus();
+          if (!boundStatus.authorized) {
+            if (boundStatus.available && boundStatus.local >= MIN_ISLAND_EVIDENCE) {
+              App.releaseIslandBinding();
+            }
+            return false;
+          }
           var fingerprint = App._pendingUploadFingerprint ||
             App.instanceEvidence().fingerprint || App.myIslandFingerprint;
           App._pendingUploadFingerprint = '';
@@ -603,6 +628,7 @@
     // 每次区域/实例切换或断线都清空；即便 territoryId 相同也重新识别。
     resetIsland: function (preserveLocal) {
       this.myIslandId = null; this.myIslandRowId = null; this.myIslandFingerprint = '';
+      this.myIslandDatacenter = 0; this.myIslandTerritory = 0;
       this._evidenceKey = ''; this._contextFingerprint = ''; this._contextFingerprints = [];
       this._locateGeneration = (this._locateGeneration || 0) + 1;
       this._lastLocateKey = ''; this._lastLocateAt = 0; this._locatePromise = null;
@@ -799,13 +825,66 @@
       return Object.keys(matchedIds).length;
     },
 
+    boundIslandRecord: function () {
+      if (!this.myIslandRowId) return null;
+      return (this._dcRows || []).filter(function (row) {
+        return Number(row.id) === Number(App.myIslandRowId);
+      })[0] || null;
+    },
+
+    boundIslandScopeMatches: function () {
+      if (!this.myIslandRowId) return false;
+      var record = this.boundIslandRecord();
+      var currentDc = Number(OC.Overlay.playerDc) || 0;
+      var currentTerritory = Number(OC.Overlay.territoryId) ||
+        Number(OC.MAP && OC.MAP.territory) || 0;
+      var boundDc = Number(this.myIslandDatacenter) || Number(record && record.datacenter) || 0;
+      var boundTerritory = Number(this.myIslandTerritory) || Number(record && record.territory) || 0;
+      return !!currentDc && !!currentTerritory && boundDc === currentDc &&
+        boundTerritory === currentTerritory;
+    },
+
+    boundIslandEvidenceStatus: function (evidence) {
+      evidence = evidence || this.instanceEvidence();
+      var history = this._island;
+      var record = this.boundIslandRecord();
+      if (!history && record) {
+        history = {
+          fate: pj(record.fate_history),
+          pot: pj(record.pot_history)
+        };
+      }
+      var local = this.localInstanceSignalCount(evidence);
+      var matched = history ? this.cloudIslandEvidenceCount(evidence, history) : 0;
+      return {
+        available: !!history,
+        local: local,
+        matched: matched,
+        authorized: this.boundIslandScopeMatches() && !!history &&
+          local >= MIN_ISLAND_EVIDENCE && matched >= MIN_ISLAND_EVIDENCE
+      };
+    },
+
+    releaseIslandBinding: function () {
+      this.myIslandId = null; this.myIslandRowId = null; this.myIslandFingerprint = '';
+      this.myIslandDatacenter = 0; this.myIslandTerritory = 0;
+      this._locateGeneration = (this._locateGeneration || 0) + 1;
+      this._lastLocateKey = ''; this._lastLocateAt = 0; this._locatePromise = null;
+      if (this._uploadTimer) clearTimeout(this._uploadTimer);
+      this._uploadTimer = null; this._uploadChain = Promise.resolve();
+      this._pendingUploadFingerprint = '';
+      this._previewIsland = null; this._island = null;
+      this._potAlertedFor = null; this._alerted = {};
+      State.detail = null; State.detailId = null;
+      State.detailLocating = this.openPanel === 'battle';
+    },
+
     // 本机可信 Add/Remove 不等待实例匹配；云端时间只允许来自严格确认的实例。
     localPotInfo: function () {
-      // 首次绑定已经在 resolveMyIsland/bindIslandRows 中要求指纹匹配且
-      // 至少两个不同的本机 Add/Remove 信号一致。绑定后保持到换区或
-      // 断线重置，不再用会随 tracker 轮换的当前指纹重复否决已确认的本岛。
+      // 当前指纹会随 FATE 轮换，不能拿它重复否决已确认的本岛；改用累计的
+      // 独立 Add/Remove 信号复核绑定，并始终锁定 territory + datacenter。
       // 本机 director 仍在下方纠正云端罐子的存活状态。
-      var cloudTimingAuthorized = !!this.myIslandRowId;
+      var cloudTimingAuthorized = this.boundIslandEvidenceStatus().authorized;
       var cloud = cloudTimingAuthorized && this._island && this._island.pot;
       if ((!cloud || !cloud.length) && cloudTimingAuthorized) {
         var overview = (this._dc || []).filter(function (item) {

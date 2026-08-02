@@ -19,12 +19,13 @@ const sandbox = {
   },
   OC: {
     TERRITORIES: {
-      1346: { fateIds: [2074, 2075], potIds: [2072], ceIds: [49] },
+      1346: { fateIds: [2074, 2075, 2076], potIds: [2072], ceIds: [49] },
     },
     CES: {},
     FATES: {
       2074: { name: { en: 'Test FATE' } },
       2075: { name: { en: 'Earlier Test FATE' } },
+      2076: { name: { en: 'Oldest Test FATE' } },
     },
     POTS: {},
     MAP: { territory: 1346 },
@@ -36,17 +37,18 @@ const sandbox = {
       memMeta: {
         2074: { active: false, spawnEpoch: 123456, spawnTrusted: true, deathEpoch: 123500 },
         2075: { active: false, spawnEpoch: 123000, spawnTrusted: true, deathEpoch: 123100 },
+        2076: { active: false, spawnEpoch: 122500, spawnTrusted: true, deathEpoch: 122600 },
       },
       memActive: {},
     },
     Pots: {
       contextFingerprint(dc, fateId, epoch) {
-        assert.deepEqual([dc, fateId, epoch], [103, 2074, 123456]);
-        return fingerprint;
+        assert.deepEqual([fateId, epoch], [2074, 123456]);
+        return dc === 103 ? fingerprint : 'D'.repeat(64);
       },
       contextFingerprints(dc, fateId, epoch) {
-        assert.deepEqual([dc, fateId, epoch], [103, 2074, 123456]);
-        return [fingerprint];
+        assert.deepEqual([fateId, epoch], [2074, 123456]);
+        return [dc === 103 ? fingerprint : 'D'.repeat(64)];
       },
       islandList(rows) {
         return rows.map(row => ({
@@ -94,6 +96,7 @@ const sandbox = {
           fate_history: JSON.stringify([
             { fate_id: 2074, spawn_time: 123456, death_time: 123500, last_seen: 123500 },
             { fate_id: 2075, spawn_time: 123000, death_time: 123100, last_seen: 123100 },
+            { fate_id: 2076, spawn_time: 122500, death_time: 122600, last_seen: 122600 },
           ]),
           pot_history: '[]',
         }]);
@@ -124,7 +127,9 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
   sandbox.OC.App.updateChips = function () {};
 
   const corroboratingMeta = sandbox.OC.Overlay.memMeta[2075];
+  const thirdMeta = sandbox.OC.Overlay.memMeta[2076];
   delete sandbox.OC.Overlay.memMeta[2075];
+  delete sandbox.OC.Overlay.memMeta[2076];
   const oneSignalEvidence = sandbox.OC.App.instanceEvidence();
   assert.equal(
     sandbox.OC.App.bindIslandRows([{
@@ -145,12 +150,33 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
   );
   sandbox.OC.Overlay.memMeta[2075] = corroboratingMeta;
 
+  const twoSignalEvidence = sandbox.OC.App.instanceEvidence();
+  assert.equal(
+    sandbox.OC.App.bindIslandRows([{
+      id: 41,
+      tracker_id: 'two-signal-collision',
+      territory: 1346,
+      datacenter: 103,
+      last_fate: fingerprint,
+      last_update: 123500,
+      encounter_history: '[]',
+      fate_history: JSON.stringify([
+        { fate_id: 2074, spawn_time: 123456, death_time: 123500, last_seen: 123500 },
+        { fate_id: 2075, spawn_time: 123000, death_time: 123100, last_seen: 123100 },
+      ]),
+      pot_history: '[]',
+    }], twoSignalEvidence, 103),
+    null,
+    'two coincidental signals must not bind a writable island row',
+  );
+  sandbox.OC.Overlay.memMeta[2076] = thirdMeta;
+
   const evidence = sandbox.OC.App.instanceEvidence();
-  assert.deepEqual(Array.from(evidence.events, event => event.fateId), [2074, 2075],
+  assert.deepEqual(Array.from(evidence.events, event => event.fateId), [2074, 2075, 2076],
     'completed Add evidence must survive until an instance reset');
   assert.deepEqual(
     Array.from(evidence.ends, event => [event.fateId, event.deathEpoch]),
-    [[2074, 123500], [2075, 123100]],
+    [[2074, 123500], [2075, 123100], [2076, 122600]],
   );
 
   const found = await sandbox.OC.App.locateMyIslandFast(true);
@@ -164,6 +190,8 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
   assert.equal(sandbox.OC.App.myIslandId, 'mine');
   assert.equal(applied.id, 'mine');
   assert.equal(applied.record.id, 42);
+  assert.equal(sandbox.OC.App.myIslandDatacenter, 103);
+  assert.equal(sandbox.OC.App.myIslandTerritory, 1346);
   assert.equal(fingerprintFetchCalls, 1, 'fast matching must use the fingerprint response without another fetch');
   clearTimeout(sandbox.OC.App._uploadTimer);
   sandbox.OC.App._uploadTimer = null;
@@ -190,6 +218,11 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
   assert.equal(mismatched, null, 'a bound instance must reject a different row');
   assert.equal(applied, appliedBeforeMismatch);
   assert.equal(sandbox.OC.App.myIslandRowId, 42);
+
+  sandbox.OC.Overlay.playerDc = 101;
+  assert.equal(sandbox.OC.App.resolveMyIsland(), null, 'a datacenter change must release the old binding');
+  assert.equal(sandbox.OC.App.myIslandRowId, null);
+  sandbox.OC.Overlay.playerDc = 103;
 
   sandbox.OC.App.myIslandId = null;
   sandbox.OC.App.myIslandRowId = null;
@@ -277,7 +310,7 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
     events: [],
     territory: 1346,
     dc: 103,
-    generation: 0,
+    generation: sandbox.OC.App._locateGeneration || 0,
   };
   const firstMissing = {
     fingerprint: secondFingerprint,
@@ -285,7 +318,7 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
     events: [],
     territory: 1346,
     dc: 103,
-    generation: 0,
+    generation: sandbox.OC.App._locateGeneration || 0,
   };
   const secondMissing = {
     fingerprint: secondFingerprint,
@@ -293,7 +326,7 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
     events: [],
     territory: 1346,
     dc: 103,
-    generation: 0,
+    generation: sandbox.OC.App._locateGeneration || 0,
   };
   assert.equal(await sandbox.OC.App.checkOrCreateIsland(unrelatedMissing), false);
   assert.equal(await sandbox.OC.App.checkOrCreateIsland(firstMissing), false);
@@ -302,6 +335,11 @@ vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
   assert.equal(createCalls, 1);
   assert.equal(sandbox.OC.App.myIslandRowId, 77);
   assert.equal(sandbox.OC.App.myIslandId, 'new-island');
+  sandbox.OC.App._island = {
+    ce: JSON.parse(applied.record.encounter_history),
+    fate: JSON.parse(applied.record.fate_history),
+    pot: JSON.parse(applied.record.pot_history),
+  };
 
   let updatedRowId = 0;
   sandbox.OC.Api.updateIslandTracker = function (rowId, record) {
