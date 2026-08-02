@@ -3,7 +3,7 @@
 
   var OC = global.OC = global.OC || {};
   var KEY = 'occultOverlay.settings';
-  var SCHEMA_V = 3;
+  var SCHEMA_V = 4;
 
   function systemLanguage() {
     var nav = global.navigator || {};
@@ -20,6 +20,7 @@
   var defaults = {
     _v: SCHEMA_V,
     lang: 'auto',
+    dataRegion: systemLanguage() === 'zh' ? 'cn' : 'global',
     trackerId: '',
     trackerPassword: '',
     datacenter: 0,
@@ -51,6 +52,8 @@
       if (oldVersion < 2) obj.mapLayers = clone(defaults.mapLayers);
       // Language selection did not exist before v3, so existing installs start in system mode.
       if (oldVersion < 3) obj.lang = 'auto';
+      // Data region is initialized once from the effective language, then stored independently.
+      if (oldVersion < 4) obj.dataRegion = effectiveLanguage(obj.lang) === 'zh' ? 'cn' : 'global';
       var out = {};
       for (var k in defaults) out[k] = (k in obj) ? obj[k] : clone(defaults[k]);
       out._v = SCHEMA_V;
@@ -59,11 +62,17 @@
       for (var m in defaults.mapLayers) ml[m] = (m in out.mapLayers) ? !!out.mapLayers[m] : defaults.mapLayers[m];
       out.mapLayers = ml;
       if (['auto', 'zh', 'en', 'ja'].indexOf(out.lang) < 0) out.lang = 'auto';
+      if (['cn', 'global'].indexOf(out.dataRegion) < 0) {
+        out.dataRegion = effectiveLanguage(out.lang) === 'zh' ? 'cn' : 'global';
+      }
       return out;
     } catch (e) { return clone(defaults); }
   }
 
   function clone(v) { return typeof v === 'object' && v ? JSON.parse(JSON.stringify(v)) : v; }
+
+  // Persist schema migrations immediately so the initial language-based region does not drift later.
+  save();
 
   var Settings = OC.Settings = {
     get: function (k) { return k === 'lang' ? effectiveLanguage(data.lang) : data[k]; },

@@ -55,7 +55,7 @@
     },
 
     showsCnDcOverview: function () {
-      return OC.Settings.get('lang') === 'zh';
+      return OC.Settings.get('dataRegion') === 'cn';
     },
 
     trackerDatacenters: function () {
@@ -72,19 +72,25 @@
       document.title = t('page_title');
     },
 
-    changeLanguage: function (lang, systemChanged) {
+    changeLanguage: function (lang) {
       if (lang !== 'auto' && OC.i18n.langs.indexOf(lang) < 0) return;
-      var wasCn = this.showsCnDcOverview();
       OC.Settings.set('lang', lang);
-      var scopeChanged = !!systemChanged || wasCn !== this.showsCnDcOverview();
-      if (scopeChanged) this.resetIsland(true);
       this.applyDocumentLanguage();
-      if (this.openPanel === 'dcpots' && !this.showsCnDcOverview()) this.closePanel();
       this.refreshRail();
       OC.Map.render(document.getElementById('mapLayer'));
       this.updateChips();
       if (this.openPanel) this.renderPanel();
-      if (scopeChanged) this.fetchDc(true);
+    },
+
+    changeDataRegion: function (region) {
+      if (['cn', 'global'].indexOf(region) < 0 || OC.Settings.get('dataRegion') === region) return;
+      OC.Settings.set('dataRegion', region);
+      this.resetIsland(true);
+      if (this.openPanel === 'dcpots' && !this.showsCnDcOverview()) this.closePanel();
+      this.refreshRail();
+      this.updateChips();
+      if (this.openPanel) this.renderPanel();
+      this.fetchDc(true);
     },
 
     init: function () {
@@ -95,7 +101,7 @@
       if (global.addEventListener) {
         global.addEventListener('resize', function () { App.applyUiScale(); });
         global.addEventListener('languagechange', function () {
-          if (OC.Settings.getRaw && OC.Settings.getRaw('lang') === 'auto') App.changeLanguage('auto', true);
+          if (OC.Settings.getRaw && OC.Settings.getRaw('lang') === 'auto') App.changeLanguage('auto');
         });
       }
       this.renderShell();
@@ -349,7 +355,7 @@
     },
 
     // 参考 AutoPopper/DR：有 Add 指纹后直接按 last_fate 查询，而不是等待
-    // 当前语言对应的数据中心记录下载完成。查询结果仍需通过同一套严格匹配。
+    // 当前数据服务器对应的数据中心记录下载完成。查询结果仍需通过同一套严格匹配。
     locateMyIslandFast: function (force) {
       if (this.resolveMyIsland()) return Promise.resolve(true);
       var evidence = this.instanceEvidence();
@@ -1214,6 +1220,7 @@
       h += '<div class="s-grp">' + t('panel_settings') + '</div>';
       var languageMode = OC.Settings.getRaw ? OC.Settings.getRaw('lang') : g('lang');
       h += row(t('set_lang'), '<select id="s-lang">' + languageOptions(languageMode) + '</select>');
+      h += row(t('set_data_region'), '<select id="s-data-region">' + dataRegionOptions(g('dataRegion')) + '</select>');
       h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'));
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
@@ -1235,6 +1242,8 @@
       });
       var lang = pop.querySelector('#s-lang');
       if (lang) lang.addEventListener('change', function () { App.changeLanguage(lang.value); });
+      var dataRegion = pop.querySelector('#s-data-region');
+      if (dataRegion) dataRegion.addEventListener('change', function () { App.changeDataRegion(dataRegion.value); });
       bindChk(pop, 'a-pot', 'alertPot');
       bindChk(pop, 'a-all', 'alertAllEncounters');
       bindChk(pop, 'a-tts', 'useTts');
@@ -1292,6 +1301,14 @@
       return '<option value="' + item[0] + '"' + (selected === item[0] ? ' selected' : '') + '>' + item[1] + '</option>';
     }).join('');
   }
+  function dataRegionOptions(selected) {
+    return [
+      ['cn', t('data_region_cn')],
+      ['global', t('data_region_global')]
+    ].map(function (item) {
+      return '<option value="' + item[0] + '"' + (selected === item[0] ? ' selected' : '') + '>' + item[1] + '</option>';
+    }).join('');
+  }
   function rowChk(id, l, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + l + '</label></div>'; }
   function bindChk(pop, id, key) {
     var el = pop.querySelector('#' + id);
@@ -1307,7 +1324,7 @@
       h += '<button class="rbtn' + (layers[l.key] ? ' on' : '') + '" data-layer="' + l.key + '" title="' + OC.i18n.t('layer_' + l.key) + '" style="--rc:' + l.color + '">' + OC.i18n.t('layer_short_' + l.key) + '</button>';
     });
     h += '<div class="rail-div"></div>';
-    if (OC.Settings.get('lang') === 'zh') h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + OC.i18n.t('panel_dcpots') + '">罐</button>';
+    if (App.showsCnDcOverview()) h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + OC.i18n.t('panel_dcpots') + '">罐</button>';
     h += '<button class="rbtn panel" data-panel="settings" title="' + OC.i18n.t('panel_settings') + '">⚙</button>';
     return h;
   }

@@ -19,6 +19,7 @@ let alertAllEncounters = false;
 let alertPot = false;
 let alertColors = {};
 let currentLanguage = 'en';
+let currentDataRegion = 'global';
 const sandbox = {
   console,
   document: {
@@ -88,10 +89,12 @@ const sandbox = {
         if (key === 'alertPot') return alertPot;
         if (key === 'alertColors') return alertColors;
         if (key === 'lang') return currentLanguage;
+        if (key === 'dataRegion') return currentDataRegion;
         return null;
       },
       set(key, value) {
         if (key === 'lang') currentLanguage = value;
+        if (key === 'dataRegion') currentDataRegion = value;
       },
       getRaw(key) {
         if (key === 'lang') return currentLanguage;
@@ -138,6 +141,8 @@ assert.equal(sandbox.OC.App.isDatacenterInScope(103), false);
 sandbox.OC.Overlay.playerDc = 103;
 assert.equal(sandbox.OC.App.trackerContext(2074, 100), null, 'English matching must reject CN fingerprints');
 currentLanguage = 'zh';
+assert.equal(sandbox.OC.App.showsCnDcOverview(), false, 'language alone must not change the data region');
+currentDataRegion = 'cn';
 assert.equal(sandbox.OC.App.showsCnDcOverview(), true);
 assert.deepEqual(Array.from(sandbox.OC.App.trackerDatacenters()), [101, 102, 103, 104]);
 assert.equal(sandbox.OC.App.isDatacenterInScope(103), true);
@@ -146,6 +151,25 @@ sandbox.OC.Overlay.playerDc = 3;
 assert.equal(sandbox.OC.App.trackerContext(2074, 100), null, 'Chinese matching must reject global fingerprints');
 delete sandbox.OC.Overlay.playerDc;
 currentLanguage = 'en';
+assert.equal(sandbox.OC.App.showsCnDcOverview(), true, 'the selected data region must survive language changes');
+currentDataRegion = 'global';
+
+const originalRegionHandlers = {
+  resetIsland: sandbox.OC.App.resetIsland,
+  refreshRail: sandbox.OC.App.refreshRail,
+  updateChips: sandbox.OC.App.updateChips,
+  fetchDc: sandbox.OC.App.fetchDc,
+};
+const regionActions = [];
+sandbox.OC.App.resetIsland = preserveLocal => regionActions.push(['reset', preserveLocal]);
+sandbox.OC.App.refreshRail = () => regionActions.push(['rail']);
+sandbox.OC.App.updateChips = () => regionActions.push(['chips']);
+sandbox.OC.App.fetchDc = throttled => regionActions.push(['fetch', throttled]);
+sandbox.OC.App.changeDataRegion('cn');
+assert.equal(currentDataRegion, 'cn');
+assert.deepEqual(regionActions, [['reset', true], ['rail'], ['chips'], ['fetch', true]]);
+Object.assign(sandbox.OC.App, originalRegionHandlers);
+currentDataRegion = 'global';
 
 const styles = fs.readFileSync(require.resolve('../css/style.css'), 'utf8');
 const activeChipRule = styles.match(/\.chip\.chip-act\s*\{([^}]*)\}/);
@@ -473,6 +497,7 @@ const settingsControls = {
   '#s-op': { value: '0.9', addEventListener() {} },
   '#s-scale': { value: '1', addEventListener() {} },
   '#s-lang': { value: 'en', addEventListener() {} },
+  '#s-data-region': { value: 'global', addEventListener() {} },
   '#s-chips': { checked: true, addEventListener() {} },
   '#s-repo': { addEventListener() {} },
 };
@@ -490,6 +515,8 @@ sandbox.OC.App.renderSettings(settingsPop);
 assert.match(settingsPop.innerHTML, /id="s-lang"/);
 assert.match(settingsPop.innerHTML, /value="auto">lang_auto/);
 assert.match(settingsPop.innerHTML, /value="en" selected>English/);
+assert.match(settingsPop.innerHTML, /id="s-data-region"/);
+assert.match(settingsPop.innerHTML, /value="global" selected>data_region_global/);
 assert.doesNotMatch(settingsPop.innerHTML, /id="s-auto"/);
 assert.match(settingsPop.innerHTML, /alert_dispeller/);
 assert.match(settingsPop.innerHTML, /Test Dispeller/);
