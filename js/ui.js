@@ -148,7 +148,12 @@
     (arr || []).forEach(function (entry) {
       if (entry && entry.fate_id != null) byId[Number(entry.fate_id)] = entry;
     });
-    return zone[key].map(function (id) {
+    var ids = zone[key].slice();
+    if (type === 'ce' && zone.towerId != null) {
+      ids = ids.filter(function (id) { return Number(id) !== Number(zone.towerId); });
+      ids.unshift(zone.towerId);
+    }
+    return ids.map(function (id) {
       return byId[id] || {
         fate_id: id,
         spawn_time: -1,

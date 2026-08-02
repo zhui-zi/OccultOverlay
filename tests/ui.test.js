@@ -49,6 +49,10 @@ assert.equal((host.innerHTML.match(/class="p-row fate/g) || []).length, 11);
 assert.equal((host.innerHTML.match(/class="p-row pot/g) || []).length, 2);
 assert.match(host.innerHTML, /The Forked Tower: Magic/);
 assert.doesNotMatch(host.innerHTML, /The Forked Tower: Magic \(Extreme\)/);
+assert.ok(
+  host.innerHTML.indexOf('The Forked Tower: Magic') < host.innerHTML.indexOf('Many Mouths to Feed'),
+  'North Horn tower must be the first CE row',
+);
 assert.match(host.innerHTML, /Thunderregnum/);
 assert.match(host.innerHTML, /In a Pot of Bother \(South\)/);
 assert.match(host.innerHTML, /title="Weakness: Ice"/);
@@ -93,6 +97,10 @@ sandbox.OC.UI.renderBattlePanel(southHost, {
 }, 'south-test');
 assert.match(southHost.innerHTML, /data-monster-image="assets\/trigger-monsters\/33\.png"/);
 assert.match(southHost.innerHTML, />▸ 新月鬼鱼<\/button>/);
+assert.ok(
+  southHost.innerHTML.indexOf('两歧塔 力之塔') < southHost.innerHTML.indexOf('脑髓爱好者—夺心魔'),
+  'South Horn tower must be the first CE row',
+);
 assert.doesNotMatch(southHost.innerHTML, /class="weaknesses"/, 'South Horn rows must not gain unverified weaknesses');
 assert.doesNotMatch(southHost.innerHTML, /src="assets\/trigger-monsters\/33\.png"/, 'south monster location images must load on demand');
 
