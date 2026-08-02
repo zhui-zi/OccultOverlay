@@ -345,11 +345,13 @@ sandbox.OC.App.instanceEvidence = () => ({
   events: [{ fateId: 2074, spawnEpoch: 1000 }, { fateId: 2082, spawnEpoch: 1400 }],
   ends: [],
 });
+sandbox.OC.App.myIslandRowId = null;
 assert.equal(
   sandbox.OC.App.localPotInfo(),
   null,
-  'one coincidental FATE match must not authorize another island pot prediction',
+  'one coincidental FATE match must not authorize an unbound island pot prediction',
 );
+sandbox.OC.App.myIslandRowId = 1;
 sandbox.OC.App.instanceEvidence = () => strictEvidence;
 
 sandbox.OC.App._localPot = { 2072: { active: true, lastSeen: 120 } };
@@ -424,10 +426,10 @@ assert.notEqual(
 sandbox.OC.App.trackerContext = originalTrackerContext;
 
 sandbox.OC.App.myIslandFingerprint = 'OTHER-INSTANCE';
-assert.equal(
+assert.notEqual(
   sandbox.OC.App.localPotInfo(),
   null,
-  'a weak or stale island binding must not authorize a cloud pot prediction',
+  'an already strict-bound island must keep its countdown while tracker fingerprints rotate',
 );
 sandbox.OC.App.myIslandFingerprint = 'CURRENT-INSTANCE';
 

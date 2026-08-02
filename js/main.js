@@ -801,23 +801,11 @@
 
     // 本机可信 Add/Remove 不等待实例匹配；云端时间只允许来自严格确认的实例。
     localPotInfo: function () {
-      var evidence = this.instanceEvidence();
-      var currentFingerprint = String(evidence.fingerprint || '').toUpperCase();
-      var boundFingerprint = String(this.myIslandFingerprint || '').toUpperCase();
-      var currentFingerprints = (evidence.fingerprints || []).map(function (fingerprint) {
-        return String(fingerprint || '').toUpperCase();
-      });
-      if (currentFingerprint && currentFingerprints.indexOf(currentFingerprint) < 0) {
-        currentFingerprints.push(currentFingerprint);
-      }
-      // 结束时间和 director 快照足以辅助定位，但不能授权精确罐子时间。
-      // 只有绑定记录的指纹仍在当前本机 Add 的 ±15 秒严格证据窗口内，且该行
-      // 至少与两个不同的本机 Add/Remove 信号一致，才采用云端锚点。单个 FATE
-      // 可能与其它岛时间碰撞；ACT 观测时间与 tracker StartTimeEpoch 也可有数秒偏差。
-      // 否则与 OccultPotNotifier 一样保持未知，避免弱绑定把其它岛的罐时带进来。
-      var cloudTimingAuthorized = !!this.myIslandRowId && !!boundFingerprint &&
-        currentFingerprints.indexOf(boundFingerprint) >= 0 &&
-        this.cloudIslandEvidenceCount(evidence) >= 2;
+      // 首次绑定已经在 resolveMyIsland/bindIslandRows 中要求指纹匹配且
+      // 至少两个不同的本机 Add/Remove 信号一致。绑定后保持到换区或
+      // 断线重置，不再用会随 tracker 轮换的当前指纹重复否决已确认的本岛。
+      // 本机 director 仍在下方纠正云端罐子的存活状态。
+      var cloudTimingAuthorized = !!this.myIslandRowId;
       var cloud = cloudTimingAuthorized && this._island && this._island.pot;
       if ((!cloud || !cloud.length) && cloudTimingAuthorized) {
         var overview = (this._dc || []).filter(function (item) {
