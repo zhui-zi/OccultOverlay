@@ -14,7 +14,7 @@ for (const file of ['../js/data.js', '../data/mapPoints.js']) {
 }
 
 const OC = sandbox.OC;
-// EN/JA game-name assertions mirror EurekaTrackerAutoPopper@cd0dcf5.
+// EN/JA game-name assertions mirror EurekaTrackerAutoPopper@00782bf.
 assert.equal(OC.TERRITORIES[1346].mapId, 1135);
 assert.deepEqual(Array.from(OC.TERRITORIES[1346].mapIds), [1135, 1244]);
 assert.equal(OC.TERRITORIES[1346].fateIds.length, 11);
@@ -93,12 +93,13 @@ assert.deepEqual(Array.from(OC.FATES[2081].weakness), ['wind', 'lightning']);
 assert.deepEqual(Array.from(OC.POTS[2072].drops), [50976]);
 assert.deepEqual(Array.from(OC.POTS[2072].weakness), ['fire']);
 assert.deepEqual(Array.from(OC.POTS[2073].drops), [50975]);
-assert.deepEqual(Array.from(OC.CES[49].drops), [50974]);
+assert.deepEqual(Array.from(OC.CES[49].drops), [49826, 49831, 50974]);
+assert.deepEqual(Array.from(OC.CES[53].drops), [49827, 49832, 51986, 50975]);
 assert.deepEqual(Array.from(OC.CES[50].drops), [49832, 49827, 51988, 50976]);
 assert.deepEqual(Array.from(OC.CES[57].drops), [49832, 49827, 51974, 51984, 50975]);
 assert.deepEqual(Array.from(OC.CES[59].drops), [49831, 49826, 51972, 51983, 50974]);
 assert.deepEqual(Array.from(OC.CES[63].drops), [49831, 49826, 51982, 50976]);
-assert.deepEqual(Array.from(OC.CES[49].weakness), ['ice']);
+assert.deepEqual(Array.from(OC.CES[49].weakness), ['fire']);
 assert.deepEqual(Array.from(OC.CES[58].weakness), ['lightning']);
 assert.deepEqual(Array.from(OC.CES[64].drops), []);
 

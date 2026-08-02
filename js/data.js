@@ -1,7 +1,7 @@
 /* Static Occult Crescent data from EurekaTrackerAutoPopper and OccultTrackerV3.
  * Keep English and Japanese game names identical to the upstream zone/const data;
  * never derive them by translating the Simplified Chinese strings.
- * Audited at Infiziert90/EurekaTrackerAutoPopper@cd0dcf5 against:
+ * Audited at Infiziert90/EurekaTrackerAutoPopper@00782bf against:
  * website/src/lib/zones/{southHorn,northHorn}.js and website/src/lib/const.js.
  */
 (function (global) {
@@ -205,11 +205,11 @@
     48: { name: { zh: '两歧塔 力之塔', en: 'The Forked Tower: Blood', ja: 'フォークタワー：力の塔' }, drops: [47868, 47734, 47735, 47736, 47737], spawn_type: false, type: 'tower' },
 
     // North Horn elemental weaknesses and reward drops.
-    49: { name: { zh: '四颚斧花—提蔛', en: 'Many Mouths to Feed', ja: '四つ顎の魔樹「ペレキュス」' }, drops: [50974], weakness: ['ice'], spawn_type: true, monster: { zh: '新月瓦魔蛾', en: 'Crescent Wamoura', ja: 'クレセント・ワモーラ' }, monster_image: 'assets/trigger-monsters/49.png' },
+    49: { name: { zh: '四颚斧花—提蔛', en: 'Many Mouths to Feed', ja: '四つ顎の魔樹「ペレキュス」' }, drops: [49826, 49831, 50974], weakness: ['fire'], spawn_type: true, monster: { zh: '新月瓦魔蛾', en: 'Crescent Wamoura', ja: 'クレセント・ワモーラ' }, monster_image: 'assets/trigger-monsters/49.png' },
     50: { name: { zh: '魔女复制体—卡洛菲斯提莉二重身', en: 'Doubled Trouble', ja: '魔女の複製体「カロフィステリ・ダブル」' }, drops: [49832, 49827, 51988, 50976], weakness: ['wind'], spawn_type: true, monster: { zh: '新月黑卫', en: 'Crescent Blackguard', ja: 'クレセント・ブラックガード' }, monster_image: 'assets/trigger-monsters/50.png' },
     51: { name: { zh: '纯白守护者—雪石膏之剑', en: 'Quarried Away', ja: '白の守護者「アラバスターブレード」' }, drops: [49831, 49826, 51987, 50975], weakness: ['lightning'], spawn_type: false },
     52: { name: { zh: '禁书化形—古术魔典', en: 'Forbidden Folios', ja: '禁忌の魔道書「アルバテル」' }, drops: [49833, 49828, 51979, 50974], weakness: ['fire'], spawn_type: false },
-    53: { name: { zh: '暗红尸骸—赤龙', en: 'Cursed Resurgence', ja: '暗紅の屍竜「ルブルムドラゴン」' }, drops: [51986, 50975], weakness: ['fire'], spawn_type: true, monster: { zh: '新月大角牛', en: 'Crescent Big Horn', ja: 'クレセント・ビッグホーン' }, monster_image: 'assets/trigger-monsters/53.png' },
+    53: { name: { zh: '暗红尸骸—赤龙', en: 'Cursed Resurgence', ja: '暗紅の屍竜「ルブルムドラゴン」' }, drops: [49827, 49832, 51986, 50975], weakness: ['fire'], spawn_type: true, monster: { zh: '新月大角牛', en: 'Crescent Big Horn', ja: 'クレセント・ビッグホーン' }, monster_image: 'assets/trigger-monsters/53.png' },
     54: { name: { zh: '暴食咒鬼—阿尔戈尔', en: 'Imbalanced Diet', ja: '大食の呪鬼「アルゴル」' }, drops: [49831, 49826, 51981, 50975], weakness: ['fire'], spawn_type: false },
     55: { name: { zh: '残暴的母蜘蛛—新月阿剌克涅', en: 'Web of Terror', ja: '猟奇の母蜘蛛「クレセント・アルケニー」' }, drops: [49832, 49827, 50974], weakness: ['ice'], spawn_type: true, monster: { zh: '新月地狱犬', en: 'Crescent Hellhound', ja: 'クレセント・ヘルハウンド' }, monster_image: 'assets/trigger-monsters/55.png' },
     56: { name: { zh: '叛逆使魔—负隅宝石兽', en: 'A Beast Unleashed', ja: '反逆の使い魔「アトラス・カーバンクル」' }, drops: [49833, 49828, 50976], weakness: ['ice'], spawn_type: false },
