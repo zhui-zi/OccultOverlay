@@ -5,9 +5,10 @@ Everything is automatic — no setup, no tracker id. Data comes from the shared 
 
 ## Features
 
-- Translucent zone map with toggleable point layers: bronze / silver coffers, north / south / reroll pots, carrots.
+- Translucent zone map with toggleable point layers: bronze / silver coffers, north / south / reroll pots, carrots, and survey points.
 - Your character position on the map.
-- Pot overview across the CN datacenters, sorted by next-pot time; click an island for its CE / FATE and drops.
+- Simplified Chinese, English, and Japanese UI with language-aware instance matching.
+- CN pot overview in the Chinese UI, sorted by next-pot time; click an island for its CE / FATE and drops.
 - Pot timing only uses an observed current-cycle spawn from a strictly matched instance.
 - Optional ACT TTS alerts for every CE, FATE, and pot, with per-spawn deduplication.
 - South Horn demiatma filters; North Horn soul-shard and exploration-note drops.
@@ -15,7 +16,13 @@ Everything is automatic — no setup, no tracker id. Data comes from the shared 
 - North Horn Phantom Dispeller mappings and filtered spawn alerts.
 - Only visible while you are in Occult Crescent.
 - Collapse mode to hide the map.
-- zh / en / ja.
+
+## Language
+
+The default `System default` mode follows the computer language: Chinese selects Simplified Chinese, Japanese selects Japanese, and all other languages select English. The language can also be selected manually in Settings.
+
+- Simplified Chinese matches CN datacenters `101–104` and shows the CN pot overview.
+- English and Japanese match global datacenters `1–11` and hide the CN pot overview.
 
 ## Use
 

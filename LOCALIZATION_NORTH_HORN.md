@@ -2,11 +2,13 @@
 
 All current North Horn runtime strings are localized.
 
+English and Japanese game terms follow `Infiziert90/EurekaTrackerAutoPopper` directly. They are not derived from the zh-CN entries.
+
 ## Territory and Pot FATEs
 
 | Type | ID | English | zh-CN |
 | --- | ---: | --- | --- |
-| Territory | 1346 | Occult Crescent: North Horn | 蜃景幻界新月岛 北征之章 |
+| Territory | 1346 | North Horn | 蜃景幻界新月岛 北征之章 |
 | Pot FATE | 2072 | Daylight Pottery (North) | 被欺负的魔法罐(北) |
 | Pot FATE | 2073 | In a Pot of Bother (South) | 被吹飞的魔法罐(南) |
 

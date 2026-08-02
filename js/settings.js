@@ -3,11 +3,23 @@
 
   var OC = global.OC = global.OC || {};
   var KEY = 'occultOverlay.settings';
-  var SCHEMA_V = 2; // 递增此值会重置地图图层等易变默认项
+  var SCHEMA_V = 3;
+
+  function systemLanguage() {
+    var nav = global.navigator || {};
+    var code = String((nav.languages && nav.languages[0]) || nav.language || '').toLowerCase();
+    if (code.indexOf('zh') === 0) return 'zh';
+    if (code.indexOf('ja') === 0) return 'ja';
+    return 'en';
+  }
+
+  function effectiveLanguage(mode) {
+    return mode === 'auto' ? systemLanguage() : (['zh', 'en', 'ja'].indexOf(mode) >= 0 ? mode : systemLanguage());
+  }
 
   var defaults = {
     _v: SCHEMA_V,
-    lang: 'zh',
+    lang: 'auto',
     trackerId: '',
     trackerPassword: '',
     datacenter: 0,
@@ -25,7 +37,7 @@
     alertPot: false,            // 撒娇罐出现时提示
     alertColors: {},            // 半魂晶颜色提示：{ itemId: true }
     _alertScope: 'dc',          // 提示范围：dc=仅本大区
-    mapLayers: { bronze: false, silver: false, potN: false, potS: false, reroll: false, bunny: false }
+    mapLayers: { bronze: false, silver: false, potN: false, potS: false, reroll: false, bunny: false, survey: false }
   };
 
   var data = load();
@@ -34,8 +46,11 @@
     try {
       var raw = localStorage.getItem(KEY);
       var obj = raw ? JSON.parse(raw) : {};
-      // 版本升级：重置地图图层为默认（全部关闭），避免旧的“全部显示”遗留
-      if (obj._v !== SCHEMA_V) obj.mapLayers = clone(defaults.mapLayers);
+      var oldVersion = Number(obj._v) || 0;
+      // v2 introduced per-layer defaults; only older settings need that reset.
+      if (oldVersion < 2) obj.mapLayers = clone(defaults.mapLayers);
+      // Language selection did not exist before v3, so existing installs start in system mode.
+      if (oldVersion < 3) obj.lang = 'auto';
       var out = {};
       for (var k in defaults) out[k] = (k in obj) ? obj[k] : clone(defaults[k]);
       out._v = SCHEMA_V;
@@ -43,6 +58,7 @@
       var ml = {};
       for (var m in defaults.mapLayers) ml[m] = (m in out.mapLayers) ? !!out.mapLayers[m] : defaults.mapLayers[m];
       out.mapLayers = ml;
+      if (['auto', 'zh', 'en', 'ja'].indexOf(out.lang) < 0) out.lang = 'auto';
       return out;
     } catch (e) { return clone(defaults); }
   }
@@ -50,11 +66,13 @@
   function clone(v) { return typeof v === 'object' && v ? JSON.parse(JSON.stringify(v)) : v; }
 
   var Settings = OC.Settings = {
-    get: function (k) { return data[k]; },
+    get: function (k) { return k === 'lang' ? effectiveLanguage(data.lang) : data[k]; },
+    getRaw: function (k) { return data[k]; },
     getAll: function () { return data; },
     set: function (k, v) { data[k] = v; save(); return v; },
     setMany: function (obj) { for (var k in obj) data[k] = obj[k]; save(); },
-    toggleLayer: function (name) { data.mapLayers[name] = !data.mapLayers[name]; save(); return data.mapLayers[name]; }
+    toggleLayer: function (name) { data.mapLayers[name] = !data.mapLayers[name]; save(); return data.mapLayers[name]; },
+    systemLanguage: systemLanguage
   };
 
   function save() {

@@ -18,6 +18,7 @@ let showActiveChips = true;
 let alertAllEncounters = false;
 let alertPot = false;
 let alertColors = {};
+let currentLanguage = 'en';
 const sandbox = {
   console,
   document: {
@@ -30,6 +31,7 @@ const sandbox = {
   OC: {
     CES: {
       49: { name: { en: 'Test CE' }, drops: [50974] },
+      64: { name: { en: 'Test Tower' }, drops: [], type: 'tower' },
     },
     FATES: {
       2074: { name: { en: 'Test FATE' }, drops: [50974] },
@@ -85,7 +87,14 @@ const sandbox = {
         if (key === 'alertAllEncounters') return alertAllEncounters;
         if (key === 'alertPot') return alertPot;
         if (key === 'alertColors') return alertColors;
-        if (key === 'lang') return 'en';
+        if (key === 'lang') return currentLanguage;
+        return null;
+      },
+      set(key, value) {
+        if (key === 'lang') currentLanguage = value;
+      },
+      getRaw(key) {
+        if (key === 'lang') return currentLanguage;
         return null;
       },
     },
@@ -122,6 +131,21 @@ assert.equal(sandbox.OC.App.displayScale(3072, 1728, 1.25), 1, 'OS DPI scaling m
 assert.equal(sandbox.OC.App.effectiveUiScale(1, 3840, 2160, 1), 1.5);
 assert.equal(sandbox.OC.App.effectiveUiScale(2, 3840, 2160, 1), 2, 'combined scaling must remain bounded');
 assert.equal(sandbox.OC.App.effectiveUiScale(0.8, 1024, 600, 1), 0.8, 'small-screen scaling must remain readable');
+assert.equal(sandbox.OC.App.showsCnDcOverview(), false);
+assert.deepEqual(Array.from(sandbox.OC.App.trackerDatacenters()), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+assert.equal(sandbox.OC.App.isDatacenterInScope(3), true);
+assert.equal(sandbox.OC.App.isDatacenterInScope(103), false);
+sandbox.OC.Overlay.playerDc = 103;
+assert.equal(sandbox.OC.App.trackerContext(2074, 100), null, 'English matching must reject CN fingerprints');
+currentLanguage = 'zh';
+assert.equal(sandbox.OC.App.showsCnDcOverview(), true);
+assert.deepEqual(Array.from(sandbox.OC.App.trackerDatacenters()), [101, 102, 103, 104]);
+assert.equal(sandbox.OC.App.isDatacenterInScope(103), true);
+assert.equal(sandbox.OC.App.isDatacenterInScope(3), false);
+sandbox.OC.Overlay.playerDc = 3;
+assert.equal(sandbox.OC.App.trackerContext(2074, 100), null, 'Chinese matching must reject global fingerprints');
+delete sandbox.OC.Overlay.playerDc;
+currentLanguage = 'en';
 
 const styles = fs.readFileSync(require.resolve('../css/style.css'), 'utf8');
 const activeChipRule = styles.match(/\.chip\.chip-act\s*\{([^}]*)\}/);
@@ -143,11 +167,12 @@ assert.match(resizeAnchorsRule[1], /pointer-events:\s*none/, 'resize anchor laye
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
 
-sandbox.OC.State.highlights = [49, 2074];
+sandbox.OC.State.highlights = [49, 64, 2074];
 sandbox.OC.App.updateActive();
 assert.equal(writes, 1);
 assert.match(markup, /Test CE/);
 assert.match(markup, /Test FATE/);
+assert.doesNotMatch(markup, /Test Tower/, 'Forked Towers must not appear in the active CE overview');
 
 sandbox.OC.App.updateActive();
 assert.equal(writes, 1, 'unchanged capsules must keep their DOM nodes');
@@ -447,6 +472,7 @@ assert.deepEqual(alerts.slice(4).map((entry) => entry.message), [
 const settingsControls = {
   '#s-op': { value: '0.9', addEventListener() {} },
   '#s-scale': { value: '1', addEventListener() {} },
+  '#s-lang': { value: 'en', addEventListener() {} },
   '#s-chips': { checked: true, addEventListener() {} },
   '#s-repo': { addEventListener() {} },
 };
@@ -461,6 +487,9 @@ const settingsPop = {
 };
 sandbox.OC.Overlay.territoryId = 1346;
 sandbox.OC.App.renderSettings(settingsPop);
+assert.match(settingsPop.innerHTML, /id="s-lang"/);
+assert.match(settingsPop.innerHTML, /value="auto">lang_auto/);
+assert.match(settingsPop.innerHTML, /value="en" selected>English/);
 assert.doesNotMatch(settingsPop.innerHTML, /id="s-auto"/);
 assert.match(settingsPop.innerHTML, /alert_dispeller/);
 assert.match(settingsPop.innerHTML, /Test Dispeller/);

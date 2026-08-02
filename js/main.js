@@ -16,6 +16,7 @@
     return found;
   }
   var CN_DCS = [101, 102, 103, 104];
+  var GLOBAL_DCS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   var TRACKER_VERSION = 'OccultOverlay-v69';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
 
@@ -53,12 +54,49 @@
       return effective;
     },
 
+    showsCnDcOverview: function () {
+      return OC.Settings.get('lang') === 'zh';
+    },
+
+    trackerDatacenters: function () {
+      return (this.showsCnDcOverview() ? CN_DCS : GLOBAL_DCS).slice();
+    },
+
+    isDatacenterInScope: function (datacenter) {
+      return this.trackerDatacenters().indexOf(Number(datacenter)) >= 0;
+    },
+
+    applyDocumentLanguage: function () {
+      var lang = OC.Settings.get('lang');
+      if (document.documentElement) document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+      document.title = t('page_title');
+    },
+
+    changeLanguage: function (lang, systemChanged) {
+      if (lang !== 'auto' && OC.i18n.langs.indexOf(lang) < 0) return;
+      var wasCn = this.showsCnDcOverview();
+      OC.Settings.set('lang', lang);
+      var scopeChanged = !!systemChanged || wasCn !== this.showsCnDcOverview();
+      if (scopeChanged) this.resetIsland(true);
+      this.applyDocumentLanguage();
+      if (this.openPanel === 'dcpots' && !this.showsCnDcOverview()) this.closePanel();
+      this.refreshRail();
+      OC.Map.render(document.getElementById('mapLayer'));
+      this.updateChips();
+      if (this.openPanel) this.renderPanel();
+      if (scopeChanged) this.fetchDc(true);
+    },
+
     init: function () {
       this.collapsed = !!OC.Settings.get('collapsed');
       document.documentElement.style.setProperty('--app-opacity', OC.Settings.get('opacity'));
       this.applyUiScale();
+      this.applyDocumentLanguage();
       if (global.addEventListener) {
         global.addEventListener('resize', function () { App.applyUiScale(); });
+        global.addEventListener('languagechange', function () {
+          if (OC.Settings.getRaw && OC.Settings.getRaw('lang') === 'auto') App.changeLanguage('auto', true);
+        });
       }
       this.renderShell();
       this.wireOverlay();
@@ -151,6 +189,7 @@
       }).sort(function (a, b) { return b.spawnEpoch - a.spawnEpoch; });
       var latest = fateEvents[0];
       var dc = Number(OC.Overlay.playerDc) || 0;
+      if (!this.isDatacenterInScope(dc)) dc = 0;
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
       var key = latest && dc ? dc + ':' + latest.fateId + ':' + latest.spawnEpoch : '';
       if (this._evidenceKey !== key) {
@@ -214,7 +253,7 @@
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
       fateId = Number(fateId) || 0;
       spawnEpoch = Number(spawnEpoch) || 0;
-      if (!dc || !territory || !OC.FATES[fateId] || !spawnEpoch) return null;
+      if (!dc || !this.isDatacenterInScope(dc) || !territory || !OC.FATES[fateId] || !spawnEpoch) return null;
       return {
         fingerprint: OC.Pots.contextFingerprint(dc, fateId, spawnEpoch),
         fingerprints: OC.Pots.contextFingerprints(dc, fateId, spawnEpoch, 15),
@@ -310,7 +349,7 @@
     },
 
     // 参考 AutoPopper/DR：有 Add 指纹后直接按 last_fate 查询，而不是等待
-    // 四大区 30 分钟记录下载完成。查询结果仍需通过同一套严格匹配。
+    // 当前语言对应的数据中心记录下载完成。查询结果仍需通过同一套严格匹配。
     locateMyIslandFast: function (force) {
       if (this.resolveMyIsland()) return Promise.resolve(true);
       var evidence = this.instanceEvidence();
@@ -391,7 +430,7 @@
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
       var dc = Number(OC.Overlay.playerDc) || 0;
       var def = OC.TERRITORIES && OC.TERRITORIES[territory];
-      if (!def || !dc || !/^[0-9A-F]{64}$/i.test(String(fingerprint || ''))) return null;
+      if (!def || !dc || !this.isDatacenterInScope(dc) || !/^[0-9A-F]{64}$/i.test(String(fingerprint || ''))) return null;
       var shared = this._island || {};
       return {
         version: TRACKER_VERSION,
@@ -556,7 +595,7 @@
     },
 
     // 每次区域/实例切换或断线都清空；即便 territoryId 相同也重新识别。
-    resetIsland: function () {
+    resetIsland: function (preserveLocal) {
       this.myIslandId = null; this.myIslandRowId = null; this.myIslandFingerprint = '';
       this._evidenceKey = ''; this._contextFingerprint = ''; this._contextFingerprints = [];
       this._locateGeneration = (this._locateGeneration || 0) + 1;
@@ -569,17 +608,21 @@
       this._missingTrackerChecks = {}; this._trackerCheckChain = Promise.resolve();
       this._uploadTimer = null; this._uploadChain = Promise.resolve();
       this._pendingUploadFingerprint = '';
-      this._previewIsland = null;
+      this._previewIsland = null; this._dcRows = []; this._dc = []; this._islands = []; this._dcLoaded = false;
       this._island = null; this._potAlertedFor = null; this._alerted = {};
       this._highlightMissingSince = {};
-      this._lastIslandFetch = 0;
-      this._localPot = null;                 // 换本后本机观测的罐状态作废
+      this._lastIslandFetch = 0; this._lastDcFetch = 0;
+      if (!preserveLocal) this._localPot = null; // 换本后本机观测的罐状态作废
       State.detail = null; State.detailId = null;
       State.detailLocating = this.openPanel === 'battle';
-      if (OC.Overlay.resetMemory) OC.Overlay.resetMemory();
-      else OC.Overlay.memActive = {};
-      OC.State.highlights = [];
-      OC.Map.updateHighlights(document.getElementById('mapLayer'));
+      if (!preserveLocal) {
+        if (OC.Overlay.resetMemory) OC.Overlay.resetMemory();
+        else OC.Overlay.memActive = {};
+        OC.State.highlights = [];
+        OC.Map.updateHighlights(document.getElementById('mapLayer'));
+      } else {
+        this.refreshHighlights();
+      }
       if (State.detailLocating) this.renderPanel();
     },
 
@@ -595,6 +638,7 @@
     },
 
     togglePanel: function (which) {
+      if (which === 'dcpots' && !this.showsCnDcOverview()) return;
       if (this.openPanel === which) return this.closePanel();
       this.openPanel = which;
       document.getElementById('popover').classList.remove('hidden');
@@ -609,6 +653,7 @@
 
     renderPanel: function () {
       var pop = document.getElementById('popover');
+      if (this.openPanel === 'dcpots' && !this.showsCnDcOverview()) return this.closePanel();
       // 保持滚动位置（面板每秒重绘，避免被顶回最上）
       var oldBody = pop.querySelector('.panel-body');
       var scroll = oldBody ? oldBody.scrollTop : 0;
@@ -670,12 +715,14 @@
       }
       var conn = document.getElementById('chip-conn');
       if (conn) {
+        conn.title = t(this.collapsed ? 'expand' : 'collapse');
         var c = OC.Overlay.connected;
         var zone = c ? (OC.Overlay.inOccult ? t('in_occult') : (OC.Overlay.zoneName || t('not_in_occult'))) : t('disconnected');
         conn.innerHTML = '<span class="dot ' + (c ? 'ok' : 'off') + '"></span>' + OC.UI.esc(zone);
       }
       var pot = document.getElementById('chip-pot');
       if (pot) {
+        pot.title = t('my_island_hint');
         this.resolveMyIsland();
         var mine = this.localPotInfo();
         var body = '<span class="chip-k">' + t('pot') + '</span>';
@@ -840,6 +887,7 @@
           var isCe = !!OC.CES[id], isPot = !!OC.POTS[id];
           var def = isCe ? OC.CES[id] : isPot ? OC.POTS[id] : OC.FATES[id];
           if (!def) return '';
+          if (isCe && def.type === 'tower') return '';
           var cls = isCe ? 'ce' : isPot ? 'pot' : 'fate';
           return '<div class="chip chip-act ' + cls + '">' + OC.UI.esc(nm(def.name)) + rewardSuffix(def.drops) + '</div>';
         }).join('');
@@ -929,7 +977,7 @@
       this._lastDcFetch = tn;
       // 30 分钟窗口：岛屿上报间隔可能较长，窗口太窄会导致识别不到所在岛
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 1252;
-      OC.Api.fetchDcPots(CN_DCS, 1800, territory).then(function (rows) {
+      OC.Api.fetchDcPots(this.trackerDatacenters(), 1800, territory).then(function (rows) {
         App._dcRows = rows;
         App._dc = OC.Pots.dcOverview(rows);
         App._islands = OC.Pots.islandList(rows);  // 全部活跃岛（用于识别所在岛，不依赖罐数据）
@@ -1164,6 +1212,8 @@
       h += '</div>';
       h += rowChk('a-tts', t('alert_tts'), g('useTts'));
       h += '<div class="s-grp">' + t('panel_settings') + '</div>';
+      var languageMode = OC.Settings.getRaw ? OC.Settings.getRaw('lang') : g('lang');
+      h += row(t('set_lang'), '<select id="s-lang">' + languageOptions(languageMode) + '</select>');
       h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'));
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
@@ -1183,6 +1233,8 @@
         OC.Settings.set('uiScale', Number(sc.value));
         App.applyUiScale();
       });
+      var lang = pop.querySelector('#s-lang');
+      if (lang) lang.addEventListener('change', function () { App.changeLanguage(lang.value); });
       bindChk(pop, 'a-pot', 'alertPot');
       bindChk(pop, 'a-all', 'alertAllEncounters');
       bindChk(pop, 'a-tts', 'useTts');
@@ -1230,6 +1282,16 @@
 
   function rewardSuffix(drops) { return OC.UI.rewardSuffix(drops); }
   function row(l, c) { return '<div class="s-row"><label>' + l + '</label>' + c + '</div>'; }
+  function languageOptions(selected) {
+    return [
+      ['auto', t('lang_auto')],
+      ['zh', '简体中文'],
+      ['en', 'English'],
+      ['ja', '日本語']
+    ].map(function (item) {
+      return '<option value="' + item[0] + '"' + (selected === item[0] ? ' selected' : '') + '>' + item[1] + '</option>';
+    }).join('');
+  }
   function rowChk(id, l, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + l + '</label></div>'; }
   function bindChk(pop, id, key) {
     var el = pop.querySelector('#' + id);
@@ -1239,14 +1301,13 @@
 
   function railHtml() {
     var L = OC.MAP_LAYERS, layers = OC.Settings.get('mapLayers');
-    var labels = { bronze: '铜', silver: '银', potN: '北', potS: '南', reroll: '续', bunny: '萝' };
     var h = '';
     L.forEach(function (l) {
       if (!OC.MAP.points[l.src] || !OC.MAP.points[l.src].length) return;
-      h += '<button class="rbtn' + (layers[l.key] ? ' on' : '') + '" data-layer="' + l.key + '" title="' + OC.i18n.t('layer_' + l.key) + '" style="--rc:' + l.color + '">' + labels[l.key] + '</button>';
+      h += '<button class="rbtn' + (layers[l.key] ? ' on' : '') + '" data-layer="' + l.key + '" title="' + OC.i18n.t('layer_' + l.key) + '" style="--rc:' + l.color + '">' + OC.i18n.t('layer_short_' + l.key) + '</button>';
     });
     h += '<div class="rail-div"></div>';
-    h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + OC.i18n.t('panel_dcpots') + '">罐</button>';
+    if (OC.Settings.get('lang') === 'zh') h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + OC.i18n.t('panel_dcpots') + '">罐</button>';
     h += '<button class="rbtn panel" data-panel="settings" title="' + OC.i18n.t('panel_settings') + '">⚙</button>';
     return h;
   }

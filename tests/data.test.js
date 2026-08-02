@@ -14,20 +14,29 @@ for (const file of ['../js/data.js', '../data/mapPoints.js']) {
 }
 
 const OC = sandbox.OC;
+// EN/JA game-name assertions mirror EurekaTrackerAutoPopper@cd0dcf5.
 assert.equal(OC.TERRITORIES[1346].mapId, 1135);
 assert.deepEqual(Array.from(OC.TERRITORIES[1346].mapIds), [1135, 1244]);
 assert.equal(OC.TERRITORIES[1346].fateIds.length, 11);
 assert.equal(OC.TERRITORIES[1346].potIds.length, 2);
 assert.equal(OC.TERRITORIES[1346].ceIds.length, 16);
 assert.equal(OC.TERRITORIES[1346].name.zh, '蜃景幻界新月岛 北征之章');
+assert.equal(OC.TERRITORIES[1252].name.en, 'South Horn');
+assert.equal(OC.TERRITORIES[1252].name.ja, '南征編');
+assert.equal(OC.TERRITORIES[1346].name.en, 'North Horn');
+assert.equal(OC.TERRITORIES[1346].name.ja, '北征編');
 
 assert.equal(OC.FATES[2074].name.en, 'Raging Thrall');
 assert.equal(OC.FATES[2074].name.zh, '暴力牛魔—好战弥诺陶洛斯');
 assert.equal(OC.FATES[2074].name.ja, '暴力の牛魔「ミノタウロス・マキア」');
-assert.equal(OC.POTS[1976].name.en, 'Persistent Pots (North)');
-assert.equal(OC.POTS[1977].name.en, 'Pleading Pots (South)');
+assert.equal(OC.POTS[1976].name.en, 'Pleading Pots (North)');
+assert.equal(OC.POTS[1976].name.ja, 'しあわせのマジックポット (北)');
+assert.equal(OC.POTS[1977].name.en, 'Persistent Pots (South)');
+assert.equal(OC.POTS[1977].name.ja, 'カチカチのマジックポット (南)');
 assert.equal(OC.POTS[2072].name.en, 'Daylight Pottery (North)');
+assert.equal(OC.POTS[2072].name.ja, '隠されのマジックポット (北)');
 assert.equal(OC.POTS[2073].name.zh, '被吹飞的魔法罐(南)');
+assert.equal(OC.POTS[2073].name.ja, '飛ばされのマジックポット (南)');
 assert.equal(OC.CES[65], undefined);
 const southTriggerNames = {
   33: '新月鬼鱼',
@@ -97,13 +106,20 @@ for (const id of north.ceIds) {
   if (OC.CES[id].monster) assert.ok(OC.CES[id].monster.zh, `CE ${id} trigger monster is missing zh-CN`);
 }
 
+let i18nLanguage = 'zh';
 const i18nSandbox = {
-  OC: { Settings: { get() { return 'zh'; } } },
+  OC: { Settings: { get() { return i18nLanguage; } } },
 };
 i18nSandbox.window = i18nSandbox;
 vm.runInNewContext(fs.readFileSync(require.resolve('../js/i18n.js'), 'utf8'), i18nSandbox, { filename: '../js/i18n.js' });
 assert.equal(i18nSandbox.OC.i18n.t('alert_dispeller'), '出现掉落以下消幻晶的 CE/FATE 时提示：');
 assert.equal(i18nSandbox.OC.i18n.t('island_unknown'), '未知');
+i18nLanguage = 'en';
+assert.equal(i18nSandbox.OC.i18n.t('set_lang'), 'Language');
+assert.equal(i18nSandbox.OC.i18n.t('layer_survey'), 'Survey Point');
+i18nLanguage = 'ja';
+assert.equal(i18nSandbox.OC.i18n.t('set_lang'), '言語');
+assert.equal(i18nSandbox.OC.i18n.t('layer_survey'), '調査地点');
 
 assert.equal(OC.selectMap(1346), true);
 assert.equal(OC.MAP.background, 'https://pic.imgdd.cc/i/033yZEk5hNqakHejLVO4sm.png');
@@ -119,6 +135,7 @@ assert.equal(OC.MAP.points.potSouth.some(([x, z]) => x === -269.6122 && z === 87
 assert.equal(OC.MAP.points.potSouth.some(([x, z]) => x === 889.2178 && z === 155.9825), false);
 assert.equal(OC.MAP.points.reroll.length, 20);
 assert.equal(OC.MAP.points.bunny.length, 25);
+assert.equal(OC.MAP.points.survey.length, 13);
 assert.deepEqual(Array.from(OC.MAP.encounters[64]), [-320.06552, 422.0136]);
 assert.deepEqual(Array.from(OC.MAP.encounters[2084]), [140, -708]);
 assert.equal(OC.MAP.encounters[65], undefined);
@@ -135,6 +152,7 @@ assert.equal(OC.MAP.points.potNorth.length, 0);
 assert.equal(OC.MAP.points.potSouth.length, 0);
 assert.equal(OC.MAP.points.reroll.length, 0);
 assert.equal(OC.MAP.points.bunny.length, 0);
+assert.deepEqual(Array.from(OC.MAP.points.survey[0]), [62, 124]);
 assert.deepEqual(Array.from(OC.MAP.points.silver[0]), [223.6532, -30.64362]);
 assert.equal(OC.selectMap(1346, { y: -40 }), true);
 assert.equal(OC.MAP.mapId, 1135);
@@ -146,7 +164,7 @@ assert.equal(subterraneMap.readUInt32BE(20), 2048);
 
 OC.Settings = {
   get(key) {
-    if (key === 'mapLayers') return { potN: true, potS: true, reroll: true };
+    if (key === 'mapLayers') return { potN: true, potS: true, reroll: true, survey: true };
     if (key === 'lang') return 'en';
     return null;
   },
@@ -180,10 +198,12 @@ assert.equal(backgroundImage.removed, true);
 assert.equal((mapTarget.innerHTML.match(/fill="#4a90ff"/g) || []).length, 30);
 assert.equal((mapTarget.innerHTML.match(/fill="#ff8a3c"/g) || []).length, 30);
 assert.equal((mapTarget.innerHTML.match(/fill="#c56bff"/g) || []).length, 20);
+assert.equal((mapTarget.innerHTML.match(/fill="#55e6d4"/g) || []).length, 13);
 
 assert.equal(OC.selectMap(1252), true);
 assert.equal(OC.MAP.background, 'https://pic.imgdd.cc/i/033yZEhvlCl64oDk6DXtrl.jpg');
 assert.equal(OC.MAP.fallbackBackground, 'https://tu.keita.cc/i/2026/07/31/22n0ew.png');
 assert.equal(OC.MAP.finalFallbackBackground, 'assets/map.png');
+assert.equal(OC.MAP.points.survey.length, 12);
 
 console.log('data tests passed');

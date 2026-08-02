@@ -7,7 +7,8 @@
     { key: 'potN', src: 'potNorth', color: '#4a90ff', r: 16, ring: true },
     { key: 'potS', src: 'potSouth', color: '#ff8a3c', r: 16, ring: true },
     { key: 'reroll', src: 'reroll', color: '#c56bff', r: 15, diamond: true },
-    { key: 'bunny', src: 'bunny', color: '#3ddb63', r: 15, tri: true }
+    { key: 'bunny', src: 'bunny', color: '#3ddb63', r: 15, tri: true },
+    { key: 'survey', src: 'survey', color: '#55e6d4', r: 15, square: true }
   ];
   OC.MAP_LAYERS = LAYERS;
 
@@ -137,6 +138,10 @@
     }
     if (L.tri) {
       return '<path d="M' + x + ' ' + (y - r) + ' L' + (x + r) + ' ' + (y + r) + ' L' + (x - r) + ' ' + (y + r) + ' Z" fill="' + c + '" ' + halo + '/>';
+    }
+    if (L.square) {
+      return '<rect x="' + (x - r) + '" y="' + (y - r) + '" width="' + (r * 2) + '" height="' + (r * 2) + '" rx="4" fill="' + c + '" ' + halo + '/>' +
+        '<path d="M' + (x - 8) + ' ' + y + ' H' + (x + 8) + ' M' + x + ' ' + (y - 8) + ' V' + (y + 8) + '" stroke="#0a0f16" stroke-width="4"/>';
     }
     var out = '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="' + c + '" ' + halo + '/>';
     if (L.ring) out += '<circle cx="' + x + '" cy="' + y + '" r="' + (r + 7) + '" fill="none" stroke="' + c + '" stroke-width="3"/>';

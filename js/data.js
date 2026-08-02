@@ -1,4 +1,9 @@
-/* Static Occult Crescent data from EurekaTrackerAutoPopper and OccultTrackerV3. */
+/* Static Occult Crescent data from EurekaTrackerAutoPopper and OccultTrackerV3.
+ * Keep English and Japanese game names identical to the upstream zone/const data;
+ * never derive them by translating the Simplified Chinese strings.
+ * Audited at Infiziert90/EurekaTrackerAutoPopper@cd0dcf5 against:
+ * website/src/lib/zones/{southHorn,northHorn}.js and website/src/lib/const.js.
+ */
 (function (global) {
   'use strict';
 
@@ -7,7 +12,7 @@
   OC.TERRITORIES = {
     1252: {
       key: 'southHorn',
-      name: { zh: '新月岛 南征之章', en: 'Occult Crescent: South Horn', ja: '蜃気楼の島 クレセントアイル：南征編' },
+      name: { zh: '新月岛 南征之章', en: 'South Horn', ja: '南征編' },
       mapId: 967,
       fateIds: [1962, 1963, 1964, 1965, 1966, 1967, 1968, 1969, 1970, 1971, 1972],
       potIds: [1976, 1977],
@@ -15,7 +20,7 @@
     },
     1346: {
       key: 'northHorn',
-      name: { zh: '蜃景幻界新月岛 北征之章', en: 'Occult Crescent: North Horn', ja: '北征編' },
+      name: { zh: '蜃景幻界新月岛 北征之章', en: 'North Horn', ja: '北征編' },
       mapId: 1135,
       mapIds: [1135, 1244],
       fateIds: [2074, 2075, 2076, 2077, 2078, 2079, 2080, 2081, 2082, 2083, 2084],
@@ -169,10 +174,10 @@
 
   // --- 撒娇罐 Pots（fate_id -> 定义） -----------------------------------
   OC.POTS = {
-    1976: { name: { zh: '幸福的魔法罐（北）', en: 'Persistent Pots (North)', ja: 'しあわせのマジックポット(北)' }, territory: 1252, side: 'north', drops: [47749, 47738], encounter_id: 40 },
-    1977: { name: { zh: '瑟瑟发抖的魔法罐（南）', en: 'Pleading Pots (South)', ja: 'カチカチのマジックポット(南)' }, territory: 1252, side: 'south', drops: [47745, 47737], encounter_id: 18 },
-    2072: { name: { zh: '被欺负的魔法罐(北)', en: 'Daylight Pottery (North)', ja: '隠されのマジックポット（北）' }, territory: 1346, side: 'north', drops: [50976], weakness: ['fire'], encounter_id: 0 },
-    2073: { name: { zh: '被吹飞的魔法罐(南)', en: 'In a Pot of Bother (South)', ja: '飛ばされのマジックポット（南）' }, territory: 1346, side: 'south', drops: [50975], weakness: ['lightning'], encounter_id: 0 }
+    1976: { name: { zh: '幸福的魔法罐（北）', en: 'Pleading Pots (North)', ja: 'しあわせのマジックポット (北)' }, territory: 1252, side: 'north', drops: [47749, 47738], encounter_id: 40 },
+    1977: { name: { zh: '瑟瑟发抖的魔法罐（南）', en: 'Persistent Pots (South)', ja: 'カチカチのマジックポット (南)' }, territory: 1252, side: 'south', drops: [47745, 47737], encounter_id: 18 },
+    2072: { name: { zh: '被欺负的魔法罐(北)', en: 'Daylight Pottery (North)', ja: '隠されのマジックポット (北)' }, territory: 1346, side: 'north', drops: [50976], weakness: ['fire'], encounter_id: 0 },
+    2073: { name: { zh: '被吹飞的魔法罐(南)', en: 'In a Pot of Bother (South)', ja: '飛ばされのマジックポット (南)' }, territory: 1346, side: 'south', drops: [50975], weakness: ['lightning'], encounter_id: 0 }
   };
 
   // --- 危命任务 CE（encounter_id -> 定义） -------------------------------

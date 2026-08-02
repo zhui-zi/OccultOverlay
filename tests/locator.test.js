@@ -102,7 +102,7 @@ const sandbox = {
         return Promise.resolve(null);
       },
     },
-    Settings: { get(key) { return key === 'autoReport' ? false : null; } },
+    Settings: { get(key) { return key === 'lang' ? 'zh' : (key === 'autoReport' ? false : null); } },
     i18n: { t(key) { return key; } },
     localName(value) { return value.en; },
   },
