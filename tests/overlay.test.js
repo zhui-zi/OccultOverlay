@@ -116,6 +116,24 @@ memory.sandbox.dispatchOverlayEvent({
 assert.ok(memory.sandbox.OC.Overlay.memMeta[1962].spawnEpoch > firstSpawn);
 assert.equal(memory.sandbox.OC.Overlay.memMeta[1962].deathEpoch, null);
 
+const updateOnlyPot = loadOverlay('');
+let updateOnlyPotDetail = null;
+updateOnlyPot.sandbox.OC.Overlay.on('memActive', (_id, _active, detail) => {
+  updateOnlyPotDetail = detail;
+});
+updateOnlyPot.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: ['258', '2026-08-02T10:38:41.411+08:00', 'Update', '0000', '00000818', '00000000'],
+});
+assert.equal(updateOnlyPot.sandbox.OC.Overlay.memMeta[2072].spawnEpoch, 1785638321);
+assert.equal(updateOnlyPot.sandbox.OC.Overlay.memMeta[2072].spawnTrusted, true);
+assert.equal(updateOnlyPotDetail.eventType, 'add', 'first zero-progress pot Update must recover the missing Add');
+updateOnlyPot.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: ['258', '2026-08-02T10:39:37.240+08:00', 'Remove', '0000', '00000818', '00000000'],
+});
+assert.equal(updateOnlyPot.sandbox.OC.Overlay.memMeta[2072].deathEpoch, 1785638377);
+
 const snapshot = loadOverlay('');
 let snapshotDetail = null;
 snapshot.sandbox.OC.Overlay.on('memActive', (_id, _active, detail) => {
@@ -133,6 +151,12 @@ snapshot.sandbox.dispatchOverlayEvent({
 assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2074].spawnEpoch, null);
 assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2074].spawnTrusted, false);
 assert.equal(snapshotDetail.startTrusted, false, 'initial Add replay must remain read-only');
+snapshot.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: ['258', new Date().toISOString(), 'Update', '0000', '00000818', '00000000'],
+});
+assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2072].spawnEpoch, undefined);
+assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2072].spawnTrusted, undefined);
 snapshot.sandbox.dispatchOverlayEvent({
   type: 'onFateEvent',
   eventType: 'add',

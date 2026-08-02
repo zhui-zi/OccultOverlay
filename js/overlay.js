@@ -358,8 +358,9 @@
   // ---- 内存态 FATE/CE（258/259 director 行）-----------------------------
   // Overlay.memActive: { id: true } 当前岛上正在进行的 FATE/CE（与距离无关）
   Overlay.memActive = {};
-  // Overlay.memMeta preserves trusted live Add evidence. Initial snapshot Add
-  // events and Update events only prove that the event is alive.
+  // Overlay.memMeta preserves trusted live start evidence. Initial snapshot
+  // packets only prove that the event is alive; a new zero-progress pot Update
+  // can also be the first director packet when ACT drops its Add packet.
   Overlay.memMeta = {};
 
   function memChanged(id, active, detail) {
@@ -409,6 +410,16 @@
     var eventType = cat.toLowerCase();
     var observedAt = Date.parse(line[1] || '') / 1000;
     if (!isFinite(observedAt)) observedAt = Math.floor(Date.now() / 1000);
+    var progress = parseInt(line[5], 16);
+    // ACT occasionally starts a Magic Pot with Update(progress=0) and never
+    // emits Add. Outside the reconnect snapshot, that first zero-progress
+    // packet is the live start transition; keep its epoch so the countdown
+    // can continue after Remove. Do not generalize this to ordinary FATEs,
+    // whose start time is also used as instance identity evidence.
+    if (eventType === 'update' && OC.POTS[fateId] && !Overlay.memActive[fateId] &&
+        progress === 0 && observedAt > Number(Overlay.fateSnapshotUntil || 0)) {
+      eventType = 'add';
+    }
     var detail = { eventType: eventType, observedAt: Math.floor(observedAt), source: 'FateDirector' };
     if (cat === 'Remove') memChanged(fateId, false, detail);
     else memChanged(fateId, true, detail); // Add / Update
