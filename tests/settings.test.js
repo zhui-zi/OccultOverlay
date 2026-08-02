@@ -28,6 +28,7 @@ let settings = loaded.settings;
 assert.equal(settings.getRaw('lang'), 'auto');
 assert.equal(settings.get('lang'), 'ja');
 assert.equal(settings.get('dataRegion'), 'global');
+assert.equal(settings.get('alertTower'), false);
 assert.equal(settings.get('mapLayers').survey, false);
 assert.equal(loaded.stored().dataRegion, 'global', 'the initial region must be persisted immediately');
 

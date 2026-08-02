@@ -893,7 +893,7 @@
           var isCe = !!OC.CES[id], isPot = !!OC.POTS[id];
           var def = isCe ? OC.CES[id] : isPot ? OC.POTS[id] : OC.FATES[id];
           if (!def) return '';
-          if (isCe && def.type === 'tower') return '';
+          if (isCe && def.type === 'tower' && !OC.Settings.get('alertTower')) return '';
           var cls = isCe ? 'ce' : isPot ? 'pot' : 'fate';
           return '<div class="chip chip-act ' + cls + '">' + OC.UI.esc(nm(def.name)) + rewardSuffix(def.drops) + '</div>';
         }).join('');
@@ -1097,6 +1097,10 @@
         this.fireAlert(kind, t('notify_' + kind) + ' · ' + nm(def.name), 'spawn:' + id);
         return;
       }
+      if (kind === 'ce' && def.type === 'tower') {
+        if (OC.Settings.get('alertTower')) this.fireAlert('ce', t('notify_ce') + ' · ' + nm(def.name), 'spawn:' + id);
+        return;
+      }
       if (kind === 'pot') {
         if (OC.Settings.get('alertPot')) this.fireAlert('pot', nm(def.name), 'spawn:' + id);
         return;
@@ -1207,6 +1211,7 @@
       h += '<div class="panel-body settings">';
       h += '<div class="s-grp">' + t('alert_title') + '</div>';
       h += rowChk('a-all', t('alert_all'), g('alertAllEncounters'));
+      h += rowChk('a-tower', t('alert_tower'), g('alertTower'));
       h += rowChk('a-pot', t('alert_pot_opt'), g('alertPot'));
       h += '<div class="s-sub">' + t(territory === 1346 ? 'alert_dispeller' : 'alert_demiatma') + '</div><div class="color-grid">';
       rewardIds.forEach(function (id) {
@@ -1246,6 +1251,7 @@
       if (dataRegion) dataRegion.addEventListener('change', function () { App.changeDataRegion(dataRegion.value); });
       bindChk(pop, 'a-pot', 'alertPot');
       bindChk(pop, 'a-all', 'alertAllEncounters');
+      bindChk(pop, 'a-tower', 'alertTower', function () { App.updateActive(); });
       bindChk(pop, 'a-tts', 'useTts');
       var chipsChk = pop.querySelector('#s-chips');
       if (chipsChk) chipsChk.addEventListener('change', function () {
@@ -1310,9 +1316,12 @@
     }).join('');
   }
   function rowChk(id, l, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + l + '</label></div>'; }
-  function bindChk(pop, id, key) {
+  function bindChk(pop, id, key, onChange) {
     var el = pop.querySelector('#' + id);
-    if (el) el.addEventListener('change', function () { OC.Settings.set(key, el.checked); });
+    if (el) el.addEventListener('change', function () {
+      OC.Settings.set(key, el.checked);
+      if (onChange) onChange(el.checked);
+    });
   }
   function esc(s) { return OC.UI.esc(s); }
 

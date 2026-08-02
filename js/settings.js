@@ -3,7 +3,7 @@
 
   var OC = global.OC = global.OC || {};
   var KEY = 'occultOverlay.settings';
-  var SCHEMA_V = 4;
+  var SCHEMA_V = 5;
 
   function systemLanguage() {
     var nav = global.navigator || {};
@@ -35,6 +35,7 @@
     collapsed: false,
     useTts: true,               // 语音提示（不可用时退回提示音）
     alertAllEncounters: false,  // 播报所有 CE/FATE/魔法罐
+    alertTower: false,          // 两歧塔出现时播报并显示胶囊
     alertPot: false,            // 撒娇罐出现时提示
     alertColors: {},            // 半魂晶颜色提示：{ itemId: true }
     _alertScope: 'dc',          // 提示范围：dc=仅本大区

@@ -11,6 +11,7 @@ Everything is automatic — no setup, no tracker id. Data comes from the shared 
 - CN pot overview when the CN data region is selected, sorted by next-pot time; click an island for its CE / FATE and drops.
 - Pot timing only uses an observed current-cycle spawn from a strictly matched instance.
 - Optional ACT TTS alerts for every CE, FATE, and pot, with per-spawn deduplication.
+- Optional Forked Tower alerts and active-event chips.
 - South Horn demiatma filters; North Horn soul-shard and exploration-note drops.
 - On-demand North Horn trigger-monster location maps.
 - North Horn Phantom Dispeller mappings and filtered spawn alerts.

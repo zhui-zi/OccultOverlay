@@ -16,6 +16,7 @@ const activeBox = {
 
 let showActiveChips = true;
 let alertAllEncounters = false;
+let alertTower = false;
 let alertPot = false;
 let alertColors = {};
 let currentLanguage = 'en';
@@ -86,6 +87,7 @@ const sandbox = {
       get(key) {
         if (key === 'showActiveChips') return showActiveChips;
         if (key === 'alertAllEncounters') return alertAllEncounters;
+        if (key === 'alertTower') return alertTower;
         if (key === 'alertPot') return alertPot;
         if (key === 'alertColors') return alertColors;
         if (key === 'lang') return currentLanguage;
@@ -95,6 +97,7 @@ const sandbox = {
       set(key, value) {
         if (key === 'lang') currentLanguage = value;
         if (key === 'dataRegion') currentDataRegion = value;
+        if (key === 'alertTower') alertTower = value;
       },
       getRaw(key) {
         if (key === 'lang') return currentLanguage;
@@ -214,6 +217,13 @@ sandbox.OC.App.updateActive();
 assert.equal(writes, 3, 'the hidden state must not be rewritten every tick');
 
 showActiveChips = true;
+alertTower = true;
+sandbox.OC.State.highlights = [64];
+sandbox.OC.App.updateActive();
+assert.match(markup, /Test Tower/, 'the tower option must show active Forked Tower capsules');
+alertTower = false;
+sandbox.OC.State.highlights = [];
+sandbox.OC.App._highlightMissingSince = {};
 sandbox.OC.Overlay.memActive = { 2074: true };
 sandbox.OC.App._island = {
   ce: [{ fate_id: 49, spawn_time: 100, death_time: -1 }],
@@ -449,7 +459,15 @@ sandbox.OC.App._alerted = {};
 sandbox.OC.App.alertEncounter(49);
 sandbox.OC.App.alertEncounter(2074);
 sandbox.OC.App.alertEncounter(2072);
+sandbox.OC.App.alertEncounter(64);
 assert.equal(alerts.length, 0, 'default filters must remain unchanged');
+
+alertTower = true;
+sandbox.OC.App._alerted = {};
+sandbox.OC.App.alertEncounter(64);
+assert.deepEqual(alerts, [{ kind: 'ce', message: 'CE · Test Tower', key: 'spawn:64' }]);
+alertTower = false;
+alerts.length = 0;
 
 alertAllEncounters = true;
 sandbox.OC.App._alerted = {};
@@ -512,6 +530,7 @@ const settingsPop = {
 };
 sandbox.OC.Overlay.territoryId = 1346;
 sandbox.OC.App.renderSettings(settingsPop);
+assert.match(settingsPop.innerHTML, /alert_tower/);
 assert.match(settingsPop.innerHTML, /id="s-lang"/);
 assert.match(settingsPop.innerHTML, /value="auto">lang_auto/);
 assert.match(settingsPop.innerHTML, /value="en" selected>English/);
