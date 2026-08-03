@@ -1,7 +1,7 @@
 /* Static Occult Crescent data from EurekaTrackerAutoPopper and OccultTrackerV3.
  * Keep English and Japanese game names identical to the upstream zone/const data;
  * never derive them by translating the Simplified Chinese strings.
- * Audited at Infiziert90/EurekaTrackerAutoPopper@00782bf against:
+ * Audited at Infiziert90/EurekaTrackerAutoPopper@a43ae95 against:
  * website/src/lib/zones/{southHorn,northHorn}.js and website/src/lib/const.js.
  */
 (function (global) {

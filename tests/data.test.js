@@ -14,7 +14,7 @@ for (const file of ['../js/data.js', '../data/mapPoints.js']) {
 }
 
 const OC = sandbox.OC;
-// EN/JA game-name assertions mirror EurekaTrackerAutoPopper@00782bf.
+// EN/JA game-name assertions mirror EurekaTrackerAutoPopper@a43ae95.
 assert.equal(OC.TERRITORIES[1346].mapId, 1135);
 assert.deepEqual(Array.from(OC.TERRITORIES[1346].mapIds), [1135, 1244]);
 assert.equal(OC.TERRITORIES[1346].fateIds.length, 11);

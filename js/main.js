@@ -17,7 +17,7 @@
   }
   var CN_DCS = [101, 102, 103, 104];
   var GLOBAL_DCS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-  var TRACKER_VERSION = 'OccultOverlay-v69';
+  var TRACKER_VERSION = 'OccultOverlay-v70';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
   var MIN_ISLAND_EVIDENCE = 3;
 
@@ -28,6 +28,10 @@
     collapsed: false,
     _dc: [],        // 撒娇罐总览数据（去重排序后）
     _dcTick: 0,
+
+    trackerCheckDelayMs: function () {
+      return 2500 + Math.floor(Math.random() * 1500);
+    },
 
     displayScale: function (width, height, pixelRatio) {
       width = Number(width) || 0;
@@ -434,6 +438,20 @@
         id = Number(id);
         var entry = byId[id] || OC.Api.blankEntry(id);
         var local = meta[id];
+        if (!Array.isArray(entry.respawn_times)) entry.respawn_times = [];
+        if (!isFinite(Number(entry.killed_fates))) entry.killed_fates = 0;
+        if (!isFinite(Number(entry.killed_ces))) entry.killed_ces = 0;
+        var pending = App._pendingTowerProgress;
+        if (pending && id === Number(pending.towerId) &&
+            Number(pending.territory) === Number(OC.Overlay.territoryId)) {
+          if (pending.reset) {
+            entry.killed_fates = pending.killedFates;
+            entry.killed_ces = pending.killedCes;
+          } else {
+            entry.killed_fates = Math.max(Number(entry.killed_fates) || 0, pending.killedFates);
+            entry.killed_ces = Math.max(Number(entry.killed_ces) || 0, pending.killedCes);
+          }
+        }
         if (!local) {
           if (snapshotComplete && isAlive(entry)) {
             entry.death_time = observedNow;
@@ -452,12 +470,71 @@
         } else if (!local.active && death > 0 && Number(entry.spawn_time) > 0) {
           entry.death_time = death;
         }
+        if (OC.CES[id]) {
+          entry.state = local.active ? Math.max(1, Number(entry.state) || 0) : 0;
+        }
         if (seen > Number(entry.last_seen || -1)) entry.last_seen = seen;
-        if (!Array.isArray(entry.respawn_times)) entry.respawn_times = [];
-        if (!isFinite(Number(entry.killed_fates))) entry.killed_fates = 0;
-        if (!isFinite(Number(entry.killed_ces))) entry.killed_ces = 0;
         return entry;
       });
+    },
+
+    // Keep the shared tower reduction counters aligned with the current zone.
+    // Every completed CE removes five minutes; every FATE or pot removes one.
+    // A completed normal tower starts the next cycle from zero in both zones.
+    recordTowerCompletion: function (id) {
+      id = Number(id) || 0;
+      var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
+      var zone = OC.TERRITORIES && OC.TERRITORIES[territory];
+      var encounters = this._island && this._island.ce;
+      if (!id || !zone || !zone.towerId || !Array.isArray(encounters)) return false;
+
+      var towerId = Number(zone.towerId);
+      var tower = encounters.filter(function (entry) {
+        return Number(entry && entry.fate_id) === towerId;
+      })[0];
+      if (!tower) return false;
+
+      var currentPending = this._pendingTowerProgress;
+      var pending;
+      if (!currentPending || Number(currentPending.territory) !== territory ||
+          Number(currentPending.towerId) !== towerId) {
+        pending = {
+          territory: territory,
+          towerId: towerId,
+          killedFates: Math.max(0, Number(tower.killed_fates) || 0),
+          killedCes: Math.max(0, Number(tower.killed_ces) || 0),
+          reset: false
+        };
+      } else {
+        pending = {
+          territory: territory,
+          towerId: towerId,
+          killedFates: currentPending.killedFates,
+          killedCes: currentPending.killedCes,
+          reset: currentPending.reset
+        };
+      }
+      if (!pending.reset) {
+        pending.killedFates = Math.max(pending.killedFates, Number(tower.killed_fates) || 0);
+        pending.killedCes = Math.max(pending.killedCes, Number(tower.killed_ces) || 0);
+      }
+
+      if (id === towerId) {
+        pending.killedFates = 0;
+        pending.killedCes = 0;
+        pending.reset = true;
+        this._pendingTowerProgress = pending;
+        return true;
+      }
+
+      if ((OC.Overlay.memActive || {})[towerId] || (!pending.reset && isAlive(tower))) return false;
+      var field = OC.CES[id] ? 'killed_ces' :
+        (OC.FATES[id] || OC.POTS[id]) ? 'killed_fates' : '';
+      if (!field) return false;
+      if (field === 'killed_ces') pending.killedCes += 1;
+      else pending.killedFates += 1;
+      this._pendingTowerProgress = pending;
+      return true;
     },
 
     buildLocalTrackerRecord: function (fingerprint) {
@@ -561,13 +638,13 @@
             }
             var count = Number((App._missingTrackerChecks || {})[key] || 0);
             if (count < 2) {
-              App._scheduledTrackerChecks[key] = setTimeout(runCheck, 3000);
+              App._scheduledTrackerChecks[key] = setTimeout(runCheck, App.trackerCheckDelayMs());
             } else {
               App._checkedTrackerKeys[key] = true;
             }
           });
       }
-      this._scheduledTrackerChecks[key] = setTimeout(runCheck, 8000);
+      this._scheduledTrackerChecks[key] = setTimeout(runCheck, this.trackerCheckDelayMs());
     },
 
     scheduleKnownTrackerChecks: function () {
@@ -617,12 +694,16 @@
           var fingerprint = App._pendingUploadFingerprint ||
             App.instanceEvidence().fingerprint || App.myIslandFingerprint;
           App._pendingUploadFingerprint = '';
+          var pendingTowerProgress = App._pendingTowerProgress;
           var record = App.buildLocalTrackerRecord(fingerprint);
           if (!record) return false;
           return OC.Api.updateIslandTracker(rowId, record).then(function (updated) {
             if (generation !== (App._locateGeneration || 0) ||
                 Number(rowId) !== Number(App.myIslandRowId)) return false;
             if (updated) {
+              if (pendingTowerProgress && App._pendingTowerProgress === pendingTowerProgress) {
+                App._pendingTowerProgress = null;
+              }
               var evidence = {
                 fingerprint: record.last_fate,
                 fingerprints: [record.last_fate],
@@ -654,6 +735,7 @@
       this._missingTrackerChecks = {}; this._trackerCheckChain = Promise.resolve();
       this._uploadTimer = null; this._uploadChain = Promise.resolve();
       this._pendingUploadFingerprint = '';
+      this._pendingTowerProgress = null;
       this._previewIsland = null; this._dcRows = []; this._dc = []; this._islands = []; this._dcLoaded = false;
       this._island = null; this._potAlertedFor = null; this._alerted = {};
       this._highlightMissingSince = {};
@@ -887,6 +969,7 @@
       if (this._uploadTimer) clearTimeout(this._uploadTimer);
       this._uploadTimer = null; this._uploadChain = Promise.resolve();
       this._pendingUploadFingerprint = '';
+      this._pendingTowerProgress = null;
       this._previewIsland = null; this._island = null;
       this._potAlertedFor = null; this._alerted = {};
       State.detail = null; State.detailId = null;
@@ -1040,6 +1123,7 @@
             observation.deathEpoch = observedAt;
           }
         }
+        if (!active && detail.eventType === 'remove') App.recordTowerCompletion(id);
         App.refreshHighlights();
         if (!App.myIslandRowId) App.updatePreviewIsland();
         if (active) App.alertEncounter(id);

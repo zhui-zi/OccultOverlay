@@ -41,6 +41,9 @@ const sandbox = {
     POTS: {
       2072: { name: { en: 'Test Pot' }, side: 'north', territory: 1346, drops: [50974] },
     },
+    TERRITORIES: {
+      1346: { towerId: 64 },
+    },
     ITEMS: {
       47744: { name: { en: 'Test Demiatma 1' } },
       47745: { name: { en: 'Test Demiatma 2' } },
@@ -138,6 +141,59 @@ assert.equal(sandbox.OC.App.displayScale(3072, 1728, 1.25), 1, 'OS DPI scaling m
 assert.equal(sandbox.OC.App.effectiveUiScale(1, 3840, 2160, 1), 1.5);
 assert.equal(sandbox.OC.App.effectiveUiScale(2, 3840, 2160, 1), 2, 'combined scaling must remain bounded');
 assert.equal(sandbox.OC.App.effectiveUiScale(0.8, 1024, 600, 1), 0.8, 'small-screen scaling must remain readable');
+for (let i = 0; i < 100; i += 1) {
+  const delay = sandbox.OC.App.trackerCheckDelayMs();
+  assert.ok(delay >= 2500 && delay < 4000, 'tracker lookup jitter must stay within the upstream range');
+}
+
+const towerProgress = {
+  fate_id: 64,
+  spawn_time: -1,
+  death_time: -1,
+  last_seen: -1,
+  state: 0,
+  killed_ces: 0,
+  killed_fates: 0,
+};
+sandbox.OC.App._island = { ce: [towerProgress], fate: [], pot: [] };
+assert.equal(sandbox.OC.App.recordTowerCompletion(49), true);
+const firstPendingTowerProgress = sandbox.OC.App._pendingTowerProgress;
+assert.equal(sandbox.OC.App.recordTowerCompletion(2074), true);
+assert.notEqual(
+  sandbox.OC.App._pendingTowerProgress,
+  firstPendingTowerProgress,
+  'a later completion must not mutate the tower progress captured by an in-flight upload',
+);
+assert.equal(sandbox.OC.App.recordTowerCompletion(2072), true);
+let towerUpload = sandbox.OC.App.localTrackerHistory([64], sandbox.OC.App._island.ce)[0];
+assert.equal(towerUpload.killed_ces, 1, 'a completed CE must reduce the normal tower timer');
+assert.equal(towerUpload.killed_fates, 2, 'FATEs and pots must share the one-minute reduction counter');
+sandbox.OC.App._island = { ce: [{ ...towerProgress }], fate: [], pot: [] };
+towerUpload = sandbox.OC.App.localTrackerHistory([64], sandbox.OC.App._island.ce)[0];
+assert.equal(towerUpload.killed_ces, 1, 'a tracker refresh must not discard a pending tower reduction');
+assert.equal(towerUpload.killed_fates, 2, 'pending FATE reductions must also survive a tracker refresh');
+sandbox.OC.Overlay.memActive = { 64: true };
+assert.equal(sandbox.OC.App.recordTowerCompletion(49), false, 'encounters during an active tower must not reduce its next cycle');
+sandbox.OC.Overlay.memActive = {};
+sandbox.OC.App._island.ce[0].state = 3;
+assert.equal(sandbox.OC.App.recordTowerCompletion(2074), false, 'shared active tower state must also block reductions');
+sandbox.OC.App._island.ce[0].state = 0;
+assert.equal(sandbox.OC.App.recordTowerCompletion(64), true);
+towerUpload = sandbox.OC.App.localTrackerHistory([64], sandbox.OC.App._island.ce)[0];
+assert.equal(towerUpload.killed_ces, 0, 'North Horn tower completion must reset CE reductions');
+assert.equal(towerUpload.killed_fates, 0, 'North Horn tower completion must reset FATE reductions');
+sandbox.OC.App._island.ce[0].state = 3;
+assert.equal(sandbox.OC.App.recordTowerCompletion(2074), true, 'a completed tower must override stale shared active state');
+towerUpload = sandbox.OC.App.localTrackerHistory([64], sandbox.OC.App._island.ce)[0];
+assert.equal(towerUpload.killed_fates, 1, 'events after tower completion must count toward the new cycle');
+sandbox.OC.Overlay.memMeta = {
+  64: { active: false, spawnEpoch: 100, spawnTrusted: true, deathEpoch: 200, lastSeen: 200 },
+};
+towerUpload = sandbox.OC.App.localTrackerHistory([64], [{ ...towerProgress, state: 3, spawn_time: 100 }])[0];
+assert.equal(towerUpload.state, 0, 'a local North Horn tower removal must clear stale shared active state');
+sandbox.OC.App._island = null;
+sandbox.OC.App._pendingTowerProgress = null;
+sandbox.OC.Overlay.memMeta = {};
 assert.equal(sandbox.OC.App.showsCnDcOverview(), false);
 assert.deepEqual(Array.from(sandbox.OC.App.trackerDatacenters()), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 assert.equal(sandbox.OC.App.isDatacenterInScope(3), true);
