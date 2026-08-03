@@ -175,6 +175,25 @@ assert.deepEqual(regionActions, [['reset', true], ['rail'], ['chips'], ['fetch',
 Object.assign(sandbox.OC.App, originalRegionHandlers);
 currentDataRegion = 'global';
 
+let detectedHostLanguage = null;
+let appliedLanguageMode = null;
+const originalChangeLanguage = sandbox.OC.App.changeLanguage;
+sandbox.OC.Settings.setSystemLanguage = language => {
+  detectedHostLanguage = language;
+  return true;
+};
+sandbox.OC.App.changeLanguage = mode => { appliedLanguageMode = mode; };
+currentLanguage = 'auto';
+assert.equal(sandbox.OC.App.applySystemLanguage('Japanese'), true);
+assert.equal(detectedHostLanguage, 'Japanese');
+assert.equal(appliedLanguageMode, 'auto');
+currentLanguage = 'en';
+appliedLanguageMode = null;
+assert.equal(sandbox.OC.App.applySystemLanguage('Japanese'), false, 'ACT language must not override an explicit UI language');
+assert.equal(appliedLanguageMode, null);
+sandbox.OC.App.changeLanguage = originalChangeLanguage;
+delete sandbox.OC.Settings.setSystemLanguage;
+
 const styles = fs.readFileSync(require.resolve('../css/style.css'), 'utf8');
 const activeChipRule = styles.match(/\.chip\.chip-act\s*\{([^}]*)\}/);
 assert.ok(activeChipRule, 'active capsule style must exist');
@@ -549,8 +568,6 @@ assert.deepEqual(alerts.slice(4).map((entry) => entry.message), [
 const settingsControls = {
   '#s-op': { value: '0.9', addEventListener() {} },
   '#s-scale': { value: '1', addEventListener() {} },
-  '#s-lang': { value: 'en', addEventListener() {} },
-  '#s-data-region': { value: 'global', addEventListener() {} },
   '#s-chips': { checked: true, addEventListener() {} },
   '#s-repo': { addEventListener() {} },
 };
@@ -566,12 +583,13 @@ const settingsPop = {
 sandbox.OC.Overlay.territoryId = 1346;
 sandbox.OC.App.renderSettings(settingsPop);
 assert.match(settingsPop.innerHTML, /alert_tower/);
-assert.match(settingsPop.innerHTML, /id="s-lang"/);
-assert.match(settingsPop.innerHTML, /value="auto">lang_auto/);
-assert.match(settingsPop.innerHTML, /value="en" selected>English/);
-assert.match(settingsPop.innerHTML, /id="s-data-region"/);
-assert.match(settingsPop.innerHTML, /value="global" selected>data_region_global/);
-assert.doesNotMatch(settingsPop.innerHTML, /id="s-auto"/);
+assert.match(settingsPop.innerHTML, /class="choice-grid lang-choice"/);
+assert.match(settingsPop.innerHTML, /data-lang="auto" aria-pressed="false">lang_auto/);
+assert.match(settingsPop.innerHTML, /class="choice-btn on" data-lang="en" aria-pressed="true">English/);
+assert.match(settingsPop.innerHTML, /data-lang="ja" aria-pressed="false">日本語/);
+assert.match(settingsPop.innerHTML, /class="choice-grid region-choice"/);
+assert.match(settingsPop.innerHTML, /class="choice-btn on" data-data-region="global" aria-pressed="true">data_region_global/);
+assert.doesNotMatch(settingsPop.innerHTML, /<select/);
 assert.match(settingsPop.innerHTML, /alert_dispeller/);
 assert.match(settingsPop.innerHTML, /Test Dispeller/);
 assert.match(settingsPop.innerHTML, /Test Dispeller Beta/);

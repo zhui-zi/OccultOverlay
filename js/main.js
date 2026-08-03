@@ -83,6 +83,20 @@
       if (this.openPanel) this.renderPanel();
     },
 
+    syncSystemLanguage: function () {
+      if (!OC.Overlay || !OC.Overlay.callHandler || !OC.Settings.setSystemLanguage) return Promise.resolve(false);
+      return OC.Overlay.callHandler({ call: 'getLanguage' }).then(function (result) {
+        return App.applySystemLanguage(result && result.language);
+      }).catch(function () { return false; });
+    },
+
+    applySystemLanguage: function (language) {
+      var changed = OC.Settings.setSystemLanguage && OC.Settings.setSystemLanguage(language);
+      if (!changed || !OC.Settings.getRaw || OC.Settings.getRaw('lang') !== 'auto') return false;
+      this.changeLanguage('auto');
+      return true;
+    },
+
     changeDataRegion: function (region) {
       if (['cn', 'global'].indexOf(region) < 0 || OC.Settings.get('dataRegion') === region) return;
       OC.Settings.set('dataRegion', region);
@@ -972,7 +986,11 @@
     },
 
     wireOverlay: function () {
-      OC.Overlay.on('connected', function () { App.updateChips(); App.updateMapVisible(); });
+      OC.Overlay.on('connected', function () {
+        App.syncSystemLanguage();
+        App.updateChips();
+        App.updateMapVisible();
+      });
       OC.Overlay.on('disconnected', function () {
         App.resetIsland();
         App.updateChips();
@@ -1291,8 +1309,8 @@
       h += rowChk('a-tts', t('alert_tts'), g('useTts'));
       h += '<div class="s-grp">' + t('panel_settings') + '</div>';
       var languageMode = OC.Settings.getRaw ? OC.Settings.getRaw('lang') : g('lang');
-      h += row(t('set_lang'), '<select id="s-lang">' + languageOptions(languageMode) + '</select>');
-      h += row(t('set_data_region'), '<select id="s-data-region">' + dataRegionOptions(g('dataRegion')) + '</select>');
+      h += choiceRow(t('set_lang'), '<div class="choice-grid lang-choice" role="group" aria-label="' + esc(t('set_lang')) + '">' + languageButtons(languageMode) + '</div>');
+      h += choiceRow(t('set_data_region'), '<div class="choice-grid region-choice" role="group" aria-label="' + esc(t('set_data_region')) + '">' + dataRegionButtons(g('dataRegion')) + '</div>');
       h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'));
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
@@ -1312,10 +1330,12 @@
         OC.Settings.set('uiScale', Number(sc.value));
         App.applyUiScale();
       });
-      var lang = pop.querySelector('#s-lang');
-      if (lang) lang.addEventListener('change', function () { App.changeLanguage(lang.value); });
-      var dataRegion = pop.querySelector('#s-data-region');
-      if (dataRegion) dataRegion.addEventListener('change', function () { App.changeDataRegion(dataRegion.value); });
+      pop.querySelectorAll('button[data-lang]').forEach(function (button) {
+        button.addEventListener('click', function () { App.changeLanguage(button.getAttribute('data-lang')); });
+      });
+      pop.querySelectorAll('button[data-data-region]').forEach(function (button) {
+        button.addEventListener('click', function () { App.changeDataRegion(button.getAttribute('data-data-region')); });
+      });
       bindChk(pop, 'a-pot', 'alertPot');
       bindChk(pop, 'a-all', 'alertAllEncounters');
       bindChk(pop, 'a-tower', 'alertTower', function () { App.updateActive(); });
@@ -1367,23 +1387,26 @@
 
   function rewardSuffix(drops) { return OC.UI.rewardSuffix(drops); }
   function row(l, c) { return '<div class="s-row"><label>' + l + '</label>' + c + '</div>'; }
-  function languageOptions(selected) {
-    return [
+  function choiceRow(l, c) { return '<div class="s-row s-choice-row"><label>' + l + '</label>' + c + '</div>'; }
+  function choiceButtons(items, selected, attribute) {
+    return items.map(function (item) {
+      var active = selected === item[0];
+      return '<button type="button" class="choice-btn' + (active ? ' on' : '') + '" data-' + attribute + '="' + item[0] + '" aria-pressed="' + active + '">' + esc(item[1]) + '</button>';
+    }).join('');
+  }
+  function languageButtons(selected) {
+    return choiceButtons([
       ['auto', t('lang_auto')],
       ['zh', '简体中文'],
       ['en', 'English'],
       ['ja', '日本語']
-    ].map(function (item) {
-      return '<option value="' + item[0] + '"' + (selected === item[0] ? ' selected' : '') + '>' + item[1] + '</option>';
-    }).join('');
+    ], selected, 'lang');
   }
-  function dataRegionOptions(selected) {
-    return [
+  function dataRegionButtons(selected) {
+    return choiceButtons([
       ['cn', t('data_region_cn')],
       ['global', t('data_region_global')]
-    ].map(function (item) {
-      return '<option value="' + item[0] + '"' + (selected === item[0] ? ' selected' : '') + '>' + item[1] + '</option>';
-    }).join('');
+    ], selected, 'data-region');
   }
   function rowChk(id, l, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + l + '</label></div>'; }
   function bindChk(pop, id, key, onChange) {

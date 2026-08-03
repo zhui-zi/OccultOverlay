@@ -4,13 +4,19 @@
   var OC = global.OC = global.OC || {};
   var KEY = 'occultOverlay.settings';
   var SCHEMA_V = 5;
+  var hostLanguage = null;
+
+  function normalizeLanguage(value) {
+    var code = String(value || '').trim().toLowerCase();
+    if (code.indexOf('zh') === 0 || code === 'cn' || code === 'chinese') return 'zh';
+    if (code.indexOf('ja') === 0 || code === 'jp' || code === 'japanese') return 'ja';
+    if (code.indexOf('en') === 0 || code === 'english') return 'en';
+    return null;
+  }
 
   function systemLanguage() {
     var nav = global.navigator || {};
-    var code = String((nav.languages && nav.languages[0]) || nav.language || '').toLowerCase();
-    if (code.indexOf('zh') === 0) return 'zh';
-    if (code.indexOf('ja') === 0) return 'ja';
-    return 'en';
+    return hostLanguage || normalizeLanguage((nav.languages && nav.languages[0]) || nav.language) || 'en';
   }
 
   function effectiveLanguage(mode) {
@@ -82,7 +88,14 @@
     set: function (k, v) { data[k] = v; save(); return v; },
     setMany: function (obj) { for (var k in obj) data[k] = obj[k]; save(); },
     toggleLayer: function (name) { data.mapLayers[name] = !data.mapLayers[name]; save(); return data.mapLayers[name]; },
-    systemLanguage: systemLanguage
+    systemLanguage: systemLanguage,
+    setSystemLanguage: function (value) {
+      var next = normalizeLanguage(value);
+      if (!next || next === hostLanguage) return false;
+      var before = effectiveLanguage(data.lang);
+      hostLanguage = next;
+      return effectiveLanguage(data.lang) !== before;
+    }
   };
 
   function save() {

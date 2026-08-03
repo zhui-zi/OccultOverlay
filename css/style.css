@@ -176,6 +176,18 @@ html, body {
   flex: 1; background: rgba(0,0,0,0.35); border: 1px solid var(--line); border-radius: 6px; color: var(--fg); padding: 5px 8px; font-size: 12px;
 }
 .settings input[type=range] { flex: 1; }
+.settings .s-choice-row { display: block; }
+.settings .s-choice-row > label { display: block; width: auto; margin-bottom: 4px; }
+.choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.choice-btn {
+  min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+  background: rgba(0,0,0,0.35); color: var(--fg-dim); font: inherit; font-size: 12px;
+  line-height: 1.25; cursor: pointer;
+}
+.choice-btn:hover { color: var(--fg); background: rgba(255,255,255,0.08); }
+.choice-btn.on, .choice-btn[aria-pressed="true"] {
+  color: #171100; background: var(--accent); border-color: var(--accent); font-weight: 700;
+}
 .s-grp { font-weight: 700; color: var(--accent); margin: 10px 0 4px; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
 .s-check label { width: auto; color: var(--fg); display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .s-btns { gap: 8px; }

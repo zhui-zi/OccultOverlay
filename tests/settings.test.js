@@ -32,10 +32,22 @@ assert.equal(settings.get('alertTower'), false);
 assert.equal(settings.get('mapLayers').survey, false);
 assert.equal(loaded.stored().dataRegion, 'global', 'the initial region must be persisted immediately');
 
+loaded = loadSettings('en-US');
+settings = loaded.settings;
+assert.equal(settings.get('lang'), 'en');
+assert.equal(settings.setSystemLanguage('Japanese'), true, 'ACT game language must override the CEF fallback in auto mode');
+assert.equal(settings.systemLanguage(), 'ja');
+assert.equal(settings.getRaw('lang'), 'auto');
+assert.equal(settings.get('lang'), 'ja');
+assert.equal(settings.get('dataRegion'), 'global', 'host language detection must not change the stored data region');
+assert.equal(settings.setSystemLanguage('Japanese'), false, 'repeated host language results must not trigger another render');
+
 settings.set('lang', 'zh');
 assert.equal(settings.getRaw('lang'), 'zh');
 assert.equal(settings.get('lang'), 'zh');
 assert.equal(settings.get('dataRegion'), 'global', 'changing language must not change the stored data region');
+assert.equal(settings.setSystemLanguage('English'), false, 'host language changes must not override an explicit language');
+assert.equal(settings.get('lang'), 'zh');
 
 settings.set('dataRegion', 'cn');
 assert.equal(settings.get('dataRegion'), 'cn');
