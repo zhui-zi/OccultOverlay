@@ -293,6 +293,7 @@
       observedAt: Math.floor(Date.now() / 1000),
       startEpoch: explicitStart > 0 ? Math.floor(explicitStart) : 0,
       startQuality: explicitStart > 0 ? 'exact' : 'observed',
+      endQuality: eventType === 'remove' ? 'direct' : 'observed',
       source: 'onFateEvent'
     }); // add / update = 存在；remove = 结束
   }
@@ -446,7 +447,10 @@
       }
       meta.deathEpoch = null;
     }
-    if (!active) meta.deathEpoch = observedAt;
+    if (!active) {
+      meta.deathEpoch = observedAt;
+      meta.deathQuality = String(detail.endQuality || 'observed');
+    }
     if (active) Overlay.memActive[id] = true; else delete Overlay.memActive[id];
     if (was !== !!active || gainedExactStart || cePhaseChanged) {
       Overlay.emit('memActive', id, !!active, detail);
@@ -480,6 +484,7 @@
       eventType: eventType,
       observedAt: Math.floor(observedAt),
       startQuality: cat === 'Add' ? 'direct' : 'observed',
+      endQuality: cat === 'Remove' ? 'direct' : 'observed',
       source: 'FateDirector'
     };
     if (cat === 'Remove') memChanged(fateId, false, detail);

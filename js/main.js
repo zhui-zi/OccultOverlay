@@ -17,7 +17,7 @@
   }
   var CN_DCS = [101, 102, 103, 104];
   var GLOBAL_DCS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-  var TRACKER_VERSION = 'OccultOverlay-v71-dev';
+  var TRACKER_VERSION = 'OccultOverlay-v72-dev';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
   var MIN_ISLAND_EVIDENCE = 3;
 
@@ -64,6 +64,9 @@
     },
 
     trackerDatacenters: function () {
+      var playerDc = Number(OC.Overlay.playerDc) || 0;
+      if (CN_DCS.indexOf(playerDc) >= 0) return CN_DCS.slice();
+      if (GLOBAL_DCS.indexOf(playerDc) >= 0) return GLOBAL_DCS.slice();
       return (this.showsCnDcOverview() ? CN_DCS : GLOBAL_DCS).slice();
     },
 
@@ -218,7 +221,11 @@
           });
         }
         if (item.deathEpoch && (OC.FATES[id] || OC.POTS[id])) {
-          ends.push({ fateId: id, deathEpoch: Number(item.deathEpoch) });
+          ends.push({
+            fateId: id,
+            deathEpoch: Number(item.deathEpoch),
+            quality: String(item.deathQuality || 'observed')
+          });
         }
       });
       var fateEvents = events.filter(function (item) {
@@ -928,10 +935,26 @@
       return Object.keys(ids).length;
     },
 
+    localPreciseFateSignalCount: function (evidence) {
+      var ids = {};
+      (evidence && evidence.events || []).forEach(function (signal) {
+        var id = Number(signal.fateId) || 0;
+        var quality = String(signal.quality || '');
+        if (OC.FATES[id] && (quality === 'direct' || quality === 'exact')) ids[id] = true;
+      });
+      (evidence && evidence.ends || []).forEach(function (signal) {
+        var id = Number(signal.fateId) || 0;
+        var quality = String(signal.quality || '');
+        if (OC.FATES[id] && Number(signal.deathEpoch) > 0 &&
+            (quality === 'direct' || quality === 'exact')) ids[id] = true;
+      });
+      return Object.keys(ids).length;
+    },
+
     localEvidenceReadyForCreation: function (evidence) {
       evidence = evidence || {};
       return String(evidence.fingerprintQuality || '') === 'exact' ||
-        this.localStrongFateSignalCount(evidence) >= 2 ||
+        this.localPreciseFateSignalCount(evidence) >= 2 ||
         this.localInstanceSignalCount(evidence) >= MIN_ISLAND_EVIDENCE;
     },
 
@@ -993,6 +1016,35 @@
       return Object.keys(matchedIds).length;
     },
 
+    cloudPreciseFateEvidenceCount: function (evidence, history) {
+      evidence = evidence || {};
+      history = history || this._island;
+      if (!history) return 0;
+      var remote = history.fate || [];
+      var matchedIds = {};
+      (evidence.events || []).forEach(function (signal) {
+        var id = Number(signal.fateId) || 0;
+        var epoch = Number(signal.spawnEpoch) || 0;
+        var quality = String(signal.quality || '');
+        if (!OC.FATES[id] || !epoch || (quality !== 'direct' && quality !== 'exact')) return;
+        if (remote.some(function (entry) {
+          return Number(entry.fate_id) === id && Number(entry.spawn_time) > 0 &&
+            Math.abs(Number(entry.spawn_time) - epoch) <= 15;
+        })) matchedIds[id] = true;
+      });
+      (evidence.ends || []).forEach(function (signal) {
+        var id = Number(signal.fateId) || 0;
+        var epoch = Number(signal.deathEpoch) || 0;
+        var quality = String(signal.quality || '');
+        if (!OC.FATES[id] || !epoch || (quality !== 'direct' && quality !== 'exact')) return;
+        if (remote.some(function (entry) {
+          return Number(entry.fate_id) === id && Number(entry.death_time) > 0 &&
+            Math.abs(Number(entry.death_time) - epoch) <= 15;
+        })) matchedIds[id] = true;
+      });
+      return Object.keys(matchedIds).length;
+    },
+
     cloudCePhaseEvidenceCount: function (evidence, history) {
       evidence = evidence || {};
       history = history || this._island;
@@ -1019,6 +1071,7 @@
       var strongLocal = this.localStrongFateSignalCount(evidence);
       var matched = history ? this.cloudIslandEvidenceCount(evidence, history) : 0;
       var strongMatched = history ? this.cloudStrongFateEvidenceCount(evidence, history) : 0;
+      var preciseMatched = history ? this.cloudPreciseFateEvidenceCount(evidence, history) : 0;
       var ceMatched = history ? this.cloudCePhaseEvidenceCount(evidence, history) : 0;
       var exactFingerprint = String(evidence.fingerprintQuality || '') === 'exact' &&
         !!evidence.fingerprint && !!fingerprint &&
@@ -1029,10 +1082,11 @@
         strongLocal: strongLocal,
         matched: matched,
         strongMatched: strongMatched,
+        preciseMatched: preciseMatched,
         ceMatched: ceMatched,
         exactFingerprint: exactFingerprint,
         authorized: !!history && (ceMatched >= 1 || exactFingerprint ||
-          strongMatched >= 2 || (local >= MIN_ISLAND_EVIDENCE && matched >= MIN_ISLAND_EVIDENCE))
+          preciseMatched >= 2 || (local >= MIN_ISLAND_EVIDENCE && matched >= MIN_ISLAND_EVIDENCE))
       };
     },
 

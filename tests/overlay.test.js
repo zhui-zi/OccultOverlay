@@ -109,6 +109,7 @@ memory.sandbox.dispatchOverlayEvent({
 });
 assert.equal(memory.sandbox.OC.Overlay.memMeta[1962].active, false);
 assert.equal(memory.sandbox.OC.Overlay.memActive[1962], undefined);
+assert.equal(memory.sandbox.OC.Overlay.memMeta[1962].deathQuality, 'direct');
 memory.sandbox.dispatchOverlayEvent({
   type: 'LogLine',
   line: ['258', '2026-07-26T11:00:00.000Z', 'Add', '0000', '000007AA', '00000000']

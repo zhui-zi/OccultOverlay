@@ -211,12 +211,14 @@ assert.equal(ceUpload.state, 2);
 assert.equal(ceUpload.pop_time, ceDeadline, 'CE phase deadline must be uploaded separately from spawn_time');
 assert.equal(ceUpload.spawn_time, -1, 'CE phase deadline must never overwrite spawn_time');
 sandbox.OC.Overlay.memMeta = {};
+delete sandbox.OC.Overlay.playerDc;
 assert.equal(sandbox.OC.App.showsCnDcOverview(), false);
 assert.deepEqual(Array.from(sandbox.OC.App.trackerDatacenters()), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 assert.equal(sandbox.OC.App.isDatacenterInScope(3), true);
 assert.equal(sandbox.OC.App.isDatacenterInScope(103), false);
 sandbox.OC.Overlay.playerDc = 103;
-assert.equal(sandbox.OC.App.trackerContext(2074, 100), null, 'English matching must reject CN fingerprints');
+assert.deepEqual(Array.from(sandbox.OC.App.trackerDatacenters()), [101, 102, 103, 104]);
+assert.equal(sandbox.OC.App.isDatacenterInScope(103), true, 'detected CN DC must override a fresh origin setting');
 currentLanguage = 'zh';
 assert.equal(sandbox.OC.App.showsCnDcOverview(), false, 'language alone must not change the data region');
 currentDataRegion = 'cn';
@@ -225,7 +227,8 @@ assert.deepEqual(Array.from(sandbox.OC.App.trackerDatacenters()), [101, 102, 103
 assert.equal(sandbox.OC.App.isDatacenterInScope(103), true);
 assert.equal(sandbox.OC.App.isDatacenterInScope(3), false);
 sandbox.OC.Overlay.playerDc = 3;
-assert.equal(sandbox.OC.App.trackerContext(2074, 100), null, 'Chinese matching must reject global fingerprints');
+assert.deepEqual(Array.from(sandbox.OC.App.trackerDatacenters()), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+assert.equal(sandbox.OC.App.isDatacenterInScope(3), true, 'detected global DC must override the saved CN overview setting');
 delete sandbox.OC.Overlay.playerDc;
 currentLanguage = 'en';
 assert.equal(sandbox.OC.App.showsCnDcOverview(), true, 'the selected data region must survive language changes');
@@ -449,6 +452,7 @@ const strongBindingStatus = sandbox.OC.App.islandBindingEvidenceStatus(
   '',
 );
 assert.equal(strongBindingStatus.strongMatched, 2);
+assert.equal(strongBindingStatus.preciseMatched, 2);
 assert.equal(strongBindingStatus.authorized, true, 'two post-baseline direct FATE Adds must authorize a binding');
 assert.equal(
   sandbox.OC.App.localEvidenceReadyForCreation({
@@ -456,6 +460,28 @@ assert.equal(
   }),
   true,
   'two post-baseline direct FATE Adds may create a missing tracker',
+);
+const mixedPreciseBindingStatus = sandbox.OC.App.islandBindingEvidenceStatus(
+  {
+    events: [{ fateId: 2074, spawnEpoch: 1000, quality: 'direct' }],
+    ends: [{ fateId: 2075, deathEpoch: 1300, quality: 'direct' }],
+  },
+  {
+    ce: [],
+    fate: [
+      { fate_id: 2074, spawn_time: 1000 },
+      { fate_id: 2075, death_time: 1300 },
+    ],
+    pot: [],
+  },
+  '',
+);
+assert.equal(mixedPreciseBindingStatus.strongMatched, 1);
+assert.equal(mixedPreciseBindingStatus.preciseMatched, 2);
+assert.equal(
+  mixedPreciseBindingStatus.authorized,
+  true,
+  'one direct Add plus one different FATE Remove must authorize a binding',
 );
 sandbox.OC.App._island = { ce: [], fate: strictFateHistory, pot: [cloudPot] };
 sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
