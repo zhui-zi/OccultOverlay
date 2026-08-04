@@ -88,6 +88,7 @@
       OC.Map.render(document.getElementById('mapLayer'));
       this.updateChips();
       this.updateTreasureGuide();
+      this.updateRadar();
       if (this.openPanel) this.renderPanel();
     },
 
@@ -128,6 +129,14 @@
         });
       }
       this.renderShell();
+      if (OC.Radar) {
+        OC.Radar.onChange(function () {
+          OC.Map.updateRadar(document.getElementById('mapLayer'));
+          App.updateRadar();
+        });
+        OC.Radar.onAlert(function (target) { App.alertRadar(target); });
+        OC.Radar.start(OC.Overlay);
+      }
       this.wireOverlay();
       if (OC.Treasure) {
         OC.Treasure.onChange(function (view) { App.updateTreasureGuide(view); });
@@ -148,6 +157,7 @@
       h += '<div id="chips-active" class="chips-active"></div>';
       h += '</div>';
       h += '<div id="treasure-guide" class="treasure-guide hidden" role="status" aria-live="polite"></div>';
+      h += '<div id="radar-panel" class="radar-panel hidden" role="status" aria-live="polite"></div>';
       h += '<div class="rail">' + railHtml() + '</div>';
       h += '<div id="popover" class="popover hidden"></div>';
       app.innerHTML = h;
@@ -1250,6 +1260,41 @@
       OC.UI.renderTreasureGuide(host, view || (OC.Treasure && OC.Treasure.view()));
     },
 
+    updateRadar: function () {
+      var host = document.getElementById('radar-panel');
+      if (!host) return;
+      var list = OC.Radar && OC.Radar.targets ? OC.Radar.targets() : [];
+      if (!OC.Settings.get('radarEnabled') || !list.length) {
+        host.classList.add('hidden');
+        host.innerHTML = '';
+        if (document.documentElement) document.documentElement.style.setProperty('--toast-bottom', '10px');
+        return;
+      }
+      var h = '<div class="radar-head"><span>' + esc(t('radar_title')) + '</span><b>' + list.length + '</b></div>';
+      list.forEach(function (target) {
+        var slot = target.kind === 'carrot' ? 'C' : target.slot;
+        var distance = isFinite(target.distanceRounded) ? target.distanceRounded + ' m' : t('unknown');
+        h += '<div class="radar-row radar-row-' + target.kind + '">' +
+          '<span class="radar-slot">' + slot + '</span>' +
+          '<strong>' + esc(t(target.labelKey)) + '</strong>' +
+          '<span class="radar-bearing">' + esc(t(target.relativeKey)) + ' · ' + esc(distance) + '</span>' +
+          '</div>';
+      });
+      host.innerHTML = h;
+      host.classList.remove('hidden');
+      if (document.documentElement) {
+        var radarHeight = host.getBoundingClientRect ? host.getBoundingClientRect().height : host.offsetHeight;
+        document.documentElement.style.setProperty('--toast-bottom', Math.ceil((radarHeight || 0) + 16) + 'px');
+      }
+    },
+
+    alertRadar: function (target) {
+      if (!target) return;
+      var distance = isFinite(target.distanceRounded) ? target.distanceRounded + ' m' : t('unknown');
+      var message = t(target.labelKey) + ' · ' + t(target.relativeKey) + ' · ' + distance;
+      this.fireAlert('radar', message, 'radar:' + target.id);
+    },
+
     wireOverlay: function () {
       OC.Overlay.on('connected', function () {
         App.syncSystemLanguage();
@@ -1582,6 +1627,7 @@
       h += choiceRow(t('set_data_region'), '<div class="choice-grid region-choice" role="group" aria-label="' + esc(t('set_data_region')) + '">' + dataRegionButtons(g('dataRegion')) + '</div>');
       h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'));
       h += rowChk('s-treasure', t('set_treasure_guide'), g('treasureGuide'));
+      h += rowChk('s-radar', t('set_radar'), g('radarEnabled'));
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
       h += '<div class="repo-link"><a id="s-repo" href="#">github.com/zhui-zi/OccultOverlay</a></div>';
@@ -1599,6 +1645,7 @@
       sc.addEventListener('input', function () {
         OC.Settings.set('uiScale', Number(sc.value));
         App.applyUiScale();
+        App.updateRadar();
       });
       pop.querySelectorAll('button[data-lang]').forEach(function (button) {
         button.addEventListener('click', function () { App.changeLanguage(button.getAttribute('data-lang')); });
@@ -1618,6 +1665,10 @@
       bindChk(pop, 's-treasure', 'treasureGuide', function (enabled) {
         if (OC.Treasure && OC.Treasure.setEnabled) OC.Treasure.setEnabled(enabled);
         App.updateTreasureGuide();
+      });
+      bindChk(pop, 's-radar', 'radarEnabled', function (enabled) {
+        if (OC.Radar && OC.Radar.setEnabled) OC.Radar.setEnabled(enabled);
+        App.updateRadar();
       });
       var repo = pop.querySelector('#s-repo');
       if (repo) repo.addEventListener('click', function (e) {

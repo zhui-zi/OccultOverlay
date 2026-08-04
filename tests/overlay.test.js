@@ -304,6 +304,7 @@ assert.equal(cePhaseEvents.length, 2, 'a CE phase change must trigger immediate 
 
 const position = loadOverlay('');
 let observedPosition = null;
+let observedCombatants = null;
 position.sandbox.OverlayPluginApi = {
   ready: true,
   callHandler(message, cb) {
@@ -315,6 +316,7 @@ position.sandbox.OverlayPluginApi = {
   },
 };
 position.sandbox.OC.Overlay.on('position', (value) => { observedPosition = value; });
+position.sandbox.OC.Overlay.on('combatants', (value) => { observedCombatants = value; });
 position.sandbox.OC.Overlay.start();
 position.intervals[0](); // connect legacy transport
 position.intervals[1](); // poll getCombatants
@@ -324,6 +326,7 @@ Promise.resolve().then(() => {
     { x: observedPosition.x, y: observedPosition.y, z: observedPosition.z, h: observedPosition.h },
     { x: 12, y: -100, z: 34, h: 1.5 },
   );
+  assert.equal(observedCombatants.length, 1, 'position polling must expose the same object snapshot to radar consumers');
   console.log('overlay tests passed');
 }).catch((error) => {
   console.error(error);

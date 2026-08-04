@@ -245,6 +245,7 @@
           z: Number(me.PosY),
           h: Number(me.Heading)
         };
+        Overlay.emit('combatants', arr);
         // FATE/CE 状态一律以 258/259 内存数据为准；
         // 战斗单位名字是模糊匹配，会把普通怪误判成 FATE/CE，故不再使用。
         Overlay.emit('position', Overlay.playerPos);

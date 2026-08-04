@@ -20,7 +20,9 @@ let alertTower = false;
 let alertPot = false;
 let alertColors = {};
 let treasureGuide = true;
+let radarEnabled = true;
 const treasureEnabledCalls = [];
+const radarEnabledCalls = [];
 let currentLanguage = 'en';
 let currentDataRegion = 'global';
 const sandbox = {
@@ -69,6 +71,11 @@ const sandbox = {
     },
     Map: {
       updateHighlights() {},
+      updateRadar() {},
+    },
+    Radar: {
+      targets() { return []; },
+      setEnabled(value) { radarEnabledCalls.push(value); },
     },
     Pots: {
       merge(shared, local) {
@@ -97,6 +104,7 @@ const sandbox = {
         if (key === 'alertPot') return alertPot;
         if (key === 'alertColors') return alertColors;
         if (key === 'treasureGuide') return treasureGuide;
+        if (key === 'radarEnabled') return radarEnabled;
         if (key === 'lang') return currentLanguage;
         if (key === 'dataRegion') return currentDataRegion;
         return null;
@@ -106,6 +114,7 @@ const sandbox = {
         if (key === 'dataRegion') currentDataRegion = value;
         if (key === 'alertTower') alertTower = value;
         if (key === 'treasureGuide') treasureGuide = value;
+        if (key === 'radarEnabled') radarEnabled = value;
       },
       getRaw(key) {
         if (key === 'lang') return currentLanguage;
@@ -305,8 +314,10 @@ assert.match(treasureGuideRule[1], /left:\s*8px/, 'treasure guidance must stay a
 assert.doesNotMatch(treasureGuideRule[1], /translateX/, 'left-aligned guidance must not retain centering transform');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=102/, 'the treasure state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=102') < index.indexOf('js/treasure.js?v=102'), 'treasure points must load before guidance');
+assert.match(index, /js\/treasure\.js\?v=103/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=103/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=103') < index.indexOf('js/treasure.js?v=103'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=103') < index.indexOf('js/map.js?v=103'), 'radar state must load before map rendering');
 
 sandbox.OC.State.highlights = [49, 64, 2074];
 sandbox.OC.App.updateActive();
@@ -747,6 +758,10 @@ const settingsControls = {
     checked: true,
     addEventListener(type, handler) { if (type === 'change') this.change = handler; },
   },
+  '#s-radar': {
+    checked: true,
+    addEventListener(type, handler) { if (type === 'change') this.change = handler; },
+  },
   '#s-repo': { addEventListener() {} },
 };
 const settingsPop = {
@@ -768,6 +783,8 @@ assert.match(settingsPop.innerHTML, /data-lang="ja" aria-pressed="false">日本�
 assert.match(settingsPop.innerHTML, /class="choice-grid region-choice"/);
 assert.match(settingsPop.innerHTML, /id="s-treasure" checked/);
 assert.match(settingsPop.innerHTML, /set_treasure_guide/);
+assert.match(settingsPop.innerHTML, /id="s-radar" checked/);
+assert.match(settingsPop.innerHTML, /set_radar/);
 assert.match(settingsPop.innerHTML, /class="choice-btn on" data-data-region="global" aria-pressed="true">data_region_global/);
 assert.doesNotMatch(settingsPop.innerHTML, /<select/);
 assert.match(settingsPop.innerHTML, /alert_dispeller/);
@@ -780,6 +797,10 @@ settingsControls['#s-treasure'].checked = false;
 settingsControls['#s-treasure'].change();
 assert.equal(treasureGuide, false, 'the settings switch must persist the disabled state');
 assert.deepEqual(treasureEnabledCalls, [false], 'disabling in settings must stop treasure guidance immediately');
+settingsControls['#s-radar'].checked = false;
+settingsControls['#s-radar'].change();
+assert.equal(radarEnabled, false, 'the radar switch must persist the disabled state');
+assert.deepEqual(radarEnabledCalls, [false], 'disabling in settings must stop radar tracking immediately');
 
 sandbox.OC.Overlay.territoryId = 1252;
 sandbox.OC.App.renderSettings(settingsPop);

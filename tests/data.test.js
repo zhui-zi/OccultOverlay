@@ -180,6 +180,11 @@ OC.Settings = {
 };
 OC.Overlay = { playerPos: null, bossPos: {} };
 OC.State = { highlights: [] };
+OC.Radar = {
+  targets() {
+    return [{ id: '40000001', kind: 'bronze', slot: 1, x: 12, z: -34 }];
+  },
+};
 vm.runInNewContext(fs.readFileSync(require.resolve('../js/map.js'), 'utf8'), sandbox, { filename: '../js/map.js' });
 const mapTarget = { innerHTML: '' };
 OC.Map.render(mapTarget);
@@ -187,6 +192,8 @@ assert.match(mapTarget.innerHTML, /href="https:\/\/pic\.imgdd\.cc\/i\/033yZEk5hN
 assert.match(mapTarget.innerHTML, /data-fallback="https:\/\/tu\.keita\.cc\/i\/2026\/07\/31\/22o45s\.png"/);
 assert.match(mapTarget.innerHTML, /data-final-fallback="assets\/map-north\.png"/);
 assert.match(mapTarget.innerHTML, /onerror="OC\.Map\.handleBackgroundError\(this\)"/);
+assert.match(mapTarget.innerHTML, /class="radar-mark radar-bronze"/);
+assert.match(mapTarget.innerHTML, /class="radar-label">1<\/text>/);
 const backgroundImage = {
   attrs: {
     href: OC.MAP.background,

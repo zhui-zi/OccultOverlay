@@ -56,6 +56,7 @@
       });
       s += '</g>';
 
+      s += '<g class="radar-wrap">' + radarSvg() + '</g>';
       s += '<g class="hi-wrap">' + highlightsSvg() + '</g>';
       s += '<g class="you-wrap">' + youMarker() + '</g>';
 
@@ -79,11 +80,39 @@
       wrap.innerHTML = highlightsSvg();
     },
 
+    updateRadar: function (container) {
+      container = container || document.getElementById('mapLayer');
+      if (!container) return;
+      var wrap = container.querySelector('.radar-wrap');
+      if (!wrap) return this.render(container);
+      wrap.innerHTML = radarSvg();
+    },
+
     toggle: function (key, container) {
       OC.Settings.toggleLayer(key);
       this.render(container);
     }
   };
+
+  function radarSvg() {
+    var list = OC.Radar && OC.Radar.targets ? OC.Radar.targets() : [];
+    var center = (OC.MAP && OC.MAP.center) || 1024;
+    var colors = { bronze: '#e0912f', silver: '#e8eef5', carrot: '#3ddb63' };
+    var s = '';
+    list.forEach(function (target) {
+      if (!isFinite(target.x) || !isFinite(target.z)) return;
+      var x = Number(target.x) + center;
+      var y = Number(target.z) + center;
+      var color = colors[target.kind] || '#fff';
+      var label = target.kind === 'carrot' ? 'C' : String(target.slot || '');
+      s += '<g class="radar-mark radar-' + esc(target.kind) + '">' +
+        '<circle class="radar-pulse" cx="' + x + '" cy="' + y + '" r="34" fill="none" stroke="' + color + '" stroke-width="7"/>' +
+        '<circle cx="' + x + '" cy="' + y + '" r="22" fill="' + color + '" stroke="#071019" stroke-width="6"/>' +
+        '<text x="' + x + '" y="' + (y + 10) + '" text-anchor="middle" class="radar-label">' + label + '</text>' +
+        '</g>';
+    });
+    return s;
+  }
 
   function highlightsSvg() {
     var ids = (OC.State && OC.State.highlights) || [];
