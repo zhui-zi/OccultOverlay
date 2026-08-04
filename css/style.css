@@ -116,16 +116,20 @@ html, body {
 .radar-panel {
   position: absolute; left: 8px; bottom: 8px; z-index: 7;
   width: min(310px, calc(100vw - 80px)); padding: 8px 10px;
-  background: rgb(14, 20, 30); border: 1px solid rgba(61, 219, 99, 0.55); border-radius: 11px;
+  background: rgba(14, 20, 30, var(--app-opacity)); border: 1px solid rgba(61, 219, 99, 0.55); border-radius: 11px;
   box-shadow: 0 6px 22px rgba(0,0,0,0.52); pointer-events: none;
 }
 .radar-panel.hidden { display: none; }
+.radar-panel.pinned { bottom: auto; }
 .radar-head { display: flex; justify-content: space-between; color: #8ff0a8; font-size: 11px; font-weight: 800; letter-spacing: .05em; }
 .radar-head b { color: var(--fg); font-variant-numeric: tabular-nums; }
-.radar-row { display: grid; grid-template-columns: 24px auto 1fr; align-items: center; gap: 7px; margin-top: 5px; font-size: 11.5px; }
+.radar-empty { padding: 8px 0 2px; color: var(--fg-dim); font-size: 11.5px; text-align: center; }
+.radar-row { display: grid; grid-template-columns: 24px 28px auto 1fr; align-items: center; gap: 7px; margin-top: 5px; font-size: 11.5px; }
 .radar-slot { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--radar-color); color: #071019; font-weight: 900; }
+.radar-arrow { display: inline-block; width: 28px; color: #fff; font-size: 25px; line-height: 1; text-align: center; text-shadow: 0 0 8px var(--radar-color); transform-origin: center; }
 .radar-row strong { white-space: nowrap; }
-.radar-bearing { color: var(--fg-dim); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.radar-bearing { display: flex; justify-content: flex-end; gap: 7px; color: var(--fg-dim); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.radar-bearing b { color: var(--alive); font-weight: 700; }
 .radar-row-bronze { --radar-color: #e0912f; }
 .radar-row-silver { --radar-color: #e8eef5; }
 .radar-row-carrot { --radar-color: #3ddb63; }
@@ -253,7 +257,7 @@ html, body {
 /* ---- 折叠 / 离岛：隐藏地图与右侧按钮，仅保留顶部胶囊 ---- */
 #app.no-map .map-layer { display: none; }
 #app.no-map .rail { display: none; }
-#app.no-map .radar-panel { display: none; }
+#app.no-map .radar-panel:not(.pinned) { display: none; }
 .chip-conn.clickable { cursor: pointer; }
 
 /* ---- 撒娇罐总览 ---- */
@@ -301,6 +305,5 @@ html, body {
 .toast-ce { border-left: 4px solid var(--ce); }
 .toast-fate { border-left: 4px solid var(--fate); }
 .toast-pot { border-left: 4px solid var(--pot); }
-.toast-radar { border-left: 4px solid #3ddb63; }
 .toast-title { font-weight: 700; font-size: 13px; }
 .toast-body { color: var(--fg-dim); font-size: 11.5px; margin-top: 2px; }

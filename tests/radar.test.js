@@ -65,9 +65,21 @@ assert.equal(alerts.length, 3);
 assert.equal(targets[0].kind, 'silver');
 assert.equal(targets[0].distanceRounded, 50);
 assert.equal(targets[0].absoluteKey, 'direction_north');
-assert.equal(targets[0].relativeKey, 'relative_back');
-assert.equal(targets[1].relativeKey, 'relative_left');
-assert.equal(targets[2].relativeKey, 'relative_front');
+assert.equal(targets[0].bearing, 0);
+assert.equal(targets[1].absoluteKey, 'direction_east');
+assert.equal(targets[1].bearing, 90);
+assert.equal(targets[2].absoluteKey, 'direction_south');
+assert.equal(targets[2].bearing, 180);
+assert.ok(Math.abs(Radar.bearingForDelta(1, -Math.sqrt(3)) - 30) < 0.000001,
+  'radar bearings must preserve exact angles inside a compass sector');
+
+source.playerPos = { x: -10, y: 0, z: -5, h: 2.4 };
+source.emit('position', source.playerPos);
+targets = Radar.targets();
+assert.ok(Math.abs(targets[0].distance - Math.sqrt(2125)) < 0.000001,
+  'player movement must update the exact distance immediately');
+assert.ok(Math.abs(targets[0].bearing - 12.528807709151522) < 0.000001,
+  'the live arrow must follow the exact target bearing instead of player heading');
 
 source.emit('combatants', [
   { ID: 0x40000001, BNpcID: 1789, PosX: 0, PosY: -50, PosZ: 10 },

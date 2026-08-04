@@ -123,7 +123,10 @@
       this.applyUiScale();
       this.applyDocumentLanguage();
       if (global.addEventListener) {
-        global.addEventListener('resize', function () { App.applyUiScale(); });
+        global.addEventListener('resize', function () {
+          App.applyUiScale();
+          App.updateRadarPlacement();
+        });
         global.addEventListener('languagechange', function () {
           if (OC.Settings.getRaw && OC.Settings.getRaw('lang') === 'auto') App.changeLanguage('auto');
         });
@@ -142,6 +145,7 @@
         OC.Treasure.onChange(function (view) { App.updateTreasureGuide(view); });
         OC.Treasure.start(OC.Overlay);
       }
+      this.updateRadar();
       OC.Overlay.start();
       this.fetchDc();
       this.startLoops();
@@ -151,7 +155,7 @@
       var app = document.getElementById('app');
       var h = '';
       h += '<div id="mapLayer" class="map-layer"></div>';
-      h += '<div class="chips">';
+      h += '<div id="status-chips" class="chips">';
       h += '<div id="chip-conn" class="chip chip-conn clickable" title="' + t('collapse') + '"></div>';
       h += '<div id="chip-pot" class="chip chip-pot clickable" title="' + t('my_island_hint') + '"></div>';
       h += '<div id="chips-active" class="chips-active"></div>';
@@ -930,6 +934,7 @@
         pot.innerHTML = body;
       }
       this.updateActive();
+      this.updateRadarPlacement();
     },
 
     localInstanceSignalCount: function (evidence) {
@@ -1258,40 +1263,69 @@
       var host = document.getElementById('treasure-guide');
       if (!host || !OC.UI.renderTreasureGuide) return;
       OC.UI.renderTreasureGuide(host, view || (OC.Treasure && OC.Treasure.view()));
+      this.updateRadarPlacement();
+    },
+
+    updateRadarPlacement: function () {
+      var host = document.getElementById('radar-panel');
+      if (!host || !host.style) return;
+      var pinned = !!OC.Settings.get('radarPinned');
+      if (!pinned) {
+        host.style.top = '';
+        return;
+      }
+      var top = 8;
+      var chips = document.getElementById('status-chips');
+      if (chips) top = Math.max(top, Number(chips.offsetTop || 0) + Number(chips.offsetHeight || 0) + 8);
+      var guide = document.getElementById('treasure-guide');
+      var guideHidden = guide && guide.classList && guide.classList.contains && guide.classList.contains('hidden');
+      if (guide && !guideHidden) {
+        top = Math.max(top, Number(guide.offsetTop || 0) + Number(guide.offsetHeight || 0) + 8);
+      }
+      host.style.top = Math.ceil(top) + 'px';
     },
 
     updateRadar: function () {
       var host = document.getElementById('radar-panel');
       if (!host) return;
       var list = OC.Radar && OC.Radar.targets ? OC.Radar.targets() : [];
-      if (!OC.Settings.get('radarEnabled') || !list.length) {
+      var pinned = !!OC.Settings.get('radarPinned');
+      if (pinned) host.classList.add('pinned'); else host.classList.remove('pinned');
+      if (!OC.Settings.get('radarEnabled') || (!list.length && !pinned)) {
         host.classList.add('hidden');
         host.innerHTML = '';
+        this.updateRadarPlacement();
         if (document.documentElement) document.documentElement.style.setProperty('--toast-bottom', '10px');
         return;
       }
       var h = '<div class="radar-head"><span>' + esc(t('radar_title')) + '</span><b>' + list.length + '</b></div>';
+      if (!list.length) h += '<div class="radar-empty">' + esc(t('radar_empty')) + '</div>';
       list.forEach(function (target) {
         var slot = target.kind === 'carrot' ? 'C' : target.slot;
-        var distance = isFinite(target.distanceRounded) ? target.distanceRounded + ' m' : t('unknown');
+        var bearing = Number(target.bearing);
+        var hasBearing = target.bearing != null && isFinite(bearing);
+        var arrowStyle = hasBearing ? ' style="transform:rotate(' + bearing.toFixed(1) + 'deg)"' : '';
+        var distance = isFinite(target.distance) ? Number(target.distance).toFixed(1) + ' m' : t('unknown');
         h += '<div class="radar-row radar-row-' + target.kind + '">' +
           '<span class="radar-slot">' + slot + '</span>' +
+          '<span class="radar-arrow" aria-hidden="true"' + arrowStyle + '>' + (hasBearing ? '↑' : '●') + '</span>' +
           '<strong>' + esc(t(target.labelKey)) + '</strong>' +
-          '<span class="radar-bearing">' + esc(t(target.relativeKey)) + ' · ' + esc(distance) + '</span>' +
+          '<span class="radar-bearing"><span>' + esc(t(target.absoluteKey)) + '</span><b>' + esc(distance) + '</b></span>' +
           '</div>';
       });
       host.innerHTML = h;
       host.classList.remove('hidden');
+      this.updateRadarPlacement();
       if (document.documentElement) {
         var radarHeight = host.getBoundingClientRect ? host.getBoundingClientRect().height : host.offsetHeight;
-        document.documentElement.style.setProperty('--toast-bottom', Math.ceil((radarHeight || 0) + 16) + 'px');
+        document.documentElement.style.setProperty('--toast-bottom', pinned ? '10px' : Math.ceil((radarHeight || 0) + 16) + 'px');
       }
     },
 
     alertRadar: function (target) {
-      if (!target) return;
-      var distance = isFinite(target.distanceRounded) ? target.distanceRounded + ' m' : t('unknown');
-      var message = t(target.labelKey) + ' · ' + t(target.relativeKey) + ' · ' + distance;
+      if (!target || !OC.Settings.get('radarVoice')) return;
+      var distance = isFinite(target.distance) ? Number(target.distance).toFixed(1) + ' m' : t('unknown');
+      var message = t(target.labelKey) + ' · ' + t(target.absoluteKey) + ' · ' + distance;
       this.fireAlert('radar', message, 'radar:' + target.id);
     },
 
@@ -1628,6 +1662,8 @@
       h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'));
       h += rowChk('s-treasure', t('set_treasure_guide'), g('treasureGuide'));
       h += rowChk('s-radar', t('set_radar'), g('radarEnabled'));
+      h += rowChk('s-radar-pinned', t('set_radar_pinned'), g('radarPinned'));
+      h += rowChk('s-radar-voice', t('set_radar_voice'), g('radarVoice'));
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
       h += '<div class="repo-link"><a id="s-repo" href="#">github.com/zhui-zi/OccultOverlay</a></div>';
@@ -1670,6 +1706,8 @@
         if (OC.Radar && OC.Radar.setEnabled) OC.Radar.setEnabled(enabled);
         App.updateRadar();
       });
+      bindChk(pop, 's-radar-pinned', 'radarPinned', function () { App.updateRadar(); });
+      bindChk(pop, 's-radar-voice', 'radarVoice');
       var repo = pop.querySelector('#s-repo');
       if (repo) repo.addEventListener('click', function (e) {
         e.preventDefault();

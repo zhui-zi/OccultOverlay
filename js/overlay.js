@@ -221,7 +221,9 @@
   var positionPollPending = false;
 
   function needsLivePosition() {
-    return !!(OC.Treasure && OC.Treasure.isActive && OC.Treasure.isActive());
+    var treasureActive = OC.Treasure && OC.Treasure.isActive && OC.Treasure.isActive();
+    var radarActive = OC.Radar && OC.Radar.isActive && OC.Radar.isActive();
+    return !!(treasureActive || radarActive);
   }
 
   function startPositionPolling() {

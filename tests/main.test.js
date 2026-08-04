@@ -21,6 +21,8 @@ let alertPot = false;
 let alertColors = {};
 let treasureGuide = true;
 let radarEnabled = true;
+let radarPinned = false;
+let radarVoice = true;
 const treasureEnabledCalls = [];
 const radarEnabledCalls = [];
 let currentLanguage = 'en';
@@ -105,6 +107,8 @@ const sandbox = {
         if (key === 'alertColors') return alertColors;
         if (key === 'treasureGuide') return treasureGuide;
         if (key === 'radarEnabled') return radarEnabled;
+        if (key === 'radarPinned') return radarPinned;
+        if (key === 'radarVoice') return radarVoice;
         if (key === 'lang') return currentLanguage;
         if (key === 'dataRegion') return currentDataRegion;
         return null;
@@ -115,6 +119,8 @@ const sandbox = {
         if (key === 'alertTower') alertTower = value;
         if (key === 'treasureGuide') treasureGuide = value;
         if (key === 'radarEnabled') radarEnabled = value;
+        if (key === 'radarPinned') radarPinned = value;
+        if (key === 'radarVoice') radarVoice = value;
       },
       getRaw(key) {
         if (key === 'lang') return currentLanguage;
@@ -135,7 +141,10 @@ const sandbox = {
     },
     i18n: {
       t(key) {
-        return { notify_ce: 'CE', notify_fate: 'FATE', notify_pot: 'Pot' }[key] || key;
+        return {
+          notify_ce: 'CE', notify_fate: 'FATE', notify_pot: 'Pot',
+          radar_empty: 'No coffer or carrot detected', radar_silver: 'Silver coffer', direction_east: 'East',
+        }[key] || key;
       },
     },
     localName(value) {
@@ -314,12 +323,81 @@ assert.match(treasureGuideRule[1], /left:\s*8px/, 'treasure guidance must stay a
 assert.match(treasureGuideRule[1], /background:\s*rgba\(14,\s*20,\s*30,\s*var\(--app-opacity\)\)/,
   'treasure guidance must follow the live opacity setting');
 assert.doesNotMatch(treasureGuideRule[1], /translateX/, 'left-aligned guidance must not retain centering transform');
+const radarPanelRule = styles.match(/\.radar-panel\s*\{([^}]*)\}/);
+assert.ok(radarPanelRule, 'radar panel style must exist');
+assert.match(radarPanelRule[1], /left:\s*8px/, 'radar guidance must stay against the left edge');
+assert.match(radarPanelRule[1], /background:\s*rgba\(14,\s*20,\s*30,\s*var\(--app-opacity\)\)/,
+  'radar guidance must follow the live opacity setting');
+assert.doesNotMatch(styles, /\.toast-radar\s*\{[^}]*border-left/,
+  'radar alert popups must not use a left accent stripe');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=104/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=104/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=104') < index.indexOf('js/treasure.js?v=104'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=104') < index.indexOf('js/map.js?v=104'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=106/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=106/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=106') < index.indexOf('js/treasure.js?v=106'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=106') < index.indexOf('js/map.js?v=106'), 'radar state must load before map rendering');
+
+const radarClasses = new Set(['hidden']);
+const radarHost = {
+  innerHTML: '',
+  style: {},
+  classList: {
+    add(name) { radarClasses.add(name); },
+    remove(name) { radarClasses.delete(name); },
+    contains(name) { return radarClasses.has(name); },
+  },
+  getBoundingClientRect() { return { height: 80 }; },
+};
+const statusChips = { offsetTop: 8, offsetHeight: 30 };
+let treasureGuideHidden = true;
+const treasureGuideHost = {
+  offsetTop: 52,
+  offsetHeight: 100,
+  classList: { contains(name) { return name === 'hidden' && treasureGuideHidden; } },
+};
+const radarTarget = {
+  id: '40000001', kind: 'silver', slot: 1, labelKey: 'radar_silver',
+  bearing: 73.2, absoluteKey: 'direction_east', distance: 42.44,
+};
+const originalGetElementById = sandbox.document.getElementById;
+const originalRadarTargets = sandbox.OC.Radar.targets;
+sandbox.document.getElementById = id => ({
+  'radar-panel': radarHost,
+  'status-chips': statusChips,
+  'treasure-guide': treasureGuideHost,
+}[id] || originalGetElementById(id));
+sandbox.OC.Radar.targets = () => [radarTarget];
+sandbox.OC.App.updateRadar();
+assert.equal(radarClasses.has('hidden'), false);
+assert.match(radarHost.innerHTML, /transform:rotate\(73\.2deg\)/, 'radar arrows must use the exact live bearing');
+assert.match(radarHost.innerHTML, />East</);
+assert.match(radarHost.innerHTML, />42\.4 m</);
+
+sandbox.OC.Radar.targets = () => [];
+radarPinned = true;
+sandbox.OC.App.updateRadar();
+assert.equal(radarClasses.has('hidden'), false, 'a pinned radar must remain visible without targets');
+assert.equal(radarClasses.has('pinned'), true);
+assert.match(radarHost.innerHTML, /No coffer or carrot detected/);
+assert.equal(radarHost.style.top, '46px', 'a pinned radar must start below the top status chips');
+treasureGuideHidden = false;
+sandbox.OC.App.updateRadarPlacement();
+assert.equal(radarHost.style.top, '160px', 'an active Magic Pot guide must push the pinned radar below itself');
+treasureGuideHidden = true;
+radarPinned = false;
+
+const radarAlerts = [];
+const originalFireAlert = sandbox.OC.App.fireAlert;
+sandbox.OC.App.fireAlert = (...args) => radarAlerts.push(args);
+radarVoice = false;
+sandbox.OC.App.alertRadar(radarTarget);
+assert.equal(radarAlerts.length, 0, 'disabling radar voice must leave the visible radar silent');
+radarVoice = true;
+sandbox.OC.App.alertRadar(radarTarget);
+assert.deepEqual(radarAlerts, [['radar', 'Silver coffer · East · 42.4 m', 'radar:40000001']]);
+sandbox.OC.App.fireAlert = originalFireAlert;
+sandbox.OC.Radar.targets = originalRadarTargets;
+sandbox.document.getElementById = originalGetElementById;
 
 sandbox.OC.State.highlights = [49, 64, 2074];
 sandbox.OC.App.updateActive();
@@ -764,6 +842,14 @@ const settingsControls = {
     checked: true,
     addEventListener(type, handler) { if (type === 'change') this.change = handler; },
   },
+  '#s-radar-pinned': {
+    checked: false,
+    addEventListener(type, handler) { if (type === 'change') this.change = handler; },
+  },
+  '#s-radar-voice': {
+    checked: true,
+    addEventListener(type, handler) { if (type === 'change') this.change = handler; },
+  },
   '#s-repo': { addEventListener() {} },
 };
 const settingsPop = {
@@ -787,6 +873,11 @@ assert.match(settingsPop.innerHTML, /id="s-treasure" checked/);
 assert.match(settingsPop.innerHTML, /set_treasure_guide/);
 assert.match(settingsPop.innerHTML, /id="s-radar" checked/);
 assert.match(settingsPop.innerHTML, /set_radar/);
+assert.match(settingsPop.innerHTML, /id="s-radar-pinned"/);
+assert.doesNotMatch(settingsPop.innerHTML, /id="s-radar-pinned" checked/);
+assert.match(settingsPop.innerHTML, /set_radar_pinned/);
+assert.match(settingsPop.innerHTML, /id="s-radar-voice" checked/);
+assert.match(settingsPop.innerHTML, /set_radar_voice/);
 assert.match(settingsPop.innerHTML, /class="choice-btn on" data-data-region="global" aria-pressed="true">data_region_global/);
 assert.doesNotMatch(settingsPop.innerHTML, /<select/);
 assert.match(settingsPop.innerHTML, /alert_dispeller/);
@@ -803,6 +894,12 @@ settingsControls['#s-radar'].checked = false;
 settingsControls['#s-radar'].change();
 assert.equal(radarEnabled, false, 'the radar switch must persist the disabled state');
 assert.deepEqual(radarEnabledCalls, [false], 'disabling in settings must stop radar tracking immediately');
+settingsControls['#s-radar-pinned'].checked = true;
+settingsControls['#s-radar-pinned'].change();
+assert.equal(radarPinned, true, 'the pinned radar switch must persist independently of radar tracking');
+settingsControls['#s-radar-voice'].checked = false;
+settingsControls['#s-radar-voice'].change();
+assert.equal(radarVoice, false, 'the radar voice switch must persist independently of radar visibility');
 
 sandbox.OC.Overlay.territoryId = 1252;
 sandbox.OC.App.renderSettings(settingsPop);

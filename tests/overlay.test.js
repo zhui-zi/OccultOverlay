@@ -326,7 +326,7 @@ position.sandbox.OC.Overlay.start();
 position.intervals[0](); // connect legacy transport
 position.intervals[1](); // poll getCombatants
 
-Promise.resolve().then(() => {
+Promise.resolve().then(async () => {
   assert.deepEqual(
     { x: observedPosition.x, y: observedPosition.y, z: observedPosition.z, h: observedPosition.h },
     { x: 12, y: -100, z: 34, h: 1.5 },
@@ -338,6 +338,12 @@ Promise.resolve().then(() => {
   position.sandbox.OC.Treasure = { isActive() { return true; } };
   position.intervals[1]();
   assert.equal(combatantPolls, 2, 'active treasure guidance must poll the live position after 250 ms');
+  await Promise.resolve();
+  position.sandbox.OC.Treasure = { isActive() { return false; } };
+  position.sandbox.OC.Radar = { isActive() { return true; } };
+  position.advanceTime(250);
+  position.intervals[1]();
+  assert.equal(combatantPolls, 3, 'a visible radar target must keep the same live position polling rate');
   console.log('overlay tests passed');
 }).catch((error) => {
   console.error(error);

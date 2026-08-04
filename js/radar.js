@@ -9,10 +9,6 @@
     'direction_north', 'direction_northeast', 'direction_east', 'direction_southeast',
     'direction_south', 'direction_southwest', 'direction_west', 'direction_northwest'
   ];
-  var RELATIVE_KEYS = [
-    'relative_front', 'relative_front_left', 'relative_left', 'relative_back_left',
-    'relative_back', 'relative_back_right', 'relative_right', 'relative_front_right'
-  ];
 
   var source = null;
   var started = false;
@@ -88,17 +84,22 @@
     return Math.round(normalizeAngle(angle) / (Math.PI / 4)) % 8;
   }
 
+  function bearingForDelta(dx, dz) {
+    if (dx * dx + dz * dz < 0.000001) return null;
+    var degrees = Math.atan2(dx, -dz) * 180 / Math.PI;
+    return (degrees + 360) % 360;
+  }
+
   function updateMetrics(target, player) {
     if (!target || !player) return;
     var dx = target.x - Number(player.x);
     var dz = target.z - Number(player.z);
     if (!isFinite(dx) || !isFinite(dz)) return;
     var absoluteAngle = Math.atan2(dx, -dz);
-    var forwardAngle = Math.PI - (Number(player.h) || 0);
     target.distance = Math.sqrt(dx * dx + dz * dz);
     target.distanceRounded = Math.round(target.distance / 10) * 10;
-    target.absoluteKey = ABSOLUTE_KEYS[directionIndex(absoluteAngle)];
-    target.relativeKey = RELATIVE_KEYS[directionIndex(forwardAngle - absoluteAngle)];
+    target.bearing = bearingForDelta(dx, dz);
+    target.absoluteKey = target.bearing == null ? 'unknown' : ABSOLUTE_KEYS[directionIndex(absoluteAngle)];
   }
 
   function emitChange() {
@@ -147,8 +148,8 @@
       z: target.z,
       distance: target.distance,
       distanceRounded: target.distanceRounded,
+      bearing: target.bearing,
       absoluteKey: target.absoluteKey || 'unknown',
-      relativeKey: target.relativeKey || 'unknown'
     };
   }
 
@@ -279,6 +280,10 @@
       return enabled;
     },
 
+    isActive: function () {
+      return enabled && Object.keys(targets).length > 0;
+    },
+
     scan: function (combatants) {
       enabled = settingEnabled();
       if (!enabled || !inOccult()) return false;
@@ -342,6 +347,8 @@
       pending = {};
       sequence = 0;
       if (hadState) emitChange();
-    }
+    },
+
+    bearingForDelta: bearingForDelta
   };
 })(typeof window !== 'undefined' ? window : this);
