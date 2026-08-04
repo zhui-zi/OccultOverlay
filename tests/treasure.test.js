@@ -4,8 +4,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-function loadTreasure(territory = 1346) {
+function loadTreasure(territory = 1346, treasureGuide = true) {
   const handlers = {};
+  let enabled = treasureGuide;
   const overlay = {
     playerName: '吴邪',
     territoryId: territory,
@@ -31,6 +32,9 @@ function loadTreasure(territory = 1346) {
         2072: { territory: 1346, side: 'north' },
         2073: { territory: 1346, side: 'south' },
       },
+      Settings: {
+        get(key) { return key === 'treasureGuide' ? enabled : null; },
+      },
     },
   };
   sandbox.window = sandbox;
@@ -38,7 +42,15 @@ function loadTreasure(territory = 1346) {
     vm.runInNewContext(fs.readFileSync(require.resolve(file), 'utf8'), sandbox, { filename: file });
   }
   sandbox.OC.Treasure.start(overlay);
-  return { sandbox, overlay, Treasure: sandbox.OC.Treasure };
+  return {
+    sandbox,
+    overlay,
+    Treasure: sandbox.OC.Treasure,
+    setTreasureGuide(value) {
+      enabled = value;
+      sandbox.OC.Treasure.setEnabled(value);
+    },
+  };
 }
 
 function logLine(subtype, message, timestamp = '2026-08-04T07:36:46.0000000+08:00') {
@@ -53,6 +65,20 @@ function startNorth(context) {
   const at = Math.floor(Date.parse('2026-08-04T07:36:46.0000000+08:00') / 1000);
   context.overlay.emit('memActive', 2072, false, { eventType: 'remove', observedAt: at });
   context.overlay.emit('log', 0, logLine('08AE', '吴邪附加了“指引财宝”效果。'));
+}
+
+{
+  const context = loadTreasure(1346, false);
+  startNorth(context);
+  assert.equal(context.Treasure.view().active, false, 'disabled guidance must ignore qualifying ACT events');
+
+  context.setTreasureGuide(true);
+  startNorth(context);
+  assert.equal(context.Treasure.view().active, true, 're-enabling must allow a future qualifying treasure session');
+
+  context.setTreasureGuide(false);
+  assert.equal(context.Treasure.view().active, false, 'disabling must stop an active treasure session immediately');
+  assert.equal(context.Treasure.view().lastReason, 'disabled');
 }
 
 {

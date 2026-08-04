@@ -7,7 +7,7 @@ Everything is automatic — no setup, no tracker id. Data comes from the shared 
 
 - Translucent zone map with toggleable point layers: bronze / silver coffers, north / south / reroll pots, carrots, and survey points.
 - Your character position on the map.
-- Magic Pot treasure guidance from personal buff and direction logs, with strict eight-sector filtering and safe-point priority.
+- Optional Magic Pot treasure guidance from personal buff and direction logs, with strict eight-sector filtering and safe-point priority.
 - Simplified Chinese, English, and Japanese UI with an independent CN/global data-region selector.
 - CN pot overview when the CN data region is selected, sorted by next-pot time; click an island for its CE / FATE and drops.
 - Pot timing only uses an observed current-cycle spawn from a strictly matched instance.

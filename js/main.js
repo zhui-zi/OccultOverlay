@@ -1581,6 +1581,7 @@
       h += choiceRow(t('set_lang'), '<div class="choice-grid lang-choice" role="group" aria-label="' + esc(t('set_lang')) + '">' + languageButtons(languageMode) + '</div>');
       h += choiceRow(t('set_data_region'), '<div class="choice-grid region-choice" role="group" aria-label="' + esc(t('set_data_region')) + '">' + dataRegionButtons(g('dataRegion')) + '</div>');
       h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'));
+      h += rowChk('s-treasure', t('set_treasure_guide'), g('treasureGuide'));
       h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
       h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
       h += '<div class="repo-link"><a id="s-repo" href="#">github.com/zhui-zi/OccultOverlay</a></div>';
@@ -1613,6 +1614,10 @@
       if (chipsChk) chipsChk.addEventListener('change', function () {
         OC.Settings.set('showActiveChips', chipsChk.checked);
         App.updateActive();
+      });
+      bindChk(pop, 's-treasure', 'treasureGuide', function (enabled) {
+        if (OC.Treasure && OC.Treasure.setEnabled) OC.Treasure.setEnabled(enabled);
+        App.updateTreasureGuide();
       });
       var repo = pop.querySelector('#s-repo');
       if (repo) repo.addEventListener('click', function (e) {

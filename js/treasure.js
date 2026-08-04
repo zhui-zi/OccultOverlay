@@ -30,6 +30,10 @@
   var buffActive = false;
   var buffSeenAt = 0;
 
+  function isEnabled() {
+    return !OC.Settings || OC.Settings.get('treasureGuide') !== false;
+  }
+
   function emptyState(reason) {
     return {
       active: false,
@@ -199,6 +203,7 @@
   }
 
   function beginSession(mode, kill) {
+    if (!isEnabled()) return false;
     var territory = Number(kill.territory);
     var side = kill.side || '';
     var candidates = candidatePool(territory, mode, side);
@@ -225,7 +230,7 @@
   }
 
   function tryBeginInitial() {
-    if (state.active || !buffActive || !lastPotKill || !buffSeenAt) return false;
+    if (!isEnabled() || state.active || !buffActive || !lastPotKill || !buffSeenAt) return false;
     if (Math.abs(buffSeenAt - Number(lastPotKill.at)) > POT_KILL_WINDOW_SEC) return false;
     if (!overlay || !overlay.inOccult || Number(overlay.territoryId) !== Number(lastPotKill.territory)) return false;
     return beginSession('initial', lastPotKill);
@@ -279,6 +284,7 @@
   }
 
   function handlePotTransition(id, active, detail) {
+    if (!isEnabled()) return;
     var definition = OC.POTS && OC.POTS[Number(id)];
     if (active || !definition || !overlay || !overlay.inOccult) return;
     var territory = Number(definition.territory);
@@ -293,6 +299,7 @@
   }
 
   function handleLog(type, line, raw) {
+    if (!isEnabled()) return;
     if (Number(type) === 258) {
       if (String(line && line[2] || '').toLowerCase() === 'remove') {
         handlePotTransition(parseInt(line[4], 16), false, {
@@ -382,6 +389,14 @@
       var wasActive = state.active;
       state = emptyState(reason);
       if (wasActive) notify();
+    },
+
+    setEnabled: function (enabled) {
+      if (enabled !== false) return;
+      buffActive = false;
+      buffSeenAt = 0;
+      lastPotKill = null;
+      Treasure.reset('disabled');
     },
 
     view: function () {

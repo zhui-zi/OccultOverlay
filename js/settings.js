@@ -3,7 +3,7 @@
 
   var OC = global.OC = global.OC || {};
   var KEY = 'occultOverlay.settings';
-  var SCHEMA_V = 5;
+  var SCHEMA_V = 6;
   var hostLanguage = null;
 
   function normalizeLanguage(value) {
@@ -38,6 +38,7 @@
     opacity: 0.9,
     uiScale: 1,                 // 界面缩放（放大胶囊/按钮/面板）
     showActiveChips: true,      // 顶部“当前 FATE/CE”胶囊（右键可隐藏）
+    treasureGuide: true,
     collapsed: false,
     useTts: true,               // 语音提示（不可用时退回提示音）
     alertAllEncounters: false,  // 播报所有 CE/FATE/魔法罐

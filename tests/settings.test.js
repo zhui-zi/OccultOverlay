@@ -29,6 +29,7 @@ assert.equal(settings.getRaw('lang'), 'auto');
 assert.equal(settings.get('lang'), 'ja');
 assert.equal(settings.get('dataRegion'), 'global');
 assert.equal(settings.get('alertTower'), false);
+assert.equal(settings.get('treasureGuide'), true);
 assert.equal(settings.get('mapLayers').survey, false);
 assert.equal(loaded.stored().dataRegion, 'global', 'the initial region must be persisted immediately');
 
@@ -53,6 +54,10 @@ settings.set('dataRegion', 'cn');
 assert.equal(settings.get('dataRegion'), 'cn');
 loaded = loadSettings('en-US', loaded.stored());
 assert.equal(loaded.settings.get('dataRegion'), 'cn', 'an explicit region choice must survive reload and language changes');
+
+loaded.settings.set('treasureGuide', false);
+loaded = loadSettings('en-US', loaded.stored());
+assert.equal(loaded.settings.get('treasureGuide'), false, 'the treasure guide switch must survive reload');
 
 settings = loadSettings('zh-Hans-CN').settings;
 assert.equal(settings.get('lang'), 'zh');

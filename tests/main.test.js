@@ -19,6 +19,8 @@ let alertAllEncounters = false;
 let alertTower = false;
 let alertPot = false;
 let alertColors = {};
+let treasureGuide = true;
+const treasureEnabledCalls = [];
 let currentLanguage = 'en';
 let currentDataRegion = 'global';
 const sandbox = {
@@ -94,6 +96,7 @@ const sandbox = {
         if (key === 'alertTower') return alertTower;
         if (key === 'alertPot') return alertPot;
         if (key === 'alertColors') return alertColors;
+        if (key === 'treasureGuide') return treasureGuide;
         if (key === 'lang') return currentLanguage;
         if (key === 'dataRegion') return currentDataRegion;
         return null;
@@ -102,11 +105,16 @@ const sandbox = {
         if (key === 'lang') currentLanguage = value;
         if (key === 'dataRegion') currentDataRegion = value;
         if (key === 'alertTower') alertTower = value;
+        if (key === 'treasureGuide') treasureGuide = value;
       },
       getRaw(key) {
         if (key === 'lang') return currentLanguage;
         return null;
       },
+    },
+    Treasure: {
+      setEnabled(value) { treasureEnabledCalls.push(value); },
+      view() { return { active: false }; },
     },
     UI: {
       esc(value) {
@@ -293,8 +301,8 @@ assert.match(resizeAnchorsRule[1], /inset:\s*0/, 'resize anchors must follow eve
 assert.match(resizeAnchorsRule[1], /pointer-events:\s*none/, 'resize anchor layer must not block overlay controls');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=100/, 'the treasure state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=100') < index.indexOf('js/treasure.js?v=100'), 'treasure points must load before guidance');
+assert.match(index, /js\/treasure\.js\?v=101/, 'the treasure state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=101') < index.indexOf('js/treasure.js?v=101'), 'treasure points must load before guidance');
 
 sandbox.OC.State.highlights = [49, 64, 2074];
 sandbox.OC.App.updateActive();
@@ -731,6 +739,10 @@ const settingsControls = {
   '#s-op': { value: '0.9', addEventListener() {} },
   '#s-scale': { value: '1', addEventListener() {} },
   '#s-chips': { checked: true, addEventListener() {} },
+  '#s-treasure': {
+    checked: true,
+    addEventListener(type, handler) { if (type === 'change') this.change = handler; },
+  },
   '#s-repo': { addEventListener() {} },
 };
 const settingsPop = {
@@ -750,6 +762,8 @@ assert.match(settingsPop.innerHTML, /data-lang="auto" aria-pressed="false">lang_
 assert.match(settingsPop.innerHTML, /class="choice-btn on" data-lang="en" aria-pressed="true">English/);
 assert.match(settingsPop.innerHTML, /data-lang="ja" aria-pressed="false">日本語/);
 assert.match(settingsPop.innerHTML, /class="choice-grid region-choice"/);
+assert.match(settingsPop.innerHTML, /id="s-treasure" checked/);
+assert.match(settingsPop.innerHTML, /set_treasure_guide/);
 assert.match(settingsPop.innerHTML, /class="choice-btn on" data-data-region="global" aria-pressed="true">data_region_global/);
 assert.doesNotMatch(settingsPop.innerHTML, /<select/);
 assert.match(settingsPop.innerHTML, /alert_dispeller/);
@@ -757,6 +771,11 @@ assert.match(settingsPop.innerHTML, /Test Dispeller/);
 assert.match(settingsPop.innerHTML, /Test Dispeller Beta/);
 assert.match(settingsPop.innerHTML, /Test Dispeller Gamma/);
 assert.doesNotMatch(settingsPop.innerHTML, /Test Demiatma/);
+
+settingsControls['#s-treasure'].checked = false;
+settingsControls['#s-treasure'].change();
+assert.equal(treasureGuide, false, 'the settings switch must persist the disabled state');
+assert.deepEqual(treasureEnabledCalls, [false], 'disabling in settings must stop treasure guidance immediately');
 
 sandbox.OC.Overlay.territoryId = 1252;
 sandbox.OC.App.renderSettings(settingsPop);
