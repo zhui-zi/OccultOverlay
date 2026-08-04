@@ -175,7 +175,7 @@
   function rowHtml(e, def, type, n, potStatus, territory, hist) {
     var alive = type === 'pot'
       ? !!(potStatus && potStatus.alive && potStatus.side === def.side)
-      : historyAlive(e);
+      : historyAlive(e, hist);
     var cls = 'p-row ' + type + (alive ? ' alive' : '') + (def.type === 'tower' ? ' tower' : '');
     var h = '<div class="' + cls + '"><div class="p-row-top"><span class="p-name">' + UI.weaknessIcons(def.weakness) + esc(nm(def.name)) + '</span>' + badge(e, def, n, alive, type, potStatus, territory) + '</div>';
     var tags = '';
@@ -216,9 +216,8 @@
     var timer = Math.max(0, Number(zone.towerSpawnTimer) - 300 * killedCes - 60 * killedFates);
     return base + timer;
   }
-  function historyAlive(entry) {
-    return !!(entry && (Number(entry.state) > 0 ||
-      (entry.spawn_time > 0 && (entry.death_time <= 0 || entry.death_time < entry.spawn_time))));
+  function historyAlive(entry, hist) {
+    return OC.historyAlive(entry, hist && hist.lastUpdate, now());
   }
   function towerTags(e, hist, n) {
     hist = hist || {};
@@ -232,12 +231,16 @@
       tags += '<span class="tag tower-stat">' + t('tower_reduced') + ' ' + UI.fmtClock(reduced) +
         ' · CE×' + killedCes + ' / FATE×' + killedFates + '</span>';
     }
-    if (!historyAlive(e)) {
+    if (!historyAlive(e, hist)) {
       var activeCe = (hist.ce || []).some(function (entry) {
         var def = OC.CES[entry.fate_id];
-        return def && def.type !== 'tower' && historyAlive(entry);
+        return def && def.type !== 'tower' && historyAlive(entry, hist);
       });
-      var activeFate = (hist.fate || []).some(historyAlive) || (hist.pot || []).some(historyAlive);
+      var activeFate = (hist.fate || []).some(function (entry) {
+        return historyAlive(entry, hist);
+      }) || (hist.pot || []).some(function (entry) {
+        return historyAlive(entry, hist);
+      });
       if (activeCe || activeFate) {
         var upcoming = [];
         if (activeCe) upcoming.push('CE -5:00');
@@ -346,4 +349,5 @@
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
   }
   UI.esc = esc;
+  UI.historyAlive = historyAlive;
 })(typeof window !== 'undefined' ? window : this);

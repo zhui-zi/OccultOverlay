@@ -296,13 +296,12 @@
      */
     islandList: function (rows, now) {
       now = number(now, Math.floor(Date.now() / 1000));
-      function alive(entry) {
-        var spawn = number(entry && entry.spawn_time, -1);
-        var death = number(entry && entry.death_time, -1);
-        return spawn > 0 && (death <= 0 || death < spawn);
-      }
       var groups = {};
       (rows || []).forEach(function (tracker) {
+        var lastUpdate = number(tracker.last_update, 0);
+        function alive(entry) {
+          return OC.historyAlive(entry, lastUpdate, now);
+        }
         var ces = parse(tracker.encounter_history);
         var fates = parse(tracker.fate_history);
         var pots = parse(tracker.pot_history);
@@ -311,7 +310,7 @@
           var fateId = number(entry && entry.fate_id, 0);
           var status = number(entry && (entry.state != null ? entry.state : entry.status), 0);
           var popTime = number(entry && entry.pop_time, 0);
-          if (fateId && status > 0 && popTime >= 1000000000) {
+          if (fateId && status > 0 && popTime >= 1000000000 && alive(entry)) {
             cePhases.push({ fateId: fateId, status: status, popTime: popTime });
           }
         });
@@ -356,8 +355,8 @@
           fingerprintValid: fingerprintValid,
           territory: number(tracker.territory, 0),
           dc: tracker.datacenter,
-          lastUpdate: tracker.last_update,
-          ago: now - tracker.last_update,
+          lastUpdate: lastUpdate,
+          ago: now - lastUpdate,
           aliveIds: ids,
           activeEvents: activeEvents,
           cePhases: cePhases,

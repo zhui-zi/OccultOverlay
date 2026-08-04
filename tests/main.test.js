@@ -128,8 +128,10 @@ const sandbox = {
 };
 sandbox.window = sandbox;
 
-const source = fs.readFileSync(require.resolve('../js/main.js'), 'utf8');
-vm.runInNewContext(source, sandbox, { filename: 'main.js' });
+for (const file of ['../js/history.js', '../js/main.js']) {
+  const source = fs.readFileSync(require.resolve(file), 'utf8');
+  vm.runInNewContext(source, sandbox, { filename: file });
+}
 
 assert.equal(sandbox.OC.App.displayScale(1024, 600, 1), 0.9);
 assert.equal(sandbox.OC.App.displayScale(1093, 614, 1.25), 0.9);
@@ -176,6 +178,8 @@ sandbox.OC.Overlay.memActive = { 64: true };
 assert.equal(sandbox.OC.App.recordTowerCompletion(49), false, 'encounters during an active tower must not reduce its next cycle');
 sandbox.OC.Overlay.memActive = {};
 sandbox.OC.App._island.ce[0].state = 3;
+sandbox.OC.App._island.ce[0].last_seen = Math.floor(Date.now() / 1000);
+sandbox.OC.App._island.lastUpdate = sandbox.OC.App._island.ce[0].last_seen;
 assert.equal(sandbox.OC.App.recordTowerCompletion(2074), false, 'shared active tower state must also block reductions');
 sandbox.OC.App._island.ce[0].state = 0;
 assert.equal(sandbox.OC.App.recordTowerCompletion(64), true);
@@ -321,10 +325,12 @@ alertTower = false;
 sandbox.OC.State.highlights = [];
 sandbox.OC.App._highlightMissingSince = {};
 sandbox.OC.Overlay.memActive = { 2074: true };
+const trackerNow = Math.floor(Date.now() / 1000);
 sandbox.OC.App._island = {
-  ce: [{ fate_id: 49, spawn_time: 100, death_time: -1 }],
-  fate: [{ fate_id: 2074, spawn_time: 100, death_time: -1 }],
-  pot: [{ fate_id: 2072, spawn_time: 100, death_time: -1 }],
+  lastUpdate: trackerNow,
+  ce: [{ fate_id: 49, spawn_time: 100, death_time: -1, last_seen: trackerNow }],
+  fate: [{ fate_id: 2074, spawn_time: 100, death_time: -1, last_seen: trackerNow }],
+  pot: [{ fate_id: 2072, spawn_time: 100, death_time: -1, last_seen: trackerNow }],
 };
 sandbox.OC.App.refreshHighlights();
 assert.deepEqual(
@@ -336,7 +342,8 @@ sandbox.OC.State.highlights = [];
 sandbox.OC.App._highlightMissingSince = {};
 sandbox.OC.Overlay.memActive = {};
 sandbox.OC.App._island = {
-  ce: [{ fate_id: 64, spawn_time: 0, death_time: 0, state: 3 }],
+  lastUpdate: trackerNow,
+  ce: [{ fate_id: 64, spawn_time: 0, death_time: 0, last_seen: trackerNow, state: 3 }],
   fate: [],
   pot: [],
 };
@@ -361,7 +368,8 @@ assert.deepEqual(
 assert.equal(writes, writesBeforeTransientDrop, 'a transient drop must not rebuild active capsules');
 sandbox.OC.Overlay.memActive = { 2074: true };
 sandbox.OC.App._island = {
-  ce: [{ fate_id: 49, spawn_time: 100, death_time: -1 }],
+  lastUpdate: trackerNow,
+  ce: [{ fate_id: 49, spawn_time: 100, death_time: -1, last_seen: trackerNow }],
   fate: [],
   pot: [],
 };
@@ -382,9 +390,10 @@ assert.deepEqual(
 
 sandbox.OC.Overlay.memActive = { 2074: true };
 sandbox.OC.App._island = {
-  ce: [{ fate_id: 49, spawn_time: 100, death_time: -1 }],
-  fate: [{ fate_id: 2074, spawn_time: 100, death_time: -1 }],
-  pot: [{ fate_id: 2072, spawn_time: 100, death_time: -1 }],
+  lastUpdate: trackerNow,
+  ce: [{ fate_id: 49, spawn_time: 100, death_time: -1, last_seen: trackerNow }],
+  fate: [{ fate_id: 2074, spawn_time: 100, death_time: -1, last_seen: trackerNow }],
+  pot: [{ fate_id: 2072, spawn_time: 100, death_time: -1, last_seen: trackerNow }],
 };
 sandbox.OC.App.refreshHighlights();
 sandbox.OC.Overlay.connected = false;
@@ -692,9 +701,10 @@ sandbox.OC.Overlay.inOccult = true;
 sandbox.OC.App._island = { ce: [], fate: [], pot: [] };
 sandbox.OC.App._alerted = {};
 sandbox.OC.App.checkIslandAlerts({
-  ce: [{ fate_id: 49, spawn_time: 200, death_time: -1 }],
-  fate: [{ fate_id: 2074, spawn_time: 200, death_time: -1 }],
-  pot: [{ fate_id: 2072, spawn_time: 200, death_time: -1 }],
+  lastUpdate: trackerNow,
+  ce: [{ fate_id: 49, spawn_time: 200, death_time: -1, last_seen: trackerNow }],
+  fate: [{ fate_id: 2074, spawn_time: 200, death_time: -1, last_seen: trackerNow }],
+  pot: [{ fate_id: 2072, spawn_time: 200, death_time: -1, last_seen: trackerNow }],
 });
 assert.deepEqual(
   alerts.slice(3).map((entry) => entry.kind),

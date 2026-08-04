@@ -33,7 +33,7 @@ const sandbox = {
 };
 sandbox.window = sandbox;
 
-for (const file of ['../js/data.js', '../js/ui.js']) {
+for (const file of ['../js/data.js', '../js/history.js', '../js/ui.js']) {
   const source = fs.readFileSync(require.resolve(file), 'utf8');
   vm.runInNewContext(source, sandbox, { filename: file });
 }
@@ -41,6 +41,7 @@ for (const file of ['../js/data.js', '../js/ui.js']) {
 const host = { innerHTML: '' };
 sandbox.OC.UI.renderBattlePanel(host, {
   territory: 1346,
+  lastUpdate: 100,
   ce: [{ fate_id: 49, spawn_time: 100, death_time: -1, last_seen: 100 }],
   fate: [{ fate_id: 2074, spawn_time: 100, death_time: -1, last_seen: 100 }],
   pot: [],
@@ -64,9 +65,26 @@ assert.match(host.innerHTML, />▸ Crescent Wamoura<\/button>/);
 assert.doesNotMatch(host.innerHTML, /src="assets\/trigger-monsters\/49\.png"/, 'monster location images must load on demand');
 
 const current = Math.floor(Date.now() / 1000);
+assert.equal(
+  sandbox.OC.UI.historyAlive(
+    { state: 0, spawn_time: current - 100, death_time: current - 200, last_seen: current - 200 },
+    { lastUpdate: current },
+  ),
+  false,
+  'stale inverted timestamps must not highlight a FATE row',
+);
+assert.equal(
+  sandbox.OC.UI.historyAlive(
+    { state: 0, spawn_time: current - 100, death_time: current - 200, last_seen: current },
+    { lastUpdate: current },
+  ),
+  true,
+  'a current observation must still recover a new cycle after clock inversion',
+);
 const towerHost = { innerHTML: '' };
 sandbox.OC.UI.renderBattlePanel(towerHost, {
   territory: 1346,
+  lastUpdate: current,
   ce: [
     { fate_id: 49, spawn_time: current - 60, death_time: -1, last_seen: current },
     {
@@ -90,6 +108,7 @@ assert.match(towerHost.innerHTML, /Previous intervals 1:00:00 \/ 55:00/);
 const activeTowerHost = { innerHTML: '' };
 sandbox.OC.UI.renderBattlePanel(activeTowerHost, {
   territory: 1346,
+  lastUpdate: current,
   ce: [{
     fate_id: 64,
     spawn_time: 0,
@@ -112,6 +131,7 @@ assert.match(sandbox.OC.UI.weaknessIcons(['fire']), /alt="火"/);
 const southHost = { innerHTML: '' };
 sandbox.OC.UI.renderBattlePanel(southHost, {
   territory: 1252,
+  lastUpdate: 100,
   ce: [{ fate_id: 33, spawn_time: 100, death_time: -1, last_seen: 100 }],
   fate: [],
   pot: [],

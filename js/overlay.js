@@ -511,19 +511,12 @@
     var id = ceKeyToId(ceKey, Overlay.territoryId);
     if (!id) return;
     var status = parseInt(line[7], 16) || 0;   // 0=未激活 1=招募人手 2=准备开始 3=战斗中
-    var remain = parseInt(line[3], 16) || 0;
-    var players = parseInt(line[6], 16) || 0;
     var popTime = parseInt(line[2], 16) || 0;
     if (popTime < 1000000000) popTime = 0;
-    var active;
     var was = !!Overlay.memActive[id];
-    if (Overlay.memActive[id]) {
-      active = status !== 0;                   // 已在进行中：status 0 才算结束
-    } else {
-      // 首次出现（含“招募人手”阶段）：有倒计时或已有人报名也算已出现，
-      // 同时过滤掉进本时那种全空的占位记录。
-      active = status !== 0 || remain > 0 || players > 0;
-    }
+    // CEDirector status 0 is a removal. Remaining time and player count can
+    // retain values in that line and must never reactivate the encounter.
+    var active = status !== 0;
     var observedAt = Date.parse(line[1] || '') / 1000;
     if (!isFinite(observedAt)) observedAt = Math.floor(Date.now() / 1000);
     memChanged(id, active, {

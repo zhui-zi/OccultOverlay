@@ -118,7 +118,9 @@ const sandbox = {
 };
 sandbox.window = sandbox;
 vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync('js/main.js', 'utf8'), sandbox);
+for (const file of ['js/history.js', 'js/main.js']) {
+  vm.runInContext(fs.readFileSync(file, 'utf8'), sandbox, { filename: file });
+}
 
 (async function () {
   sandbox.OC.App.applyIslandRecord = function (record, id) {

@@ -117,6 +117,23 @@ memory.sandbox.dispatchOverlayEvent({
 assert.ok(memory.sandbox.OC.Overlay.memMeta[1962].spawnEpoch > firstSpawn);
 assert.equal(memory.sandbox.OC.Overlay.memMeta[1962].deathEpoch, null);
 
+const staleCeFields = loadOverlay('');
+staleCeFields.sandbox.dispatchOverlayEvent({
+  type: 'ChangeZone',
+  zoneID: 1346,
+  zoneName: 'North Horn',
+});
+staleCeFields.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: [
+    '259', '2026-08-04T10:00:00.000Z', '69B1F000', '00000020', '00000000',
+    '00000001', '00000005', '00000000', '00000000', '00000000',
+  ],
+});
+assert.equal(staleCeFields.sandbox.OC.Overlay.memActive[49], undefined);
+assert.equal(staleCeFields.sandbox.OC.Overlay.memMeta[49].active, false);
+assert.equal(staleCeFields.sandbox.OC.Overlay.memMeta[49].ceStatus, 0);
+
 const updateOnlyPot = loadOverlay('');
 let updateOnlyPotDetail = null;
 updateOnlyPot.sandbox.OC.Overlay.on('memActive', (_id, _active, detail) => {

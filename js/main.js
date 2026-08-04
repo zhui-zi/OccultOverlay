@@ -489,7 +489,7 @@
           }
         }
         if (!local) {
-          if (snapshotComplete && isAlive(entry)) {
+          if (snapshotComplete && isActiveCandidate(entry)) {
             entry.death_time = observedNow;
             entry.last_seen = Math.max(Number(entry.last_seen) || -1, observedNow);
           }
@@ -569,7 +569,8 @@
         return true;
       }
 
-      if ((OC.Overlay.memActive || {})[towerId] || (!pending.reset && isAlive(tower))) return false;
+      if ((OC.Overlay.memActive || {})[towerId] ||
+          (!pending.reset && isAlive(tower, this._island && this._island.lastUpdate))) return false;
       var field = OC.CES[id] ? 'killed_ces' :
         (OC.FATES[id] || OC.POTS[id]) ? 'killed_fates' : '';
       if (!field) return false;
@@ -861,6 +862,7 @@
         var territory = Number(rec.territory) || Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
         State.detail = {
           territory: territory,
+          lastUpdate: Number(rec.last_update) || 0,
           ce: pj(rec.encounter_history),
           fate: pj(rec.fate_history),
           pot: pj(rec.pot_history)
@@ -1164,7 +1166,7 @@
       cloud = (cloud || []).map(function (entry) {
         var copy = JSON.parse(JSON.stringify(entry));
         var observation = local[Number(copy.fate_id)];
-        if (localDirectorsAreAuthoritative && isAlive(copy) &&
+        if (localDirectorsAreAuthoritative && isActiveCandidate(copy) &&
             !(observation && observation.active)) {
           copy.death_time = observedNow;
           copy.last_seen = Math.max(Number(copy.last_seen) || -1, observedNow);
@@ -1340,6 +1342,7 @@
       var territory = Number(rec.territory) || Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
       var h = {
         territory: territory,
+        lastUpdate: Number(rec.last_update) || 0,
         ce: pj(rec.encounter_history),
         fate: pj(rec.fate_history),
         pot: pj(rec.pot_history)
@@ -1387,7 +1390,8 @@
         var shared = trustLocalOnly ? isl.ce : isl.ce.concat(isl.fate).concat(isl.pot);
         shared.forEach(function (e) {
           var id = Number(e.fate_id);
-          if (isAlive(e) && id && ids.indexOf(id) < 0) ids.push(id);
+          var active = OC.POTS[id] ? isActiveCandidate(e) : isAlive(e, isl.lastUpdate);
+          if (active && id && ids.indexOf(id) < 0) ids.push(id);
         });
       }
       // ACT directors and the shared tracker can each miss one transient sample.
@@ -1459,7 +1463,8 @@
         if (ceFallbackOnly && tp !== 'ce') return;
         h[tp].forEach(function (e) {
           var key = tp + ':' + e.fate_id;
-          if (!isAlive(e)) {
+          var active = tp === 'pot' ? isActiveCandidate(e) : isAlive(e, h.lastUpdate);
+          if (!active) {
             // 云端可能滞后/抖动：内存仍显示进行中时不要解除提示锁，否则会重复播报
             if (!(OC.Overlay.memActive || {})[e.fate_id]) delete alerted[key];
             return;
@@ -1632,9 +1637,12 @@
   }
 
   function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }
-  function isAlive(e) {
+  function isActiveCandidate(e) {
     return !!(e && (Number(e.state) > 0 ||
       (e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time))));
+  }
+  function isAlive(e, recordLastUpdate) {
+    return OC.historyAlive(e, recordLastUpdate, now());
   }
 
   function rewardSuffix(drops) { return OC.UI.rewardSuffix(drops); }

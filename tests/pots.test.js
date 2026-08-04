@@ -2,7 +2,10 @@
 
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const root = require('../js/pots.js');
+const root = require('../js/history.js');
+global.window = root;
+require('../js/pots.js');
+delete global.window;
 
 root.OC.POTS = {
   1976: { side: 'north' },
@@ -156,7 +159,10 @@ const ceRows = [
     last_fate: '',
     last_update: ceDeadline - 10,
     encounter_history: JSON.stringify([
-      { fate_id: 49, state: 2, pop_time: ceDeadline, spawn_time: -1, death_time: -1 },
+      {
+        fate_id: 49, state: 2, pop_time: ceDeadline,
+        spawn_time: -1, death_time: -1, last_seen: ceDeadline - 10,
+      },
     ]),
     fate_history: '[]',
     pot_history: '[]',
@@ -169,7 +175,10 @@ const ceRows = [
     last_fate: '',
     last_update: ceDeadline - 10,
     encounter_history: JSON.stringify([
-      { fate_id: 49, state: 2, pop_time: ceDeadline + 60, spawn_time: -1, death_time: -1 },
+      {
+        fate_id: 49, state: 2, pop_time: ceDeadline + 60,
+        spawn_time: -1, death_time: -1, last_seen: ceDeadline - 10,
+      },
     ]),
     fate_history: '[]',
     pot_history: '[]',
@@ -198,6 +207,27 @@ assert.equal(
   null,
   'a duplicated CE phase signature must remain ambiguous',
 );
+
+const livenessRows = [{
+  id: 34,
+  tracker_id: 'liveness',
+  territory: 1252,
+  datacenter: 101,
+  last_fate: '',
+  last_update: 5000,
+  encounter_history: JSON.stringify([
+    { fate_id: 1, state: 3, spawn_time: -1, death_time: -1, last_seen: 4800, pop_time: 6000 },
+  ]),
+  fate_history: JSON.stringify([
+    pot(1962, 4900, 4800, 4800),
+    pot(1963, 4950, 4800, 4999),
+  ]),
+  pot_history: '[]',
+}];
+const livenessIsland = Pots.islandList(livenessRows, 5000)[0];
+assert.deepEqual(livenessIsland.aliveIds, [1963]);
+assert.deepEqual(livenessIsland.activeDirectorIds, [1963]);
+assert.deepEqual(livenessIsland.cePhases, [], 'stale CE state must not become island evidence');
 
 const timedIslands = [
   { id: 'a', rowId: 20, dc: 101, fingerprint: '', activeEvents: [{ fateId: 1964, spawnEpoch: 2000 }] },
