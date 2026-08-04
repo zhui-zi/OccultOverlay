@@ -247,6 +247,43 @@ assert.equal(player.sandbox.OC.ceKeyToId(1, 1346), 49);
 assert.equal(player.sandbox.OC.ceKeyToId(0, 1346), 64);
 assert.equal(player.sandbox.OC.ceKeyToId(16, 1346), 0);
 
+const cePhase = loadOverlay('');
+const cePhaseEvents = [];
+cePhase.sandbox.OC.Overlay.on('memActive', (id, active, detail) => {
+  if (id === 49) cePhaseEvents.push({ active, detail });
+});
+cePhase.sandbox.dispatchOverlayEvent({
+  type: 'ChangeZone',
+  zoneID: 1346,
+  zoneName: 'North Horn',
+});
+const recruitingDeadline = 1785643097;
+cePhase.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: [
+    '259', '2026-08-02T11:55:17.000+08:00', recruitingDeadline.toString(16),
+    '000000B4', '00000000', '00000001', '00000003', '00000001',
+  ],
+});
+assert.equal(cePhase.sandbox.OC.Overlay.memMeta[49].ceStatus, 1);
+assert.equal(cePhase.sandbox.OC.Overlay.memMeta[49].cePopTime, recruitingDeadline);
+assert.equal(
+  cePhase.sandbox.OC.Overlay.memMeta[49].spawnEpoch,
+  null,
+  'CE popTime must not be reused as a spawn timestamp during the entry snapshot',
+);
+const readyDeadline = recruitingDeadline + 11;
+cePhase.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: [
+    '259', '2026-08-02T11:58:18.000+08:00', readyDeadline.toString(16),
+    '0000000A', '00000000', '00000001', '00000003', '00000002',
+  ],
+});
+assert.equal(cePhase.sandbox.OC.Overlay.memMeta[49].ceStatus, 2);
+assert.equal(cePhase.sandbox.OC.Overlay.memMeta[49].cePopTime, readyDeadline);
+assert.equal(cePhaseEvents.length, 2, 'a CE phase change must trigger immediate rematching and upload');
+
 const position = loadOverlay('');
 let observedPosition = null;
 position.sandbox.OverlayPluginApi = {

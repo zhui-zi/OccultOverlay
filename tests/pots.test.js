@@ -146,6 +146,59 @@ assert.equal(
   'north'
 );
 
+const ceDeadline = 1785643097;
+const ceRows = [
+  {
+    id: 32,
+    tracker_id: 'ce-mine',
+    territory: 1346,
+    datacenter: 101,
+    last_fate: '',
+    last_update: ceDeadline - 10,
+    encounter_history: JSON.stringify([
+      { fate_id: 49, state: 2, pop_time: ceDeadline, spawn_time: -1, death_time: -1 },
+    ]),
+    fate_history: '[]',
+    pot_history: '[]',
+  },
+  {
+    id: 33,
+    tracker_id: 'ce-other',
+    territory: 1346,
+    datacenter: 101,
+    last_fate: '',
+    last_update: ceDeadline - 10,
+    encounter_history: JSON.stringify([
+      { fate_id: 49, state: 2, pop_time: ceDeadline + 60, spawn_time: -1, death_time: -1 },
+    ]),
+    fate_history: '[]',
+    pot_history: '[]',
+  },
+];
+const ceIslands = Pots.islandList(ceRows, ceDeadline - 10);
+assert.deepEqual(ceIslands[0].cePhases, [{ fateId: 49, status: 2, popTime: ceDeadline }]);
+assert.equal(
+  Pots.matchIsland(
+    ceIslands,
+    { territory: 1346, cePhases: [{ fateId: 49, status: 2, popTime: ceDeadline }] },
+    101,
+    15,
+  ).id,
+  'ce-mine',
+  'one unique CE phase signature must identify the island without a local spawn observation',
+);
+ceIslands[1].cePhases[0].popTime = ceDeadline;
+assert.equal(
+  Pots.matchIsland(
+    ceIslands,
+    { territory: 1346, cePhases: [{ fateId: 49, status: 2, popTime: ceDeadline }] },
+    101,
+    15,
+  ),
+  null,
+  'a duplicated CE phase signature must remain ambiguous',
+);
+
 const timedIslands = [
   { id: 'a', rowId: 20, dc: 101, fingerprint: '', activeEvents: [{ fateId: 1964, spawnEpoch: 2000 }] },
   { id: 'b', rowId: 21, dc: 101, fingerprint: '', activeEvents: [{ fateId: 1964, spawnEpoch: 2100 }] }

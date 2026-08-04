@@ -292,6 +292,7 @@
       eventType: eventType,
       observedAt: Math.floor(Date.now() / 1000),
       startEpoch: explicitStart > 0 ? Math.floor(explicitStart) : 0,
+      startQuality: explicitStart > 0 ? 'exact' : 'observed',
       source: 'onFateEvent'
     }); // add / update = 存在；remove = 结束
   }
@@ -408,28 +409,48 @@
     var observedAt = Number(detail.observedAt) || Math.floor(Date.now() / 1000);
     var meta = Overlay.memMeta[id] = Overlay.memMeta[id] || {};
     var gainedExactStart = false;
+    var cePhaseChanged = false;
     meta.active = !!active;
     meta.lastSeen = observedAt;
     meta.source = detail.source || meta.source || '';
+    if (detail.ceStatus != null) {
+      var nextCeStatus = Math.max(0, Number(detail.ceStatus) || 0);
+      var nextCePopTime = Number(detail.cePopTime) || 0;
+      if (nextCePopTime < 1000000000) nextCePopTime = 0;
+      cePhaseChanged = Number(meta.ceStatus || 0) !== nextCeStatus ||
+        Number(meta.cePopTime || 0) !== nextCePopTime;
+      meta.ceStatus = nextCeStatus;
+      meta.cePopTime = nextCePopTime;
+    }
     if (active && detail.eventType === 'add') {
       var explicitStart = Number(detail.startEpoch) || 0;
       var trustedStart = explicitStart > 0 || observedAt > Number(Overlay.fateSnapshotUntil || 0);
+      var startQuality = explicitStart > 0 ? 'exact' : String(detail.startQuality || 'observed');
+      var qualityRank = { observed: 1, direct: 2, exact: 3 };
+      if (!qualityRank[startQuality]) startQuality = 'observed';
       detail.startTrusted = trustedStart;
       detail.startEpoch = trustedStart ? (explicitStart || observedAt) : 0;
+      detail.startQuality = trustedStart ? startQuality : '';
       meta.snapshot = !trustedStart;
-      if (trustedStart && (!was || !meta.spawnEpoch || !meta.spawnTrusted)) {
-        gainedExactStart = Number(meta.spawnEpoch) !== detail.startEpoch || !meta.spawnTrusted;
+      var qualityImproved = qualityRank[startQuality] > qualityRank[meta.spawnQuality || 'observed'];
+      if (trustedStart && (!was || !meta.spawnEpoch || !meta.spawnTrusted || qualityImproved)) {
+        gainedExactStart = Number(meta.spawnEpoch) !== detail.startEpoch ||
+          !meta.spawnTrusted || qualityImproved;
         meta.spawnEpoch = detail.startEpoch;
         meta.spawnTrusted = true;
+        meta.spawnQuality = startQuality;
       } else if (!trustedStart && !was) {
         meta.spawnEpoch = null;
         meta.spawnTrusted = false;
+        meta.spawnQuality = '';
       }
       meta.deathEpoch = null;
     }
     if (!active) meta.deathEpoch = observedAt;
     if (active) Overlay.memActive[id] = true; else delete Overlay.memActive[id];
-    if (was !== !!active || gainedExactStart) Overlay.emit('memActive', id, !!active, detail);
+    if (was !== !!active || gainedExactStart || cePhaseChanged) {
+      Overlay.emit('memActive', id, !!active, detail);
+    }
   }
 
   Overlay.resetMemory = function () {
@@ -455,7 +476,12 @@
         progress === 0 && observedAt > Number(Overlay.fateSnapshotUntil || 0)) {
       eventType = 'add';
     }
-    var detail = { eventType: eventType, observedAt: Math.floor(observedAt), source: 'FateDirector' };
+    var detail = {
+      eventType: eventType,
+      observedAt: Math.floor(observedAt),
+      startQuality: cat === 'Add' ? 'direct' : 'observed',
+      source: 'FateDirector'
+    };
     if (cat === 'Remove') memChanged(fateId, false, detail);
     else memChanged(fateId, true, detail); // Add / Update
   }
@@ -482,6 +508,8 @@
     var status = parseInt(line[7], 16) || 0;   // 0=未激活 1=招募人手 2=准备开始 3=战斗中
     var remain = parseInt(line[3], 16) || 0;
     var players = parseInt(line[6], 16) || 0;
+    var popTime = parseInt(line[2], 16) || 0;
+    if (popTime < 1000000000) popTime = 0;
     var active;
     var was = !!Overlay.memActive[id];
     if (Overlay.memActive[id]) {
@@ -496,6 +524,8 @@
     memChanged(id, active, {
       eventType: active && !was ? 'add' : active ? 'update' : 'remove',
       observedAt: Math.floor(observedAt),
+      ceStatus: status,
+      cePopTime: popTime,
       source: 'CEDirector'
     });
   }

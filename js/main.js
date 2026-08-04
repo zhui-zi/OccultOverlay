@@ -17,7 +17,7 @@
   }
   var CN_DCS = [101, 102, 103, 104];
   var GLOBAL_DCS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-  var TRACKER_VERSION = 'OccultOverlay-v70';
+  var TRACKER_VERSION = 'OccultOverlay-v71-dev';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
   var MIN_ISLAND_EVIDENCE = 3;
 
@@ -200,10 +200,22 @@
       var meta = OC.Overlay.memMeta || {};
       var events = [];
       var ends = [];
+      var cePhases = [];
       Object.keys(meta).forEach(function (key) {
         var id = Number(key), item = meta[key] || {};
-        if (item.spawnTrusted && item.spawnEpoch && id !== 48) {
-          events.push({ fateId: id, spawnEpoch: Number(item.spawnEpoch) });
+        if (OC.CES[id] && Number(item.ceStatus) > 0 && Number(item.cePopTime) >= 1000000000) {
+          cePhases.push({
+            fateId: id,
+            status: Number(item.ceStatus),
+            popTime: Number(item.cePopTime)
+          });
+        }
+        if (item.spawnTrusted && item.spawnEpoch && (OC.FATES[id] || OC.POTS[id])) {
+          events.push({
+            fateId: id,
+            spawnEpoch: Number(item.spawnEpoch),
+            quality: String(item.spawnQuality || 'observed')
+          });
         }
         if (item.deathEpoch && (OC.FATES[id] || OC.POTS[id])) {
           ends.push({ fateId: id, deathEpoch: Number(item.deathEpoch) });
@@ -229,8 +241,10 @@
       return {
         fingerprint: this._contextFingerprint || '',
         fingerprints: this._contextFingerprints || [],
+        fingerprintQuality: latest ? String(latest.quality || 'observed') : '',
         events: events,
         ends: ends,
+        cePhases: cePhases,
         territory: territory
       };
     },
@@ -339,10 +353,18 @@
       var record = rows.filter(function (row) {
         return Number(row.id) === Number(matched.rowId);
       })[0];
-      if (!this.myIslandRowId && this.cloudIslandEvidenceCount(this.instanceEvidence(), record && {
-        fate: pj(record.fate_history),
-        pot: pj(record.pot_history)
-      }) < MIN_ISLAND_EVIDENCE) return null;
+      if (!this.myIslandRowId) {
+        var bindingStatus = this.islandBindingEvidenceStatus(
+          this.instanceEvidence(),
+          record && {
+            ce: pj(record.encounter_history),
+            fate: pj(record.fate_history),
+            pot: pj(record.pot_history)
+          },
+          record && record.last_fate
+        );
+        if (!bindingStatus.authorized) return null;
+      }
       var id = this.bindMatchedIsland(matched, record);
       if (!id) return null;
       return id;
@@ -358,7 +380,8 @@
         this.releaseIslandBinding();
       } else if (this.myIslandRowId) {
         var boundStatus = this.boundIslandEvidenceStatus(evidence);
-        if (boundStatus.available && boundStatus.local >= MIN_ISLAND_EVIDENCE &&
+        if (boundStatus.available && !boundStatus.authorized &&
+            boundStatus.local >= MIN_ISLAND_EVIDENCE &&
             boundStatus.matched < MIN_ISLAND_EVIDENCE) {
           this.releaseIslandBinding();
         }
@@ -373,12 +396,18 @@
               Number(this._previewIsland.rowId) === Number(matched.rowId)) {
             record = this._previewIsland.record;
           }
-          if (this.cloudIslandEvidenceCount(evidence, record && {
-            fate: pj(record.fate_history),
-            pot: pj(record.pot_history)
-          }) < MIN_ISLAND_EVIDENCE) return null;
+          var bindingStatus = this.islandBindingEvidenceStatus(
+            evidence,
+            record && {
+              ce: pj(record.encounter_history),
+              fate: pj(record.fate_history),
+              pot: pj(record.pot_history)
+            },
+            record && record.last_fate || matched.fingerprint
+          );
+          if (!bindingStatus.authorized) return null;
         }
-        var bound = this.bindMatchedIsland(matched);
+        var bound = this.bindMatchedIsland(matched, record);
         if (bound) return bound;
       }
       // 强证据绑定后保持到换区/断线；云端列表短暂掉线不能让正确实例丢失。
@@ -471,7 +500,13 @@
           entry.death_time = death;
         }
         if (OC.CES[id]) {
-          entry.state = local.active ? Math.max(1, Number(entry.state) || 0) : 0;
+          if (local.ceStatus != null) {
+            entry.state = Math.max(0, Number(local.ceStatus) || 0);
+            entry.pop_time = entry.state > 0 && Number(local.cePopTime) >= 1000000000
+              ? Number(local.cePopTime) : -1;
+          } else {
+            entry.state = local.active ? Math.max(1, Number(entry.state) || 0) : 0;
+          }
         }
         if (seen > Number(entry.last_seen || -1)) entry.last_seen = seen;
         return entry;
@@ -585,7 +620,7 @@
             return true;
           }
 
-          if (App.localInstanceSignalCount(App.instanceEvidence()) < MIN_ISLAND_EVIDENCE) {
+          if (!App.localEvidenceReadyForCreation(App.instanceEvidence())) {
             context.stopRetry = true;
             return false;
           }
@@ -883,6 +918,23 @@
       return Object.keys(ids).length;
     },
 
+    localStrongFateSignalCount: function (evidence) {
+      var ids = {};
+      (evidence && evidence.events || []).forEach(function (signal) {
+        var id = Number(signal.fateId) || 0;
+        var quality = String(signal.quality || '');
+        if (OC.FATES[id] && (quality === 'direct' || quality === 'exact')) ids[id] = true;
+      });
+      return Object.keys(ids).length;
+    },
+
+    localEvidenceReadyForCreation: function (evidence) {
+      evidence = evidence || {};
+      return String(evidence.fingerprintQuality || '') === 'exact' ||
+        this.localStrongFateSignalCount(evidence) >= 2 ||
+        this.localInstanceSignalCount(evidence) >= MIN_ISLAND_EVIDENCE;
+    },
+
     cloudIslandEvidenceCount: function (evidence, history) {
       evidence = evidence || {};
       history = history || this._island;
@@ -892,6 +944,7 @@
         })[0];
         if (row) {
           history = {
+            ce: pj(row.encounter_history),
             fate: pj(row.fate_history),
             pot: pj(row.pot_history)
           };
@@ -921,6 +974,68 @@
       return Object.keys(matchedIds).length;
     },
 
+    cloudStrongFateEvidenceCount: function (evidence, history) {
+      evidence = evidence || {};
+      history = history || this._island;
+      if (!history) return 0;
+      var remote = history.fate || [];
+      var matchedIds = {};
+      (evidence.events || []).forEach(function (signal) {
+        var id = Number(signal.fateId) || 0;
+        var epoch = Number(signal.spawnEpoch) || 0;
+        var quality = String(signal.quality || '');
+        if (!OC.FATES[id] || !epoch || (quality !== 'direct' && quality !== 'exact')) return;
+        if (remote.some(function (entry) {
+          return Number(entry.fate_id) === id && Number(entry.spawn_time) > 0 &&
+            Math.abs(Number(entry.spawn_time) - epoch) <= 15;
+        })) matchedIds[id] = true;
+      });
+      return Object.keys(matchedIds).length;
+    },
+
+    cloudCePhaseEvidenceCount: function (evidence, history) {
+      evidence = evidence || {};
+      history = history || this._island;
+      if (!history) return 0;
+      var remote = history.ce || [];
+      var matchedIds = {};
+      (evidence.cePhases || []).forEach(function (signal) {
+        var id = Number(signal.fateId) || 0;
+        var status = Number(signal.status) || 0;
+        var popTime = Number(signal.popTime) || 0;
+        if (!id || !status || popTime < 1000000000) return;
+        if (remote.some(function (entry) {
+          var remoteStatus = Number(entry && (entry.state != null ? entry.state : entry.status)) || 0;
+          return Number(entry && entry.fate_id) === id && remoteStatus === status &&
+            Number(entry && entry.pop_time) === popTime;
+        })) matchedIds[id] = true;
+      });
+      return Object.keys(matchedIds).length;
+    },
+
+    islandBindingEvidenceStatus: function (evidence, history, fingerprint) {
+      evidence = evidence || {};
+      var local = this.localInstanceSignalCount(evidence);
+      var strongLocal = this.localStrongFateSignalCount(evidence);
+      var matched = history ? this.cloudIslandEvidenceCount(evidence, history) : 0;
+      var strongMatched = history ? this.cloudStrongFateEvidenceCount(evidence, history) : 0;
+      var ceMatched = history ? this.cloudCePhaseEvidenceCount(evidence, history) : 0;
+      var exactFingerprint = String(evidence.fingerprintQuality || '') === 'exact' &&
+        !!evidence.fingerprint && !!fingerprint &&
+        String(evidence.fingerprint).toUpperCase() === String(fingerprint).toUpperCase();
+      return {
+        available: !!history,
+        local: local,
+        strongLocal: strongLocal,
+        matched: matched,
+        strongMatched: strongMatched,
+        ceMatched: ceMatched,
+        exactFingerprint: exactFingerprint,
+        authorized: !!history && (ceMatched >= 1 || exactFingerprint ||
+          strongMatched >= 2 || (local >= MIN_ISLAND_EVIDENCE && matched >= MIN_ISLAND_EVIDENCE))
+      };
+    },
+
     boundIslandRecord: function () {
       if (!this.myIslandRowId) return null;
       return (this._dcRows || []).filter(function (row) {
@@ -946,19 +1061,18 @@
       var record = this.boundIslandRecord();
       if (!history && record) {
         history = {
+          ce: pj(record.encounter_history),
           fate: pj(record.fate_history),
           pot: pj(record.pot_history)
         };
       }
-      var local = this.localInstanceSignalCount(evidence);
-      var matched = history ? this.cloudIslandEvidenceCount(evidence, history) : 0;
-      return {
-        available: !!history,
-        local: local,
-        matched: matched,
-        authorized: this.boundIslandScopeMatches() && !!history &&
-          local >= MIN_ISLAND_EVIDENCE && matched >= MIN_ISLAND_EVIDENCE
-      };
+      var status = this.islandBindingEvidenceStatus(
+        evidence,
+        history,
+        record && record.last_fate || this.myIslandFingerprint
+      );
+      status.authorized = this.boundIslandScopeMatches() && status.authorized;
+      return status;
     },
 
     releaseIslandBinding: function () {

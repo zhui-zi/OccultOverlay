@@ -194,6 +194,23 @@ assert.equal(towerUpload.state, 0, 'a local North Horn tower removal must clear 
 sandbox.OC.App._island = null;
 sandbox.OC.App._pendingTowerProgress = null;
 sandbox.OC.Overlay.memMeta = {};
+const ceDeadline = 1785643097;
+sandbox.OC.Overlay.memMeta = {
+  49: {
+    active: true,
+    ceStatus: 2,
+    cePopTime: ceDeadline,
+    lastSeen: ceDeadline - 10,
+  },
+};
+const ceUpload = sandbox.OC.App.localTrackerHistory(
+  [49],
+  [{ fate_id: 49, state: 1, pop_time: ceDeadline - 60, spawn_time: -1, death_time: -1 }],
+)[0];
+assert.equal(ceUpload.state, 2);
+assert.equal(ceUpload.pop_time, ceDeadline, 'CE phase deadline must be uploaded separately from spawn_time');
+assert.equal(ceUpload.spawn_time, -1, 'CE phase deadline must never overwrite spawn_time');
+sandbox.OC.Overlay.memMeta = {};
 assert.equal(sandbox.OC.App.showsCnDcOverview(), false);
 assert.deepEqual(Array.from(sandbox.OC.App.trackerDatacenters()), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 assert.equal(sandbox.OC.App.isDatacenterInScope(3), true);
@@ -389,6 +406,57 @@ const strictEvidence = {
   events: [{ fateId: 2074, spawnEpoch: 1000 }],
   ends: [{ fateId: 2075, deathEpoch: 1300 }, { fateId: 2076, deathEpoch: 900 }],
 };
+const ceBindingStatus = sandbox.OC.App.islandBindingEvidenceStatus(
+  { cePhases: [{ fateId: 49, status: 2, popTime: ceDeadline }], events: [], ends: [] },
+  { ce: [{ fate_id: 49, state: 2, pop_time: ceDeadline }], fate: [], pot: [] },
+  '',
+);
+assert.equal(ceBindingStatus.ceMatched, 1);
+assert.equal(ceBindingStatus.authorized, true, 'one unique CE phase signature must authorize a binding');
+const exactBindingStatus = sandbox.OC.App.islandBindingEvidenceStatus(
+  {
+    fingerprint: 'EXACT-FATE',
+    fingerprintQuality: 'exact',
+    events: [{ fateId: 2074, spawnEpoch: 1000, quality: 'exact' }],
+    ends: [],
+  },
+  { ce: [], fate: [{ fate_id: 2074, spawn_time: 1000 }], pot: [] },
+  'EXACT-FATE',
+);
+assert.equal(exactBindingStatus.authorized, true, 'one real StartTimeEpoch fingerprint must authorize a binding');
+assert.equal(
+  sandbox.OC.App.localEvidenceReadyForCreation({ fingerprintQuality: 'exact', events: [] }),
+  true,
+  'one real StartTimeEpoch may create a missing tracker after the normal retry',
+);
+sandbox.OC.FATES[2075] = { name: { en: 'Second Test FATE' }, drops: [] };
+const strongBindingStatus = sandbox.OC.App.islandBindingEvidenceStatus(
+  {
+    events: [
+      { fateId: 2074, spawnEpoch: 1000, quality: 'direct' },
+      { fateId: 2075, spawnEpoch: 1200, quality: 'direct' },
+    ],
+    ends: [],
+  },
+  {
+    ce: [],
+    fate: [
+      { fate_id: 2074, spawn_time: 1000 },
+      { fate_id: 2075, spawn_time: 1200 },
+    ],
+    pot: [],
+  },
+  '',
+);
+assert.equal(strongBindingStatus.strongMatched, 2);
+assert.equal(strongBindingStatus.authorized, true, 'two post-baseline direct FATE Adds must authorize a binding');
+assert.equal(
+  sandbox.OC.App.localEvidenceReadyForCreation({
+    events: [{ fateId: 2074, quality: 'direct' }, { fateId: 2075, quality: 'direct' }],
+  }),
+  true,
+  'two post-baseline direct FATE Adds may create a missing tracker',
+);
 sandbox.OC.App._island = { ce: [], fate: strictFateHistory, pot: [cloudPot] };
 sandbox.OC.App._dc = [{ rowId: 1, potHistory: [cloudPot] }];
 sandbox.OC.App.myIslandRowId = 1;

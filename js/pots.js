@@ -306,7 +306,15 @@
         var ces = parse(tracker.encounter_history);
         var fates = parse(tracker.fate_history);
         var pots = parse(tracker.pot_history);
-        var ids = [], activeEvents = [];
+        var ids = [], activeEvents = [], cePhases = [];
+        ces.forEach(function (entry) {
+          var fateId = number(entry && entry.fate_id, 0);
+          var status = number(entry && (entry.state != null ? entry.state : entry.status), 0);
+          var popTime = number(entry && entry.pop_time, 0);
+          if (fateId && status > 0 && popTime >= 1000000000) {
+            cePhases.push({ fateId: fateId, status: status, popTime: popTime });
+          }
+        });
         ces.concat(fates).forEach(function (entry) {
           if (!alive(entry)) return;
           var fateId = number(entry.fate_id, 0);
@@ -352,6 +360,7 @@
           ago: now - tracker.last_update,
           aliveIds: ids,
           activeEvents: activeEvents,
+          cePhases: cePhases,
           activeDirectorIds: sortedIds(activeDirectorIds),
           endEvents: endEvents,
           ceId: Pots.currentId(ces),
@@ -384,6 +393,30 @@
       if (territory) scoped = scoped.filter(function (item) {
         return number(item.territory, 0) === territory;
       });
+
+      // A CE popTime is the server-provided deadline for its current status,
+      // so the tuple remains precise even when received immediately on entry.
+      var ceSignals = evidence.cePhases || [];
+      if (ceSignals.length) {
+        var bestCeScore = 0;
+        var ceMatches = [];
+        scoped.forEach(function (item) {
+          var score = ceSignals.filter(function (signal) {
+            return (item.cePhases || []).some(function (remote) {
+              return number(remote.fateId, 0) === number(signal.fateId, 0) &&
+                number(remote.status, 0) === number(signal.status, 0) &&
+                number(remote.popTime, 0) === number(signal.popTime, 0);
+            });
+          }).length;
+          if (!score || score < bestCeScore) return;
+          if (score > bestCeScore) {
+            bestCeScore = score;
+            ceMatches = [];
+          }
+          ceMatches.push(item);
+        });
+        if (ceMatches.length === 1) return ceMatches[0];
+      }
 
       var hashes = evidence.fingerprints || [];
       if (hashes.length) {
