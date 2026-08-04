@@ -20,7 +20,8 @@ let alertTower = false;
 let alertPot = false;
 let alertColors = {};
 let treasureGuide = true;
-let radarEnabled = true;
+let radarCoffers = true;
+let radarCarrots = true;
 let radarPinned = false;
 let radarVoice = true;
 const treasureEnabledCalls = [];
@@ -38,14 +39,14 @@ const sandbox = {
   },
   OC: {
     CES: {
-      49: { name: { en: 'Test CE' }, drops: [50974] },
+      49: { name: { en: 'Test CE' }, drops: [50974], weakness: ['fire'] },
       64: { name: { en: 'Test Tower' }, drops: [], type: 'tower' },
     },
     FATES: {
-      2074: { name: { en: 'Test FATE' }, drops: [50974] },
+      2074: { name: { en: 'Test FATE' }, drops: [50974], weakness: ['ice'] },
     },
     POTS: {
-      2072: { name: { en: 'Test Pot' }, side: 'north', territory: 1346, drops: [50974] },
+      2072: { name: { en: 'Test Pot' }, side: 'north', territory: 1346, drops: [50974], weakness: ['lightning'] },
     },
     TERRITORIES: {
       1346: { towerId: 64 },
@@ -106,7 +107,8 @@ const sandbox = {
         if (key === 'alertPot') return alertPot;
         if (key === 'alertColors') return alertColors;
         if (key === 'treasureGuide') return treasureGuide;
-        if (key === 'radarEnabled') return radarEnabled;
+        if (key === 'radarCoffers') return radarCoffers;
+        if (key === 'radarCarrots') return radarCarrots;
         if (key === 'radarPinned') return radarPinned;
         if (key === 'radarVoice') return radarVoice;
         if (key === 'lang') return currentLanguage;
@@ -118,7 +120,8 @@ const sandbox = {
         if (key === 'dataRegion') currentDataRegion = value;
         if (key === 'alertTower') alertTower = value;
         if (key === 'treasureGuide') treasureGuide = value;
-        if (key === 'radarEnabled') radarEnabled = value;
+        if (key === 'radarCoffers') radarCoffers = value;
+        if (key === 'radarCarrots') radarCarrots = value;
         if (key === 'radarPinned') radarPinned = value;
         if (key === 'radarVoice') radarVoice = value;
       },
@@ -137,6 +140,10 @@ const sandbox = {
       },
       rewardSuffix() {
         return '';
+      },
+      weaknessIcons(values) {
+        if (!values || !values.length) return '';
+        return '<span class="weaknesses">' + values.map(value => '<i data-weakness="' + value + '"></i>').join('') + '</span>';
       },
     },
     i18n: {
@@ -320,22 +327,31 @@ assert.match(resizeAnchorsRule[1], /pointer-events:\s*none/, 'resize anchor laye
 const treasureGuideRule = styles.match(/\.treasure-guide\s*\{([^}]*)\}/);
 assert.ok(treasureGuideRule, 'treasure guide style must exist');
 assert.match(treasureGuideRule[1], /left:\s*8px/, 'treasure guidance must stay against the left edge');
+assert.match(treasureGuideRule[1], /width:\s*min\(270px/, 'treasure guidance must be 25% narrower');
 assert.match(treasureGuideRule[1], /background:\s*rgba\(14,\s*20,\s*30,\s*var\(--app-opacity\)\)/,
   'treasure guidance must follow the live opacity setting');
 assert.doesNotMatch(treasureGuideRule[1], /translateX/, 'left-aligned guidance must not retain centering transform');
 const radarPanelRule = styles.match(/\.radar-panel\s*\{([^}]*)\}/);
 assert.ok(radarPanelRule, 'radar panel style must exist');
 assert.match(radarPanelRule[1], /left:\s*8px/, 'radar guidance must stay against the left edge');
+assert.match(radarPanelRule[1], /width:\s*min\(248px/, 'the fixed radar must be 20% narrower');
 assert.match(radarPanelRule[1], /background:\s*rgba\(14,\s*20,\s*30,\s*var\(--app-opacity\)\)/,
   'radar guidance must follow the live opacity setting');
+const radarRowRule = styles.match(/\.radar-row\s*\{([^}]*)\}/);
+assert.ok(radarRowRule, 'radar row style must exist');
+assert.match(radarRowRule[1], /grid-template-columns:\s*22px 24px minmax\(0,\s*1fr\)/,
+  'narrow radar rows must keep the label and bearing inside the panel');
 assert.doesNotMatch(styles, /\.toast-radar\s*\{[^}]*border-left/,
   'radar alert popups must not use a left accent stripe');
+const mapLayerRule = styles.match(/\.map-layer\s*\{([^}]*)\}/);
+assert.ok(mapLayerRule, 'map layer style must exist');
+assert.match(mapLayerRule[1], /right:\s*56px/, 'the map must stop before the right-side control rail');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=107/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=107/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=107') < index.indexOf('js/treasure.js?v=107'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=107') < index.indexOf('js/map.js?v=107'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=111/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=111/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=111') < index.indexOf('js/treasure.js?v=111'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=111') < index.indexOf('js/map.js?v=111'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 assert.match(mapSource, /preserveAspectRatio="xMidYMin meet"/,
   'the map must stay horizontally centered and align below the top overlays');
@@ -367,7 +383,11 @@ const treasureGuideHost = {
   getBoundingClientRect() { return { top: 52, bottom: 152, height: 100 }; },
 };
 const mapHost = { style: {} };
-const appHost = { getBoundingClientRect() { return { top: 0 }; } };
+let noMap = false;
+const appHost = {
+  classList: { contains(name) { return name === 'no-map' && noMap; } },
+  getBoundingClientRect() { return { top: 0 }; },
+};
 const radarTarget = {
   id: '40000001', kind: 'silver', slot: 1, labelKey: 'radar_silver',
   bearing: 73.2, absoluteKey: 'direction_east', distance: 42.44,
@@ -394,16 +414,24 @@ sandbox.OC.App.updateRadar();
 assert.equal(radarClasses.has('hidden'), false, 'a pinned radar must remain visible without targets');
 assert.equal(radarClasses.has('pinned'), true);
 assert.match(radarHost.innerHTML, /No coffer or carrot detected/);
-assert.equal(radarHost.style.top, '46px', 'a pinned radar must start below the top status chips');
-assert.equal(mapHost.style.top, '134px', 'the map must start below a pinned top radar');
+assert.equal(radarHost.style.top, '', 'a pinned radar must stay bottom-aligned while the map is visible');
+assert.equal(radarHost.style.bottom, '8px');
+assert.equal(mapHost.style.top, '46px', 'the map must remain below the top status chips');
+assert.equal(mapHost.style.bottom, '96px', 'the map must stop above a pinned bottom radar');
 treasureGuideHidden = false;
 sandbox.OC.App.updateRadarPlacement();
-assert.equal(radarHost.style.top, '160px', 'an active Magic Pot guide must push the pinned radar below itself');
-assert.equal(mapHost.style.top, '248px', 'the map must follow the lowest visible top overlay');
+assert.equal(radarHost.style.top, '', 'an active Magic Pot guide must not move the bottom-aligned radar');
+assert.equal(mapHost.style.top, '160px', 'the map must start below an active Magic Pot guide');
+assert.equal(mapHost.style.bottom, '96px');
+noMap = true;
+sandbox.OC.App.updateRadarPlacement();
+assert.equal(radarHost.style.top, '160px', 'a pinned radar must move below the top overlays when the map is hidden');
+assert.equal(radarHost.style.bottom, 'auto');
 treasureGuideHidden = true;
 radarPinned = false;
 sandbox.OC.App.updateRadarPlacement();
 assert.equal(mapHost.style.top, '46px', 'bottom radar panels must not move the map');
+assert.equal(mapHost.style.bottom, '0px');
 
 const radarAlerts = [];
 const originalFireAlert = sandbox.OC.App.fireAlert;
@@ -418,11 +446,15 @@ sandbox.OC.App.fireAlert = originalFireAlert;
 sandbox.OC.Radar.targets = originalRadarTargets;
 sandbox.document.getElementById = originalGetElementById;
 
-sandbox.OC.State.highlights = [49, 64, 2074];
+sandbox.OC.State.highlights = [49, 64, 2074, 2072];
 sandbox.OC.App.updateActive();
 assert.equal(writes, 1);
 assert.match(markup, /Test CE/);
 assert.match(markup, /Test FATE/);
+assert.match(markup, /Test Pot/);
+assert.match(markup, /data-weakness="fire"/, 'CE capsules must include weakness icons');
+assert.match(markup, /data-weakness="ice"/, 'FATE capsules must include weakness icons');
+assert.doesNotMatch(markup, /data-weakness="lightning"/, 'pot capsules must not gain FATE\/CE weakness icons');
 assert.doesNotMatch(markup, /Test Tower/, 'Forked Towers must not appear in the active CE overview');
 
 sandbox.OC.App.updateActive();
@@ -857,7 +889,11 @@ const settingsControls = {
     checked: true,
     addEventListener(type, handler) { if (type === 'change') this.change = handler; },
   },
-  '#s-radar': {
+  '#s-radar-coffers': {
+    checked: true,
+    addEventListener(type, handler) { if (type === 'change') this.change = handler; },
+  },
+  '#s-radar-carrots': {
     checked: true,
     addEventListener(type, handler) { if (type === 'change') this.change = handler; },
   },
@@ -883,6 +919,14 @@ const settingsPop = {
 sandbox.OC.Overlay.territoryId = 1346;
 sandbox.OC.App.renderSettings(settingsPop);
 assert.match(settingsPop.innerHTML, /alert_tower/);
+assert.match(settingsPop.innerHTML, /class="settings-nav"/);
+assert.match(settingsPop.innerHTML, /data-settings-section="general"[^>]+aria-selected="true"/);
+assert.match(settingsPop.innerHTML, /data-settings-section="treasure"[^>]+aria-selected="false"/);
+assert.match(settingsPop.innerHTML, /data-settings-page="general" role="tabpanel">/);
+assert.match(settingsPop.innerHTML, /data-settings-page="treasure" role="tabpanel" hidden>/);
+assert.match(settingsPop.innerHTML, /settings_locale_title/);
+assert.match(settingsPop.innerHTML, /settings_display_title/);
+assert.match(settingsPop.innerHTML, /settings_alert_rules/);
 assert.match(settingsPop.innerHTML, /class="choice-grid lang-choice"/);
 assert.match(settingsPop.innerHTML, /data-lang="auto" aria-pressed="false">lang_auto/);
 assert.match(settingsPop.innerHTML, /class="choice-btn on" data-lang="en" aria-pressed="true">English/);
@@ -890,8 +934,10 @@ assert.match(settingsPop.innerHTML, /data-lang="ja" aria-pressed="false">日本�
 assert.match(settingsPop.innerHTML, /class="choice-grid region-choice"/);
 assert.match(settingsPop.innerHTML, /id="s-treasure" checked/);
 assert.match(settingsPop.innerHTML, /set_treasure_guide/);
-assert.match(settingsPop.innerHTML, /id="s-radar" checked/);
-assert.match(settingsPop.innerHTML, /set_radar/);
+assert.match(settingsPop.innerHTML, /id="s-radar-coffers" checked/);
+assert.match(settingsPop.innerHTML, /set_radar_coffers/);
+assert.match(settingsPop.innerHTML, /id="s-radar-carrots" checked/);
+assert.match(settingsPop.innerHTML, /set_radar_carrots/);
 assert.match(settingsPop.innerHTML, /id="s-radar-pinned"/);
 assert.doesNotMatch(settingsPop.innerHTML, /id="s-radar-pinned" checked/);
 assert.match(settingsPop.innerHTML, /set_radar_pinned/);
@@ -909,10 +955,24 @@ settingsControls['#s-treasure'].checked = false;
 settingsControls['#s-treasure'].change();
 assert.equal(treasureGuide, false, 'the settings switch must persist the disabled state');
 assert.deepEqual(treasureEnabledCalls, [false], 'disabling in settings must stop treasure guidance immediately');
-settingsControls['#s-radar'].checked = false;
-settingsControls['#s-radar'].change();
-assert.equal(radarEnabled, false, 'the radar switch must persist the disabled state');
-assert.deepEqual(radarEnabledCalls, [false], 'disabling in settings must stop radar tracking immediately');
+settingsControls['#s-radar-coffers'].checked = false;
+settingsControls['#s-radar-coffers'].change();
+assert.equal(radarCoffers, false, 'the coffer radar switch must persist independently');
+assert.equal(radarCarrots, true, 'disabling coffers must leave the carrot radar enabled');
+assert.deepEqual(radarEnabledCalls, [true], 'one active radar scope must keep tracking enabled');
+assert.equal(settingsControls['#s-radar-pinned'].disabled, false, 'radar options must remain available with carrots enabled');
+settingsControls['#s-radar-carrots'].checked = false;
+settingsControls['#s-radar-carrots'].change();
+assert.equal(radarCarrots, false, 'the carrot radar switch must persist independently');
+assert.deepEqual(radarEnabledCalls, [true, false], 'disabling both scopes must stop radar tracking');
+assert.equal(settingsControls['#s-radar-pinned'].disabled, true, 'radar visibility options must be disabled with the radar');
+assert.equal(settingsControls['#s-radar-voice'].disabled, true, 'radar voice options must be disabled with the radar');
+settingsControls['#s-radar-coffers'].checked = true;
+settingsControls['#s-radar-coffers'].change();
+assert.equal(radarCoffers, true, 'the coffer radar must work without the carrot radar');
+assert.equal(radarCarrots, false, 'enabling coffers must not enable carrots');
+assert.deepEqual(radarEnabledCalls, [true, false, true], 'either active scope must restart radar tracking');
+assert.equal(settingsControls['#s-radar-pinned'].disabled, false, 'radar options must return when one scope is enabled');
 settingsControls['#s-radar-pinned'].checked = true;
 settingsControls['#s-radar-pinned'].change();
 assert.equal(radarPinned, true, 'the pinned radar switch must persist independently of radar tracking');

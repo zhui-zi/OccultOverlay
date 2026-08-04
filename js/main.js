@@ -25,6 +25,7 @@
 
   var App = OC.App = {
     openPanel: null,
+    settingsSection: 'general',
     collapsed: false,
     _dc: [],        // 撒娇罐总览数据（去重排序后）
     _dcTick: 0,
@@ -826,6 +827,7 @@
       var toasts = document.getElementById('toasts');
       if (toasts) toasts.style.display = outside ? 'none' : '';
       app.classList.toggle('no-map', this.collapsed);
+      this.updateRadarPlacement();
     },
 
     togglePanel: function (which) {
@@ -1250,7 +1252,8 @@
           if (!def) return '';
           if (isCe && def.type === 'tower' && !OC.Settings.get('alertTower')) return '';
           var cls = isCe ? 'ce' : isPot ? 'pot' : 'fate';
-          return '<div class="chip chip-act ' + cls + '">' + OC.UI.esc(nm(def.name)) + rewardSuffix(def.drops) + '</div>';
+          var weakness = isPot ? '' : OC.UI.weaknessIcons(def.weakness);
+          return '<div class="chip chip-act ' + cls + '"><span class="chip-act-name">' + weakness + OC.UI.esc(nm(def.name)) + '</span>' + rewardSuffix(def.drops) + '</div>';
         }).join('');
       }
       // Rebuilding identical nodes makes ACT's Chromium surface flash.
@@ -1279,6 +1282,15 @@
       var pinned = !!OC.Settings.get('radarPinned');
       if (!pinned) {
         host.style.top = '';
+        host.style.bottom = '';
+        this.updateMapPlacement();
+        return;
+      }
+      var app = document.getElementById('app');
+      var noMap = !!(app && app.classList && app.classList.contains && app.classList.contains('no-map'));
+      if (!noMap) {
+        host.style.top = '';
+        host.style.bottom = '8px';
         this.updateMapPlacement();
         return;
       }
@@ -1291,6 +1303,7 @@
         top = Math.max(top, Number(guide.offsetTop || 0) + Number(guide.offsetHeight || 0) + 8);
       }
       host.style.top = Math.ceil(top) + 'px';
+      host.style.bottom = 'auto';
       this.updateMapPlacement();
     },
 
@@ -1300,24 +1313,38 @@
       var app = document.getElementById('app');
       var appRect = app && app.getBoundingClientRect ? app.getBoundingClientRect() : null;
       var appTop = appRect && isFinite(appRect.top) ? Number(appRect.top) : 0;
-      var bottom = 0;
+      var noMap = !!(app && app.classList && app.classList.contains && app.classList.contains('no-map'));
+      var topEdge = 0;
 
-      function include(element) {
+      function includeTop(element) {
         if (!element) return;
         if (element.classList && element.classList.contains && element.classList.contains('hidden')) return;
         var rect = element.getBoundingClientRect ? element.getBoundingClientRect() : null;
         var edge = rect && isFinite(rect.bottom)
           ? Number(rect.bottom) - appTop
           : Number(element.offsetTop || 0) + Number(element.offsetHeight || 0);
-        bottom = Math.max(bottom, edge);
+        topEdge = Math.max(topEdge, edge);
       }
 
-      include(document.getElementById('status-chips'));
-      include(document.getElementById('treasure-guide'));
-      if (OC.Settings.get('radarPinned')) include(document.getElementById('radar-panel'));
+      includeTop(document.getElementById('status-chips'));
+      includeTop(document.getElementById('treasure-guide'));
+      if (noMap && OC.Settings.get('radarPinned')) includeTop(document.getElementById('radar-panel'));
 
-      var top = bottom > 0 ? Math.max(0, Math.ceil(bottom + 8)) : 0;
+      var top = topEdge > 0 ? Math.max(0, Math.ceil(topEdge + 8)) : 0;
+      var bottom = 0;
+      if (!noMap && OC.Settings.get('radarPinned')) {
+        var radar = document.getElementById('radar-panel');
+        var radarHidden = radar && radar.classList && radar.classList.contains && radar.classList.contains('hidden');
+        if (radar && !radarHidden) {
+          var radarRect = radar.getBoundingClientRect ? radar.getBoundingClientRect() : null;
+          var radarHeight = radarRect && isFinite(radarRect.height)
+            ? Number(radarRect.height)
+            : Number(radar.offsetHeight || 0);
+          bottom = Math.max(0, Math.ceil(radarHeight + 16));
+        }
+      }
       layer.style.top = top + 'px';
+      layer.style.bottom = bottom + 'px';
       return top;
     },
 
@@ -1325,9 +1352,10 @@
       var host = document.getElementById('radar-panel');
       if (!host) return;
       var list = OC.Radar && OC.Radar.targets ? OC.Radar.targets() : [];
+      var radarEnabled = !!(OC.Settings.get('radarCoffers') || OC.Settings.get('radarCarrots'));
       var pinned = !!OC.Settings.get('radarPinned');
       if (pinned) host.classList.add('pinned'); else host.classList.remove('pinned');
-      if (!OC.Settings.get('radarEnabled') || (!list.length && !pinned)) {
+      if (!radarEnabled || (!list.length && !pinned)) {
         host.classList.add('hidden');
         host.innerHTML = '';
         this.updateRadarPlacement();
@@ -1667,6 +1695,10 @@
     renderSettings: function (pop) {
       var g = OC.Settings.get.bind(OC.Settings);
       var colors = g('alertColors') || {};
+      var activeSection = ['general', 'treasure', 'alerts'].indexOf(this.settingsSection) >= 0
+        ? this.settingsSection
+        : 'general';
+      this.settingsSection = activeSection;
       var swatch = {
         47744: '#4aa3ff', 47745: '#2ec4b6', 47746: '#3ddb63',
         47747: '#ff8a3c', 47748: '#b061ff', 47749: '#ffce4d',
@@ -1678,30 +1710,56 @@
         : [47744, 47745, 47746, 47747, 47748, 47749];
       var h = '<div class="panel-head">' + t('panel_settings') + '<button class="pclose" data-close>' + t('close') + '</button></div>';
       h += '<div class="panel-body settings">';
-      h += '<div class="s-grp">' + t('alert_title') + '</div>';
+      h += '<div class="settings-nav" role="tablist" aria-label="' + esc(t('panel_settings')) + '">';
+      h += settingsNavButton('general', t('settings_tab_general'), activeSection);
+      h += settingsNavButton('treasure', t('settings_tab_treasure'), activeSection);
+      h += settingsNavButton('alerts', t('settings_tab_alerts'), activeSection);
+      h += '</div>';
+
+      h += settingsPageStart('general', activeSection);
+      h += '<div class="settings-card"><div class="settings-card-title">' + t('settings_locale_title') + '</div>';
+      var languageMode = OC.Settings.getRaw ? OC.Settings.getRaw('lang') : g('lang');
+      h += choiceRow(t('set_lang'), t('set_lang_help'), '<div class="choice-grid lang-choice" role="group" aria-label="' + esc(t('set_lang')) + '">' + languageButtons(languageMode) + '</div>');
+      h += choiceRow(t('set_data_region'), t('set_data_region_help'), '<div class="choice-grid region-choice" role="group" aria-label="' + esc(t('set_data_region')) + '">' + dataRegionButtons(g('dataRegion')) + '</div>');
+      h += '</div>';
+      h += '<div class="settings-card"><div class="settings-card-title">' + t('settings_display_title') + '</div>';
+      h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'), t('set_show_chips_help'));
+      h += sliderRow('s-op', 's-op-value', t('set_opacity'), g('opacity'), 0.3, 1, 0.05, Math.round(g('opacity') * 100) + '%');
+      h += sliderRow('s-scale', 's-scale-value', t('set_scale'), g('uiScale') || 1, 0.8, 2, 0.1, Math.round((g('uiScale') || 1) * 100) + '%');
+      h += '</div></section>';
+
+      h += settingsPageStart('treasure', activeSection);
+      h += '<div class="settings-card"><div class="settings-card-title">' + t('treasure_title') + '</div>';
+      h += rowChk('s-treasure', t('set_treasure_guide'), g('treasureGuide'), t('set_treasure_guide_help'));
+      h += '</div>';
+      h += '<div class="settings-card"><div class="settings-card-title">' + t('radar_title') + '</div>';
+      var radarEnabled = !!(g('radarCoffers') || g('radarCarrots'));
+      h += rowChk('s-radar-coffers', t('set_radar_coffers'), g('radarCoffers'), t('set_radar_coffers_help'));
+      h += rowChk('s-radar-carrots', t('set_radar_carrots'), g('radarCarrots'), t('set_radar_carrots_help'));
+      h += '<div class="settings-dependent' + (radarEnabled ? '' : ' is-disabled') + '" data-radar-dependent>';
+      h += rowChk('s-radar-pinned', t('set_radar_pinned'), g('radarPinned'), t('set_radar_pinned_help'), !radarEnabled);
+      h += rowChk('s-radar-voice', t('set_radar_voice'), g('radarVoice'), t('set_radar_voice_help'), !radarEnabled);
+      h += '</div></div></section>';
+
+      h += settingsPageStart('alerts', activeSection);
+      h += '<div class="settings-card"><div class="settings-card-title">' + t('settings_alert_rules') + '</div>';
       h += rowChk('a-all', t('alert_all'), g('alertAllEncounters'));
       h += rowChk('a-tower', t('alert_tower'), g('alertTower'));
       h += rowChk('a-pot', t('alert_pot_opt'), g('alertPot'));
-      h += '<div class="s-sub">' + t(territory === 1346 ? 'alert_dispeller' : 'alert_demiatma') + '</div><div class="color-grid">';
+      h += '</div>';
+      h += '<div class="settings-card"><div class="settings-card-title">' + t('settings_drop_alerts') + '</div>';
+      h += '<div class="settings-card-help">' + t(territory === 1346 ? 'alert_dispeller' : 'alert_demiatma') + '</div><div class="color-grid">';
       rewardIds.forEach(function (id) {
         var it = OC.ITEMS[id], on = !!colors[id];
         h += '<label class="color-chk' + (on ? ' on' : '') + '" data-cid="' + id + '" style="--sc:' + swatch[id] + '">' +
           '<input type="checkbox" data-color="' + id + '"' + (on ? ' checked' : '') + '>' +
           '<span class="sw"></span>' + esc(OC.localName(it.name, g('lang'))) + '</label>';
       });
-      h += '</div>';
-      h += rowChk('a-tts', t('alert_tts'), g('useTts'));
-      h += '<div class="s-grp">' + t('panel_settings') + '</div>';
-      var languageMode = OC.Settings.getRaw ? OC.Settings.getRaw('lang') : g('lang');
-      h += choiceRow(t('set_lang'), '<div class="choice-grid lang-choice" role="group" aria-label="' + esc(t('set_lang')) + '">' + languageButtons(languageMode) + '</div>');
-      h += choiceRow(t('set_data_region'), '<div class="choice-grid region-choice" role="group" aria-label="' + esc(t('set_data_region')) + '">' + dataRegionButtons(g('dataRegion')) + '</div>');
-      h += rowChk('s-chips', t('set_show_chips'), g('showActiveChips'));
-      h += rowChk('s-treasure', t('set_treasure_guide'), g('treasureGuide'));
-      h += rowChk('s-radar', t('set_radar'), g('radarEnabled'));
-      h += rowChk('s-radar-pinned', t('set_radar_pinned'), g('radarPinned'));
-      h += rowChk('s-radar-voice', t('set_radar_voice'), g('radarVoice'));
-      h += row(t('set_opacity'), '<input id="s-op" type="range" min="0.3" max="1" step="0.05" value="' + g('opacity') + '">');
-      h += row(t('set_scale'), '<input id="s-scale" type="range" min="0.8" max="2" step="0.1" value="' + (g('uiScale') || 1) + '">');
+      h += '</div></div>';
+      h += '<div class="settings-card"><div class="settings-card-title">' + t('settings_alert_output') + '</div>';
+      h += rowChk('a-tts', t('alert_tts'), g('useTts'), t('alert_tts_help'));
+      h += '</div></section>';
+
       h += '<div class="repo-link"><a id="s-repo" href="#">github.com/zhui-zi/OccultOverlay</a></div>';
       var names = ['可畏', '三角初华', '柳墨琉', '茫lan', '皇帝驾到', '羽山凌', '魂魄妖妖梦', '正在烧烤中', '沧璃'];
       h += '<div class="made-with">made with 💗 for ' + esc(names[Math.floor(Math.random() * names.length)]) + '</div>';
@@ -1712,12 +1770,21 @@
       op.addEventListener('input', function () {
         OC.Settings.set('opacity', Number(op.value));
         document.documentElement.style.setProperty('--app-opacity', op.value);
+        var output = pop.querySelector('#s-op-value');
+        if (output) output.textContent = Math.round(Number(op.value) * 100) + '%';
       });
       var sc = pop.querySelector('#s-scale');
       sc.addEventListener('input', function () {
         OC.Settings.set('uiScale', Number(sc.value));
         App.applyUiScale();
         App.updateRadar();
+        var output = pop.querySelector('#s-scale-value');
+        if (output) output.textContent = Math.round(Number(sc.value) * 100) + '%';
+      });
+      pop.querySelectorAll('button[data-settings-section]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          selectSettingsSection(pop, button.getAttribute('data-settings-section'));
+        });
       });
       pop.querySelectorAll('button[data-lang]').forEach(function (button) {
         button.addEventListener('click', function () { App.changeLanguage(button.getAttribute('data-lang')); });
@@ -1738,17 +1805,21 @@
         if (OC.Treasure && OC.Treasure.setEnabled) OC.Treasure.setEnabled(enabled);
         App.updateTreasureGuide();
       });
-      bindChk(pop, 's-radar', 'radarEnabled', function (enabled) {
+      function refreshRadarSettings() {
+        var enabled = !!(g('radarCoffers') || g('radarCarrots'));
         if (OC.Radar && OC.Radar.setEnabled) OC.Radar.setEnabled(enabled);
         App.updateRadar();
-      });
+        syncRadarSettings(pop, enabled);
+      }
+      bindChk(pop, 's-radar-coffers', 'radarCoffers', refreshRadarSettings);
+      bindChk(pop, 's-radar-carrots', 'radarCarrots', refreshRadarSettings);
       bindChk(pop, 's-radar-pinned', 'radarPinned', function () { App.updateRadar(); });
       bindChk(pop, 's-radar-voice', 'radarVoice');
+      syncRadarSettings(pop, radarEnabled);
       var repo = pop.querySelector('#s-repo');
       if (repo) repo.addEventListener('click', function (e) {
         e.preventDefault();
         var url = 'https://github.com/zhui-zi/OccultOverlay';
-        // 优先让 ACT 用系统浏览器打开；未连接时回退到普通打开
         if (!OC.Overlay.openUrl(url)) window.open(url, '_blank');
       });
       pop.querySelectorAll('input[data-color]').forEach(function (cb) {
@@ -1757,7 +1828,7 @@
           c[cb.getAttribute('data-color')] = cb.checked;
           OC.Settings.set('alertColors', c);
           cb.closest('.color-chk').classList.toggle('on', cb.checked);
-          if (cb.checked) OC.UI.speak(OC.localName(OC.ITEMS[cb.getAttribute('data-color')].name, g('lang'))); // 试听
+          if (cb.checked) OC.UI.speak(OC.localName(OC.ITEMS[cb.getAttribute('data-color')].name, g('lang')));
         });
       });
     }
@@ -1788,8 +1859,41 @@
   }
 
   function rewardSuffix(drops) { return OC.UI.rewardSuffix(drops); }
-  function row(l, c) { return '<div class="s-row"><label>' + l + '</label>' + c + '</div>'; }
-  function choiceRow(l, c) { return '<div class="s-row s-choice-row"><label>' + l + '</label>' + c + '</div>'; }
+  function choiceRow(l, help, c) {
+    return '<div class="settings-choice"><div class="setting-name">' + l + '</div>' +
+      '<div class="setting-help">' + help + '</div>' + c + '</div>';
+  }
+  function settingsNavButton(section, label, active) {
+    var selected = section === active;
+    return '<button type="button" class="settings-nav-btn' + (selected ? ' on' : '') + '" data-settings-section="' + section + '" role="tab" aria-selected="' + selected + '" aria-controls="settings-page-' + section + '">' + label + '</button>';
+  }
+  function settingsPageStart(section, active) {
+    return '<section id="settings-page-' + section + '" class="settings-page" data-settings-page="' + section + '" role="tabpanel"' + (section === active ? '' : ' hidden') + '>';
+  }
+  function selectSettingsSection(pop, section) {
+    if (['general', 'treasure', 'alerts'].indexOf(section) < 0) return;
+    App.settingsSection = section;
+    pop.querySelectorAll('button[data-settings-section]').forEach(function (button) {
+      var active = button.getAttribute('data-settings-section') === section;
+      button.classList.toggle('on', active);
+      button.setAttribute('aria-selected', active);
+    });
+    pop.querySelectorAll('[data-settings-page]').forEach(function (page) {
+      page.hidden = page.getAttribute('data-settings-page') !== section;
+    });
+  }
+  function syncRadarSettings(pop, enabled) {
+    var group = pop.querySelector('[data-radar-dependent]');
+    if (group) group.classList.toggle('is-disabled', !enabled);
+    ['#s-radar-pinned', '#s-radar-voice'].forEach(function (selector) {
+      var input = pop.querySelector(selector);
+      if (input) input.disabled = !enabled;
+    });
+  }
+  function sliderRow(id, outputId, label, value, min, max, step, displayValue) {
+    return '<label class="slider-setting" for="' + id + '"><span class="slider-label"><span class="setting-name">' + label + '</span><output id="' + outputId + '">' + displayValue + '</output></span>' +
+      '<input id="' + id + '" type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + value + '"></label>';
+  }
   function choiceButtons(items, selected, attribute) {
     return items.map(function (item) {
       var active = selected === item[0];
@@ -1810,7 +1914,11 @@
       ['global', t('data_region_global')]
     ], selected, 'data-region');
   }
-  function rowChk(id, l, on) { return '<div class="s-row s-check"><label><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + l + '</label></div>'; }
+  function rowChk(id, l, on, help, disabled) {
+    return '<label class="setting-toggle">' +
+      '<span class="setting-copy"><span class="setting-name">' + l + '</span>' + (help ? '<span class="setting-help">' + help + '</span>' : '') + '</span>' +
+      '<input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + (disabled ? ' disabled' : '') + '><span class="switch-track" aria-hidden="true"></span></label>';
+  }
   function bindChk(pop, id, key, onChange) {
     var el = pop.querySelector('#' + id);
     if (el) el.addEventListener('change', function () {

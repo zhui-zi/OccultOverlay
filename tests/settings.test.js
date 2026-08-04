@@ -30,7 +30,8 @@ assert.equal(settings.get('lang'), 'ja');
 assert.equal(settings.get('dataRegion'), 'global');
 assert.equal(settings.get('alertTower'), false);
 assert.equal(settings.get('treasureGuide'), true);
-assert.equal(settings.get('radarEnabled'), true);
+assert.equal(settings.get('radarCoffers'), true);
+assert.equal(settings.get('radarCarrots'), true);
 assert.equal(settings.get('radarPinned'), false);
 assert.equal(settings.get('radarVoice'), true);
 assert.equal(settings.get('mapLayers').survey, false);
@@ -61,9 +62,13 @@ assert.equal(loaded.settings.get('dataRegion'), 'cn', 'an explicit region choice
 loaded.settings.set('treasureGuide', false);
 loaded = loadSettings('en-US', loaded.stored());
 assert.equal(loaded.settings.get('treasureGuide'), false, 'the treasure guide switch must survive reload');
-loaded.settings.set('radarEnabled', false);
+loaded.settings.set('radarCoffers', false);
 loaded = loadSettings('en-US', loaded.stored());
-assert.equal(loaded.settings.get('radarEnabled'), false, 'the radar switch must survive reload');
+assert.equal(loaded.settings.get('radarCoffers'), false, 'the coffer radar switch must survive reload');
+assert.equal(loaded.settings.get('radarCarrots'), true, 'the carrot radar switch must remain independent');
+loaded.settings.set('radarCarrots', false);
+loaded = loadSettings('en-US', loaded.stored());
+assert.equal(loaded.settings.get('radarCarrots'), false, 'the carrot radar switch must survive reload');
 loaded.settings.set('radarPinned', true);
 loaded = loadSettings('en-US', loaded.stored());
 assert.equal(loaded.settings.get('radarPinned'), true, 'the pinned radar switch must survive reload independently');
@@ -77,6 +82,13 @@ assert.equal(settings.get('dataRegion'), 'cn');
 settings = loadSettings('fr-FR').settings;
 assert.equal(settings.get('lang'), 'en');
 assert.equal(settings.get('dataRegion'), 'global');
+
+settings = loadSettings('en-US', {
+  _v: 9,
+  radarEnabled: false,
+}).settings;
+assert.equal(settings.get('radarCoffers'), false, 'a disabled legacy radar must keep both new scopes disabled');
+assert.equal(settings.get('radarCarrots'), false, 'a disabled legacy radar must keep both new scopes disabled');
 
 settings = loadSettings('en-US', {
   _v: 3,

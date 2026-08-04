@@ -121,14 +121,22 @@ assert.equal(i18nSandbox.OC.i18n.t('alert_dispeller'), '出现掉落以下消幻
 assert.equal(i18nSandbox.OC.i18n.t('island_unknown'), '未知');
 assert.equal(i18nSandbox.OC.i18n.t('tower_predicted'), '预计');
 assert.equal(i18nSandbox.OC.i18n.t('tower_reduced'), '已缩短');
+assert.equal(i18nSandbox.OC.i18n.t('settings_tab_treasure'), '寻宝');
+assert.equal(i18nSandbox.OC.i18n.t('set_data_region_help'), '控制读取的服务器数据，与界面语言独立。');
+assert.equal(i18nSandbox.OC.i18n.t('set_radar_coffers'), '宝箱雷达');
+assert.equal(i18nSandbox.OC.i18n.t('set_radar_carrots'), '胡萝卜雷达');
 i18nLanguage = 'en';
 assert.equal(i18nSandbox.OC.i18n.t('set_lang'), 'Language');
 assert.equal(i18nSandbox.OC.i18n.t('set_data_region'), 'Data region');
 assert.equal(i18nSandbox.OC.i18n.t('layer_survey'), 'Survey Point');
+assert.equal(i18nSandbox.OC.i18n.t('settings_tab_alerts'), 'Alerts');
+assert.equal(i18nSandbox.OC.i18n.t('set_radar_coffers'), 'Coffer radar');
 i18nLanguage = 'ja';
 assert.equal(i18nSandbox.OC.i18n.t('set_lang'), '言語');
 assert.equal(i18nSandbox.OC.i18n.t('data_region_global'), 'グローバル版');
 assert.equal(i18nSandbox.OC.i18n.t('layer_survey'), '調査地点');
+assert.equal(i18nSandbox.OC.i18n.t('settings_tab_general'), '表示');
+assert.equal(i18nSandbox.OC.i18n.t('set_radar_carrots'), 'ニンジンレーダー');
 
 assert.equal(OC.selectMap(1346), true);
 assert.equal(OC.MAP.background, 'https://pic.imgdd.cc/i/033yZEk5hNqakHejLVO4sm.png');

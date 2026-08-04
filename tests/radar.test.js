@@ -2,7 +2,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-let radarEnabled = true;
+let radarCoffers = true;
+let radarCarrots = true;
 const handlers = {};
 const source = {
   inOccult: true,
@@ -29,7 +30,11 @@ const sandbox = {
   Math,
   OC: {
     Settings: {
-      get(key) { return key === 'radarEnabled' ? radarEnabled : null; },
+      get(key) {
+        if (key === 'radarCoffers') return radarCoffers;
+        if (key === 'radarCarrots') return radarCarrots;
+        return null;
+      },
     },
   },
 };
@@ -70,6 +75,16 @@ assert.equal(targets[1].absoluteKey, 'direction_east');
 assert.equal(targets[1].bearing, 90);
 assert.equal(targets[2].absoluteKey, 'direction_south');
 assert.equal(targets[2].bearing, 180);
+radarCoffers = false;
+Radar.setEnabled(true);
+assert.deepEqual(Array.from(Radar.targets(), target => target.kind), ['carrot'], 'coffers can be hidden independently');
+radarCoffers = true;
+radarCarrots = false;
+Radar.setEnabled(true);
+assert.deepEqual(Array.from(Radar.targets(), target => target.kind), ['silver', 'bronze'], 'carrots can be hidden independently');
+radarCarrots = true;
+Radar.setEnabled(true);
+assert.equal(Radar.targets().length, 3, 'coffers and carrots can be enabled together');
 assert.ok(Math.abs(Radar.bearingForDelta(1, -Math.sqrt(3)) - 30) < 0.000001,
   'radar bearings must preserve exact angles inside a compass sector');
 
@@ -128,9 +143,19 @@ assert.equal(Radar.targets().length, 0, 'using a nearby carrot clears it');
   assert.equal(Radar.targets()[0].kind, 'bronze');
   assert.equal(Radar.targets()[0].bnpcId, 1856);
 
-  radarEnabled = false;
-  Radar.scan([{ ID: 0x40000030, BNpcID: 1789, PosX: 1, PosY: 1, PosZ: 1 }]);
-  assert.equal(Radar.targets().length, 1, 'disabling does not mutate existing state until the switch handler resets it');
+  Radar.reset();
+  const alertCountBeforeScopeTest = alerts.length;
+  radarCoffers = false;
+  radarCarrots = true;
+  Radar.setEnabled(true);
+  Radar.scan([
+    { ID: 0x40000030, BNpcID: 1789, PosX: 1, PosY: 1, PosZ: 1 },
+    { ID: 0x40000031, BNpcID: 2010139, PosX: 2, PosY: 2, PosZ: 1 },
+  ]);
+  assert.deepEqual(Array.from(Radar.targets(), target => target.kind), ['carrot']);
+  assert.deepEqual(Array.from(alerts.slice(alertCountBeforeScopeTest), target => target.kind), ['carrot'],
+    'disabled radar scopes must not emit alerts');
+  radarCarrots = false;
   Radar.setEnabled(false);
   assert.equal(Radar.targets().length, 0);
   console.log('radar tests passed');

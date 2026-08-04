@@ -3,7 +3,7 @@
 
   var OC = global.OC = global.OC || {};
   var KEY = 'occultOverlay.settings';
-  var SCHEMA_V = 9;
+  var SCHEMA_V = 10;
   var hostLanguage = null;
 
   function normalizeLanguage(value) {
@@ -39,7 +39,8 @@
     uiScale: 1,                 // 界面缩放（放大胶囊/按钮/面板）
     showActiveChips: true,      // 顶部“当前 FATE/CE”胶囊（右键可隐藏）
     treasureGuide: true,
-    radarEnabled: true,
+    radarCoffers: true,
+    radarCarrots: true,
     radarPinned: false,
     radarVoice: true,
     collapsed: false,
@@ -65,6 +66,11 @@
       if (oldVersion < 3) obj.lang = 'auto';
       // Data region is initialized once from the effective language, then stored independently.
       if (oldVersion < 4) obj.dataRegion = effectiveLanguage(obj.lang) === 'zh' ? 'cn' : 'global';
+      // v10 splits the radar master switch without changing the existing enabled state.
+      if (oldVersion < 10) {
+        obj.radarCoffers = obj.radarEnabled !== false;
+        obj.radarCarrots = obj.radarEnabled !== false;
+      }
       var out = {};
       for (var k in defaults) out[k] = (k in obj) ? obj[k] : clone(defaults[k]);
       out._v = SCHEMA_V;

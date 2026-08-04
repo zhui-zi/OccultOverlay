@@ -19,8 +19,13 @@
   var changeHandlers = [];
   var alertHandlers = [];
 
+  function kindEnabled(kind) {
+    if (!OC.Settings) return true;
+    return OC.Settings.get(kind === 'carrot' ? 'radarCarrots' : 'radarCoffers') !== false;
+  }
+
   function settingEnabled() {
-    return !OC.Settings || OC.Settings.get('radarEnabled') !== false;
+    return kindEnabled('bronze') || kindEnabled('carrot');
   }
 
   function inOccult() {
@@ -110,6 +115,7 @@
   }
 
   function emitAlert(target) {
+    if (!kindEnabled(target && target.kind)) return;
     var view = publicTarget(target);
     alertHandlers.forEach(function (handler) {
       try { handler(view); } catch (error) { console.error('[radar] alert handler', error); }
@@ -281,7 +287,7 @@
     },
 
     isActive: function () {
-      return enabled && Object.keys(targets).length > 0;
+      return enabled && this.targets().length > 0;
     },
 
     scan: function (combatants) {
@@ -334,6 +340,7 @@
 
     targets: function () {
       return Object.keys(targets).map(function (key) { return publicTarget(targets[key]); })
+        .filter(function (target) { return kindEnabled(target.kind); })
         .sort(function (a, b) {
           if (a.kind === 'carrot' && b.kind !== 'carrot') return 1;
           if (a.kind !== 'carrot' && b.kind === 'carrot') return -1;
