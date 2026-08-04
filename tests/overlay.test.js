@@ -8,6 +8,7 @@ const source = fs.readFileSync(require.resolve('../js/overlay.js'), 'utf8');
 
 function loadOverlay(search) {
   const intervals = [];
+  const intervalDelays = [];
   const timeouts = [];
   let websocketCount = 0;
   let nowMs = Date.now();
@@ -45,7 +46,7 @@ function loadOverlay(search) {
     Promise,
     location: { search: search || '' },
     document: { addEventListener() {} },
-    setInterval(cb) { intervals.push(cb); return intervals.length; },
+    setInterval(cb, delay) { intervals.push(cb); intervalDelays.push(delay); return intervals.length; },
     clearInterval() {},
     setTimeout(cb) { timeouts.push(cb); return timeouts.length; },
     WebSocket: FakeWebSocket,
@@ -66,6 +67,7 @@ function loadOverlay(search) {
   return {
     sandbox,
     intervals,
+    intervalDelays,
     timeouts,
     advanceTime(ms) { nowMs += ms; },
     get websocketCount() { return websocketCount; }
@@ -90,6 +92,7 @@ ws.sandbox.OverlayPluginApi = {
 ws.sandbox.OC.Overlay.start();
 assert.equal(ws.websocketCount, 1);
 assert.equal(ws.intervals.length, 1); // position polling only; no legacy polling
+assert.equal(ws.intervalDelays[0], 250, 'the live position scheduler must react within 250 ms');
 
 const memory = loadOverlay('');
 memory.sandbox.dispatchOverlayEvent({
@@ -305,10 +308,12 @@ assert.equal(cePhaseEvents.length, 2, 'a CE phase change must trigger immediate 
 const position = loadOverlay('');
 let observedPosition = null;
 let observedCombatants = null;
+let combatantPolls = 0;
 position.sandbox.OverlayPluginApi = {
   ready: true,
   callHandler(message, cb) {
     const request = JSON.parse(message);
+    if (request.call === 'getCombatants') combatantPolls += 1;
     const response = request.call === 'getCombatants'
       ? { combatants: [{ ID: 1, Name: 'Player', Type: 1, PosX: 12, PosY: 34, PosZ: -100, Heading: 1.5 }] }
       : {};
@@ -327,6 +332,12 @@ Promise.resolve().then(() => {
     { x: 12, y: -100, z: 34, h: 1.5 },
   );
   assert.equal(observedCombatants.length, 1, 'position polling must expose the same object snapshot to radar consumers');
+  position.advanceTime(250);
+  position.intervals[1]();
+  assert.equal(combatantPolls, 1, 'idle position polling must keep its existing two-second throttle');
+  position.sandbox.OC.Treasure = { isActive() { return true; } };
+  position.intervals[1]();
+  assert.equal(combatantPolls, 2, 'active treasure guidance must poll the live position after 250 ms');
   console.log('overlay tests passed');
 }).catch((error) => {
   console.error(error);

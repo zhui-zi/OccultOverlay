@@ -93,6 +93,8 @@ function startNorth(context) {
   const north = Treasure.refineCandidates(candidates, { x: 0, z: 0 }, '正北');
   assert.deepEqual(Array.from(north, (entry) => [entry.x, entry.z]), [[0, -10], [4, -10]]);
   assert.equal(Treasure.directionForDelta(4.2, -10), 1, 'the clockwise side of the 22.5 degree boundary must be northeast');
+  assert.ok(Math.abs(Treasure.bearingForDelta(1, -Math.sqrt(3)) - 30) < 0.000001,
+    'display bearing must preserve angles inside an eight-direction sector');
   assert.equal(Treasure.parseDirection('财宝好像是在东北方向很远的地方！'), '东北');
 }
 
@@ -124,6 +126,15 @@ function startNorth(context) {
   assert.ok(view.candidateCount < 30);
 
   const oldTarget = { x: view.target.x, z: view.target.z };
+  let liveView = null;
+  Treasure.onChange((nextView) => { liveView = nextView; });
+  overlay.playerPos = { x: oldTarget.x - 10, y: 0, z: oldTarget.z + 5 };
+  overlay.emit('position', overlay.playerPos);
+  assert.ok(liveView && liveView.target, 'a position update must immediately publish a fresh guide view');
+  assert.ok(Math.abs(liveView.target.distance - Math.sqrt(125)) < 0.000001);
+  assert.ok(Math.abs(liveView.target.bearing - 63.43494882292201) < 0.000001,
+    'the live arrow bearing must not snap to the nearest direction sector');
+
   const another = firstMatches.find((candidate) => {
     const dx = candidate.x - oldTarget.x;
     const dz = candidate.z - oldTarget.z;

@@ -5,7 +5,6 @@
   var OC = global.OC = global.OC || {};
   var DIRECTIONS = ['正北', '东北', '正东', '东南', '正南', '西南', '正西', '西北'];
   var DIRECTION_KEYS = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
-  var DIRECTION_ARROWS = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
   var POT_KILL_WINDOW_SEC = 30;
   var NORTH_DANGER_RADIUS = 20;
   var NORTH_DANGER_POINTS = [
@@ -113,6 +112,12 @@
     var angle = Math.atan2(dx, -dz);
     var sector = Math.floor((angle + sectorSize / 2) / sectorSize);
     return (sector + 8) % 8;
+  }
+
+  function bearingForDelta(dx, dz) {
+    if (dx * dx + dz * dz < 0.000001) return null;
+    var degrees = Math.atan2(dx, -dz) * 180 / Math.PI;
+    return (degrees + 360) % 360;
   }
 
   function parseDirection(message) {
@@ -431,14 +436,19 @@
         dangerous: !!state.target.danger,
         direction: travelSector >= 0 ? DIRECTIONS[travelSector] : '',
         directionKey: travelSector >= 0 ? DIRECTION_KEYS[travelSector] : '',
-        arrow: travelSector >= 0 ? DIRECTION_ARROWS[travelSector] : '●'
+        bearing: bearingForDelta(dx, dz)
       };
       return view;
+    },
+
+    isActive: function () {
+      return !!state.active;
     },
 
     parseDirection: parseDirection,
     directionIndex: directionIndex,
     directionForDelta: directionForDelta,
+    bearingForDelta: bearingForDelta,
     refineCandidates: refineCandidates,
     isDanger: isDanger,
     selectTarget: selectTarget,

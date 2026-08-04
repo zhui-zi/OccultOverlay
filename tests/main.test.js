@@ -311,13 +311,15 @@ assert.match(resizeAnchorsRule[1], /pointer-events:\s*none/, 'resize anchor laye
 const treasureGuideRule = styles.match(/\.treasure-guide\s*\{([^}]*)\}/);
 assert.ok(treasureGuideRule, 'treasure guide style must exist');
 assert.match(treasureGuideRule[1], /left:\s*8px/, 'treasure guidance must stay against the left edge');
+assert.match(treasureGuideRule[1], /background:\s*rgba\(14,\s*20,\s*30,\s*var\(--app-opacity\)\)/,
+  'treasure guidance must follow the live opacity setting');
 assert.doesNotMatch(treasureGuideRule[1], /translateX/, 'left-aligned guidance must not retain centering transform');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=103/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=103/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=103') < index.indexOf('js/treasure.js?v=103'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=103') < index.indexOf('js/map.js?v=103'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=104/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=104/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=104') < index.indexOf('js/treasure.js?v=104'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=104') < index.indexOf('js/map.js?v=104'), 'radar state must load before map rendering');
 
 sandbox.OC.State.highlights = [49, 64, 2074];
 sandbox.OC.App.updateActive();

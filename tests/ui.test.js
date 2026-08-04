@@ -184,13 +184,15 @@ sandbox.OC.UI.renderTreasureGuide(guideHost, {
   candidateCount: 3,
   safeCount: 0,
   lastDirection: '正东',
-  target: { arrow: '→', directionKey: 'east', distance: 42.4, dangerous: true },
+  target: { bearing: 73.2, directionKey: 'east', distance: 42.4, dangerous: true },
 });
 assert.equal(guideClasses.has('hidden'), false);
 assert.equal(guideClasses.has('danger'), true);
 assert.match(guideHost.innerHTML, /Reroll coffer/);
 assert.match(guideHost.innerHTML, />East</);
-assert.match(guideHost.innerHTML, /42 m/);
+assert.match(guideHost.innerHTML, /transform:rotate\(73\.2deg\)/, 'the arrow must use the exact live bearing');
+assert.match(guideHost.innerHTML, />↑<\/span>/);
+assert.match(guideHost.innerHTML, /42\.4 m/);
 assert.match(guideHost.innerHTML, /Only dangerous points remain/);
 
 console.log('ui tests passed');

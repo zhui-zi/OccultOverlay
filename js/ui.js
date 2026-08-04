@@ -142,9 +142,14 @@
     } else if (!view.target) {
       h += '<div class="tg-wait">' + esc(t('treasure_wait_direction')) + '</div>';
     } else {
-      h += '<div class="tg-route"><span class="tg-arrow">' + esc(view.target.arrow) + '</span>' +
+      var bearing = Number(view.target.bearing);
+      var hasBearing = view.target.bearing != null && isFinite(bearing);
+      var arrowStyle = hasBearing ? ' style="transform:rotate(' + bearing.toFixed(1) + 'deg)"' : '';
+      var distance = Number(view.target.distance);
+      var distanceText = isFinite(distance) ? distance.toFixed(1) : '?';
+      h += '<div class="tg-route"><span class="tg-arrow" aria-hidden="true"' + arrowStyle + '>' + (hasBearing ? '↑' : '●') + '</span>' +
         '<div class="tg-destination"><strong>' + esc(t('direction_' + view.target.directionKey)) + '</strong>' +
-        '<span>' + Math.round(view.target.distance) + ' m</span></div></div>';
+        '<span>' + distanceText + ' m</span></div></div>';
     }
     h += '<div class="tg-meta">' + esc(t('treasure_candidates')) + ' ' + view.candidateCount +
       ' · ' + esc(t('treasure_safe')) + ' ' + view.safeCount;

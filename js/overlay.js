@@ -214,13 +214,28 @@
     return Promise.resolve(null);
   };
 
+  var POSITION_POLL_MS = 2000;
+  var LIVE_POSITION_POLL_MS = 250;
   var posTimer = null;
+  var lastPositionPollAt = 0;
+  var positionPollPending = false;
+
+  function needsLivePosition() {
+    return !!(OC.Treasure && OC.Treasure.isActive && OC.Treasure.isActive());
+  }
+
   function startPositionPolling() {
     if (posTimer) return;
     posTimer = setInterval(function () {
-      if (!Overlay.connected) return;
+      if (!Overlay.connected || positionPollPending) return;
+      var current = Date.now();
+      var interval = needsLivePosition() ? LIVE_POSITION_POLL_MS : POSITION_POLL_MS;
+      if (lastPositionPollAt && current - lastPositionPollAt < interval) return;
+      lastPositionPollAt = current;
+      positionPollPending = true;
 
       Overlay.callHandler({ call: 'getCombatants' }).then(function (data) {
+        positionPollPending = false;
         if (!data || !data.combatants) return;
         var arr = data.combatants;
         var me = null, i, c;
@@ -249,9 +264,11 @@
         // FATE/CE 状态一律以 258/259 内存数据为准；
         // 战斗单位名字是模糊匹配，会把普通怪误判成 FATE/CE，故不再使用。
         Overlay.emit('position', Overlay.playerPos);
+      }, function () {
+        positionPollPending = false;
       });
 
-    }, 2000);
+    }, LIVE_POSITION_POLL_MS);
   }
 
   function handleMessage(d) {
