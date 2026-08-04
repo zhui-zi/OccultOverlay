@@ -1254,9 +1254,13 @@
         }).join('');
       }
       // Rebuilding identical nodes makes ACT's Chromium surface flash.
-      if (box._ocActiveHtml === html) return;
+      if (box._ocActiveHtml === html) {
+        this.updateRadarPlacement();
+        return;
+      }
       box._ocActiveHtml = html;
       box.innerHTML = html;
+      this.updateRadarPlacement();
     },
 
     updateTreasureGuide: function (view) {
@@ -1268,10 +1272,14 @@
 
     updateRadarPlacement: function () {
       var host = document.getElementById('radar-panel');
-      if (!host || !host.style) return;
+      if (!host || !host.style) {
+        this.updateMapPlacement();
+        return;
+      }
       var pinned = !!OC.Settings.get('radarPinned');
       if (!pinned) {
         host.style.top = '';
+        this.updateMapPlacement();
         return;
       }
       var top = 8;
@@ -1283,6 +1291,34 @@
         top = Math.max(top, Number(guide.offsetTop || 0) + Number(guide.offsetHeight || 0) + 8);
       }
       host.style.top = Math.ceil(top) + 'px';
+      this.updateMapPlacement();
+    },
+
+    updateMapPlacement: function () {
+      var layer = document.getElementById('mapLayer');
+      if (!layer || !layer.style) return 0;
+      var app = document.getElementById('app');
+      var appRect = app && app.getBoundingClientRect ? app.getBoundingClientRect() : null;
+      var appTop = appRect && isFinite(appRect.top) ? Number(appRect.top) : 0;
+      var bottom = 0;
+
+      function include(element) {
+        if (!element) return;
+        if (element.classList && element.classList.contains && element.classList.contains('hidden')) return;
+        var rect = element.getBoundingClientRect ? element.getBoundingClientRect() : null;
+        var edge = rect && isFinite(rect.bottom)
+          ? Number(rect.bottom) - appTop
+          : Number(element.offsetTop || 0) + Number(element.offsetHeight || 0);
+        bottom = Math.max(bottom, edge);
+      }
+
+      include(document.getElementById('status-chips'));
+      include(document.getElementById('treasure-guide'));
+      if (OC.Settings.get('radarPinned')) include(document.getElementById('radar-panel'));
+
+      var top = bottom > 0 ? Math.max(0, Math.ceil(bottom + 8)) : 0;
+      layer.style.top = top + 'px';
+      return top;
     },
 
     updateRadar: function () {

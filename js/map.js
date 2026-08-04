@@ -39,7 +39,7 @@
       var background = map.background || 'assets/map.png';
       var fallbackBackground = map.fallbackBackground || '';
       var finalFallbackBackground = map.finalFallbackBackground || '';
-      var s = '<svg viewBox="0 0 ' + tex + ' ' + tex + '" class="map-svg" preserveAspectRatio="xMidYMid meet">';
+      var s = '<svg viewBox="0 0 ' + tex + ' ' + tex + '" class="map-svg" preserveAspectRatio="xMidYMin meet">';
       s += '<g class="map-bg">';
       s += '<image href="' + esc(background) + '"' +
         (fallbackBackground ? ' data-fallback="' + esc(fallbackBackground) + '"' : '') +

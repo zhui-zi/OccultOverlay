@@ -332,10 +332,13 @@ assert.doesNotMatch(styles, /\.toast-radar\s*\{[^}]*border-left/,
   'radar alert popups must not use a left accent stripe');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=106/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=106/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=106') < index.indexOf('js/treasure.js?v=106'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=106') < index.indexOf('js/map.js?v=106'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=107/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=107/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=107') < index.indexOf('js/treasure.js?v=107'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=107') < index.indexOf('js/map.js?v=107'), 'radar state must load before map rendering');
+const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
+assert.match(mapSource, /preserveAspectRatio="xMidYMin meet"/,
+  'the map must stay horizontally centered and align below the top overlays');
 
 const radarClasses = new Set(['hidden']);
 const radarHost = {
@@ -346,15 +349,25 @@ const radarHost = {
     remove(name) { radarClasses.delete(name); },
     contains(name) { return radarClasses.has(name); },
   },
-  getBoundingClientRect() { return { height: 80 }; },
+  getBoundingClientRect() {
+    const top = Number.parseFloat(this.style.top || '0') || 0;
+    return { top, bottom: top + 80, height: 80 };
+  },
 };
-const statusChips = { offsetTop: 8, offsetHeight: 30 };
+const statusChips = {
+  offsetTop: 8,
+  offsetHeight: 30,
+  getBoundingClientRect() { return { top: 8, bottom: 38, height: 30 }; },
+};
 let treasureGuideHidden = true;
 const treasureGuideHost = {
   offsetTop: 52,
   offsetHeight: 100,
   classList: { contains(name) { return name === 'hidden' && treasureGuideHidden; } },
+  getBoundingClientRect() { return { top: 52, bottom: 152, height: 100 }; },
 };
+const mapHost = { style: {} };
+const appHost = { getBoundingClientRect() { return { top: 0 }; } };
 const radarTarget = {
   id: '40000001', kind: 'silver', slot: 1, labelKey: 'radar_silver',
   bearing: 73.2, absoluteKey: 'direction_east', distance: 42.44,
@@ -362,6 +375,8 @@ const radarTarget = {
 const originalGetElementById = sandbox.document.getElementById;
 const originalRadarTargets = sandbox.OC.Radar.targets;
 sandbox.document.getElementById = id => ({
+  app: appHost,
+  mapLayer: mapHost,
   'radar-panel': radarHost,
   'status-chips': statusChips,
   'treasure-guide': treasureGuideHost,
@@ -380,11 +395,15 @@ assert.equal(radarClasses.has('hidden'), false, 'a pinned radar must remain visi
 assert.equal(radarClasses.has('pinned'), true);
 assert.match(radarHost.innerHTML, /No coffer or carrot detected/);
 assert.equal(radarHost.style.top, '46px', 'a pinned radar must start below the top status chips');
+assert.equal(mapHost.style.top, '134px', 'the map must start below a pinned top radar');
 treasureGuideHidden = false;
 sandbox.OC.App.updateRadarPlacement();
 assert.equal(radarHost.style.top, '160px', 'an active Magic Pot guide must push the pinned radar below itself');
+assert.equal(mapHost.style.top, '248px', 'the map must follow the lowest visible top overlay');
 treasureGuideHidden = true;
 radarPinned = false;
+sandbox.OC.App.updateRadarPlacement();
+assert.equal(mapHost.style.top, '46px', 'bottom radar panels must not move the map');
 
 const radarAlerts = [];
 const originalFireAlert = sandbox.OC.App.fireAlert;
