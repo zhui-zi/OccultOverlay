@@ -299,10 +299,14 @@ assert.ok(resizeAnchorsRule, 'ACT resize anchor layer must exist');
 assert.match(resizeAnchorsRule[1], /position:\s*fixed/);
 assert.match(resizeAnchorsRule[1], /inset:\s*0/, 'resize anchors must follow every viewport resize');
 assert.match(resizeAnchorsRule[1], /pointer-events:\s*none/, 'resize anchor layer must not block overlay controls');
+const treasureGuideRule = styles.match(/\.treasure-guide\s*\{([^}]*)\}/);
+assert.ok(treasureGuideRule, 'treasure guide style must exist');
+assert.match(treasureGuideRule[1], /left:\s*8px/, 'treasure guidance must stay against the left edge');
+assert.doesNotMatch(treasureGuideRule[1], /translateX/, 'left-aligned guidance must not retain centering transform');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=101/, 'the treasure state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=101') < index.indexOf('js/treasure.js?v=101'), 'treasure points must load before guidance');
+assert.match(index, /js\/treasure\.js\?v=102/, 'the treasure state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=102') < index.indexOf('js/treasure.js?v=102'), 'treasure points must load before guidance');
 
 sandbox.OC.State.highlights = [49, 64, 2074];
 sandbox.OC.App.updateActive();

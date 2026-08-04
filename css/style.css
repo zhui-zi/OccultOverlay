@@ -90,7 +90,7 @@ html, body {
 
 /* ---- 魔法罐寻宝指引 ---- */
 .treasure-guide {
-  position: absolute; top: 52px; left: 50%; z-index: 7; transform: translateX(-50%);
+  position: absolute; top: 52px; left: 8px; z-index: 7;
   width: min(360px, calc(100vw - 80px)); padding: 9px 12px;
   background: rgb(14, 20, 30); border: 1px solid var(--pot); border-radius: 12px;
   box-shadow: 0 6px 24px rgba(0,0,0,0.55), 0 0 12px rgba(176,97,255,0.28);
