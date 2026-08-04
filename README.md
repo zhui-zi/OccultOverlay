@@ -7,7 +7,7 @@ Everything is automatic — no setup, no tracker id. Data comes from the shared 
 
 - Translucent zone map with toggleable point layers: bronze / silver coffers, north / south / reroll pots, carrots, and survey points.
 - Your character position on the map.
-- Live bronze/silver coffer and carrot radar with map markers, absolute compass directions, continuous target bearings, live distance, independent pin/voice switches, and opacity-aware panels.
+- Live bronze/silver coffer and carrot radar with map markers, absolute compass directions, continuous target bearings, live distance, collapsed-map persistence, independent voice control, and opacity-aware panels.
 - Optional Magic Pot treasure guidance with strict eight-sector filtering, safe-point priority, live distance, and continuous target bearing.
 - Simplified Chinese, English, and Japanese UI with an independent CN/global data-region selector.
 - CN pot overview when the CN data region is selected, sorted by next-pot time; click an island for its CE / FATE and drops.

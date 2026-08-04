@@ -827,7 +827,7 @@
       var toasts = document.getElementById('toasts');
       if (toasts) toasts.style.display = outside ? 'none' : '';
       app.classList.toggle('no-map', this.collapsed);
-      this.updateRadarPlacement();
+      this.updateRadar();
     },
 
     togglePanel: function (which) {
@@ -1280,17 +1280,11 @@
         return;
       }
       var pinned = !!OC.Settings.get('radarPinned');
-      if (!pinned) {
-        host.style.top = '';
-        host.style.bottom = '';
-        this.updateMapPlacement();
-        return;
-      }
       var app = document.getElementById('app');
       var noMap = !!(app && app.classList && app.classList.contains && app.classList.contains('no-map'));
-      if (!noMap) {
+      if (!pinned || !noMap) {
         host.style.top = '';
-        host.style.bottom = '8px';
+        host.style.bottom = '';
         this.updateMapPlacement();
         return;
       }
@@ -1332,17 +1326,6 @@
 
       var top = topEdge > 0 ? Math.max(0, Math.ceil(topEdge + 8)) : 0;
       var bottom = 0;
-      if (!noMap && OC.Settings.get('radarPinned')) {
-        var radar = document.getElementById('radar-panel');
-        var radarHidden = radar && radar.classList && radar.classList.contains && radar.classList.contains('hidden');
-        if (radar && !radarHidden) {
-          var radarRect = radar.getBoundingClientRect ? radar.getBoundingClientRect() : null;
-          var radarHeight = radarRect && isFinite(radarRect.height)
-            ? Number(radarRect.height)
-            : Number(radar.offsetHeight || 0);
-          bottom = Math.max(0, Math.ceil(radarHeight + 16));
-        }
-      }
       layer.style.top = top + 'px';
       layer.style.bottom = bottom + 'px';
       return top;
@@ -1354,8 +1337,10 @@
       var list = OC.Radar && OC.Radar.targets ? OC.Radar.targets() : [];
       var radarEnabled = !!(OC.Settings.get('radarCoffers') || OC.Settings.get('radarCarrots'));
       var pinned = !!OC.Settings.get('radarPinned');
+      var app = document.getElementById('app');
+      var noMap = !!(app && app.classList && app.classList.contains && app.classList.contains('no-map'));
       if (pinned) host.classList.add('pinned'); else host.classList.remove('pinned');
-      if (!radarEnabled || (!list.length && !pinned)) {
+      if (!radarEnabled || (noMap ? !pinned : !list.length)) {
         host.classList.add('hidden');
         host.innerHTML = '';
         this.updateRadarPlacement();
@@ -1382,7 +1367,7 @@
       this.updateRadarPlacement();
       if (document.documentElement) {
         var radarHeight = host.getBoundingClientRect ? host.getBoundingClientRect().height : host.offsetHeight;
-        document.documentElement.style.setProperty('--toast-bottom', pinned ? '10px' : Math.ceil((radarHeight || 0) + 16) + 'px');
+        document.documentElement.style.setProperty('--toast-bottom', noMap ? '10px' : Math.ceil((radarHeight || 0) + 16) + 'px');
       }
     },
 

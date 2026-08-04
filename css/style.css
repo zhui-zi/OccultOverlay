@@ -123,8 +123,6 @@ html, body {
   box-shadow: 0 6px 22px rgba(0,0,0,0.52); pointer-events: none;
 }
 .radar-panel.hidden { display: none; }
-.radar-panel.pinned { bottom: 8px; }
-#app.no-map .radar-panel.pinned { bottom: auto; }
 .radar-head { display: flex; justify-content: space-between; color: #8ff0a8; font-size: 11px; font-weight: 800; letter-spacing: .05em; }
 .radar-head b { color: var(--fg); font-variant-numeric: tabular-nums; }
 .radar-empty { padding: 8px 0 2px; color: var(--fg-dim); font-size: 11.5px; text-align: center; }
