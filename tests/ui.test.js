@@ -11,6 +11,9 @@ const uiStrings = {
     ce_active: 'Active', pot_active: 'Active',
     tower_window: 'Expected window reached', tower_reduced: 'Reduced',
     tower_upcoming: 'More after completion', tower_history: 'Previous intervals',
+    treasure_title: 'Magic Pot Treasure', treasure_reroll: 'Reroll coffer', treasure_candidates: 'Candidates',
+    treasure_safe: 'Safe', treasure_reported: 'Reported', treasure_danger: 'Only dangerous points remain.',
+    direction_east: 'East',
   },
   zh: {
     weakness: '弱点', tower: '两歧塔', last_seen: '上次', tower_predicted: '预计',
@@ -163,5 +166,31 @@ sandbox.OC.UI.renderDcPots(overviewHost, [{
 }], false);
 assert.doesNotMatch(overviewHost.innerHTML, /class="dc-row/, 'an expired ETA must disappear immediately');
 assert.doesNotMatch(overviewHost.innerHTML, /pot_soon/, 'an expired ETA must not be shown as soon');
+
+const guideClasses = new Set(['hidden']);
+const guideHost = {
+  innerHTML: '',
+  classList: {
+    add(name) { guideClasses.add(name); },
+    remove(name) { guideClasses.delete(name); },
+    toggle(name, enabled) { if (enabled) guideClasses.add(name); else guideClasses.delete(name); },
+  },
+};
+currentLang = 'en';
+sandbox.OC.UI.renderTreasureGuide(guideHost, {
+  active: true,
+  mode: 'reroll',
+  status: 'guiding',
+  candidateCount: 3,
+  safeCount: 0,
+  lastDirection: '正东',
+  target: { arrow: '→', directionKey: 'east', distance: 42.4, dangerous: true },
+});
+assert.equal(guideClasses.has('hidden'), false);
+assert.equal(guideClasses.has('danger'), true);
+assert.match(guideHost.innerHTML, /Reroll coffer/);
+assert.match(guideHost.innerHTML, />East</);
+assert.match(guideHost.innerHTML, /42 m/);
+assert.match(guideHost.innerHTML, /Only dangerous points remain/);
 
 console.log('ui tests passed');

@@ -293,6 +293,8 @@ assert.match(resizeAnchorsRule[1], /inset:\s*0/, 'resize anchors must follow eve
 assert.match(resizeAnchorsRule[1], /pointer-events:\s*none/, 'resize anchor layer must not block overlay controls');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
+assert.match(index, /js\/treasure\.js\?v=100/, 'the treasure state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=100') < index.indexOf('js/treasure.js?v=100'), 'treasure points must load before guidance');
 
 sandbox.OC.State.highlights = [49, 64, 2074];
 sandbox.OC.App.updateActive();

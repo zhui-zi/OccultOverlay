@@ -87,6 +87,7 @@
       this.refreshRail();
       OC.Map.render(document.getElementById('mapLayer'));
       this.updateChips();
+      this.updateTreasureGuide();
       if (this.openPanel) this.renderPanel();
     },
 
@@ -128,6 +129,10 @@
       }
       this.renderShell();
       this.wireOverlay();
+      if (OC.Treasure) {
+        OC.Treasure.onChange(function (view) { App.updateTreasureGuide(view); });
+        OC.Treasure.start(OC.Overlay);
+      }
       OC.Overlay.start();
       this.fetchDc();
       this.startLoops();
@@ -142,6 +147,7 @@
       h += '<div id="chip-pot" class="chip chip-pot clickable" title="' + t('my_island_hint') + '"></div>';
       h += '<div id="chips-active" class="chips-active"></div>';
       h += '</div>';
+      h += '<div id="treasure-guide" class="treasure-guide hidden" role="status" aria-live="polite"></div>';
       h += '<div class="rail">' + railHtml() + '</div>';
       h += '<div id="popover" class="popover hidden"></div>';
       app.innerHTML = h;
@@ -1236,6 +1242,12 @@
       if (box._ocActiveHtml === html) return;
       box._ocActiveHtml = html;
       box.innerHTML = html;
+    },
+
+    updateTreasureGuide: function (view) {
+      var host = document.getElementById('treasure-guide');
+      if (!host || !OC.UI.renderTreasureGuide) return;
+      OC.UI.renderTreasureGuide(host, view || (OC.Treasure && OC.Treasure.view()));
     },
 
     wireOverlay: function () {

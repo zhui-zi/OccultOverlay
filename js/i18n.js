@@ -37,7 +37,13 @@
       alert_pot_opt: '魔法罐出现前3分钟提示', alert_demiatma: '出现掉落以下半魂晶的 CE/FATE 时提示：',
       alert_dispeller: '出现掉落以下消幻晶的 CE/FATE 时提示：',
       alert_tts: '语音提示', alert_pot: '魔法罐出现', pot_pre_alert: '魔法罐即将出现',
-      my_island_hint: '点击查看你所在岛的 CE/FATE', set_show_chips: '显示当前 FATE/CE 胶囊', chips_hidden: '已隐藏（可在设置中重新打开）'
+      my_island_hint: '点击查看你所在岛的 CE/FATE', set_show_chips: '显示当前 FATE/CE 胶囊', chips_hidden: '已隐藏（可在设置中重新打开）',
+      treasure_title: '魔法罐寻宝', treasure_initial: '首次宝箱', treasure_reroll: '续罐宝箱',
+      treasure_wait_direction: '使用魔法圣灵药，等待新的方位提示', treasure_wait_position: '正在读取玩家坐标…',
+      treasure_mismatch: '当前方位没有匹配点位，请再次使用圣灵药确认', treasure_candidates: '候选', treasure_safe: '安全',
+      treasure_reported: '提示方位', treasure_danger: '只剩危险点位，请确认安全后再前往',
+      direction_north: '正北', direction_northeast: '东北', direction_east: '正东', direction_southeast: '东南',
+      direction_south: '正南', direction_southwest: '西南', direction_west: '正西', direction_northwest: '西北'
     },
     en: {
       title: 'Occult Crescent',
@@ -73,7 +79,13 @@
       alert_pot_opt: 'Alert 3 min before a pot', alert_demiatma: 'Alert on CE/FATE dropping these demiatma:',
       alert_dispeller: 'Alert on CE/FATE dropping these Phantom Dispellers:',
       alert_tts: 'Voice', alert_pot: 'Pot spawned', pot_pre_alert: 'Pot spawning soon',
-      my_island_hint: 'Click to see your island CE/FATE', set_show_chips: 'Show active FATE/CE chips', chips_hidden: 'Hidden (re-enable in settings)'
+      my_island_hint: 'Click to see your island CE/FATE', set_show_chips: 'Show active FATE/CE chips', chips_hidden: 'Hidden (re-enable in settings)',
+      treasure_title: 'Magic Pot Treasure', treasure_initial: 'First coffer', treasure_reroll: 'Reroll coffer',
+      treasure_wait_direction: 'Use a Magic Elixir and wait for a direction', treasure_wait_position: 'Reading player position…',
+      treasure_mismatch: 'No point matches this direction; use another elixir to confirm', treasure_candidates: 'Candidates', treasure_safe: 'Safe',
+      treasure_reported: 'Reported', treasure_danger: 'Only dangerous points remain. Check the area before proceeding.',
+      direction_north: 'North', direction_northeast: 'Northeast', direction_east: 'East', direction_southeast: 'Southeast',
+      direction_south: 'South', direction_southwest: 'Southwest', direction_west: 'West', direction_northwest: 'Northwest'
     },
     ja: {
       title: '南方海域',
@@ -109,7 +121,13 @@
       alert_pot_opt: 'ポット出現3分前に通知', alert_demiatma: '以下のデミアートマをドロップするCE/FATE出現で通知：',
       alert_dispeller: '以下のファントムディスペラーをドロップするCE/FATE出現で通知：',
       alert_tts: '音声通知', alert_pot: 'ポット出現', pot_pre_alert: 'ポットまもなく出現',
-      my_island_hint: 'クリックで自分の島のCE/FATE', set_show_chips: '現在のFATE/CEを表示', chips_hidden: '非表示にしました（設定で再表示）'
+      my_island_hint: 'クリックで自分の島のCE/FATE', set_show_chips: '現在のFATE/CEを表示', chips_hidden: '非表示にしました（設定で再表示）',
+      treasure_title: 'マジックポット宝探し', treasure_initial: '最初の宝箱', treasure_reroll: '追加の宝箱',
+      treasure_wait_direction: 'マジックエリクサーを使い、方角を待ってください', treasure_wait_position: '現在位置を取得中…',
+      treasure_mismatch: 'この方角に候補地点がありません。もう一度確認してください', treasure_candidates: '候補', treasure_safe: '安全',
+      treasure_reported: '示された方角', treasure_danger: '危険地点だけが残っています。安全を確認してください。',
+      direction_north: '北', direction_northeast: '北東', direction_east: '東', direction_southeast: '南東',
+      direction_south: '南', direction_southwest: '南西', direction_west: '西', direction_northwest: '北西'
     }
   };
 

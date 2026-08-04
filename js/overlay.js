@@ -232,7 +232,9 @@
         }
         if (!me) for (i = 0; i < arr.length; i++) { c = arr[i]; if ((c.type === 1 || c.Type === 1) && c.Name) { me = c; break; } }
         if (!me) return;
-        // 跨区旅行时以”当前世界”为准（CurrentWorldID），而非home世界(WorldID)
+        if (!Overlay.playerName && me.Name) Overlay.playerName = me.Name;
+        if (Overlay.playerId == null && me.ID != null) Overlay.playerId = me.ID;
+        // 跨区旅行时以“当前世界”为准（CurrentWorldID），而非home世界(WorldID)
         var wid = me.CurrentWorldID || me.CurrentWorld || me.WorldID;
         if (wid) setPlayerWorld(wid);
         if (me.PosX == null) return;

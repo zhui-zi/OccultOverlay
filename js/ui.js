@@ -125,6 +125,37 @@
     bindMonsterImages(host);
   };
 
+  UI.renderTreasureGuide = function (host, view) {
+    if (!host) return;
+    if (!view || !view.active) {
+      host.classList.add('hidden');
+      host.innerHTML = '';
+      return;
+    }
+
+    var stage = view.mode === 'reroll' ? t('treasure_reroll') : t('treasure_initial');
+    var h = '<div class="tg-head"><span>' + esc(t('treasure_title')) + '</span><span class="tg-stage">' + esc(stage) + '</span></div>';
+    if (view.status === 'waiting-position') {
+      h += '<div class="tg-wait">' + esc(t('treasure_wait_position')) + '</div>';
+    } else if (view.status === 'mismatch') {
+      h += '<div class="tg-mismatch">' + esc(t('treasure_mismatch')) + '</div>';
+    } else if (!view.target) {
+      h += '<div class="tg-wait">' + esc(t('treasure_wait_direction')) + '</div>';
+    } else {
+      h += '<div class="tg-route"><span class="tg-arrow">' + esc(view.target.arrow) + '</span>' +
+        '<div class="tg-destination"><strong>' + esc(t('direction_' + view.target.directionKey)) + '</strong>' +
+        '<span>' + Math.round(view.target.distance) + ' m</span></div></div>';
+    }
+    h += '<div class="tg-meta">' + esc(t('treasure_candidates')) + ' ' + view.candidateCount +
+      ' · ' + esc(t('treasure_safe')) + ' ' + view.safeCount;
+    if (view.lastDirection) h += ' · ' + esc(t('treasure_reported')) + ' ' + esc(view.lastDirection);
+    h += '</div>';
+    if (view.target && view.target.dangerous) h += '<div class="tg-danger">⚠ ' + esc(t('treasure_danger')) + '</div>';
+    host.innerHTML = h;
+    host.classList.remove('hidden');
+    host.classList.toggle('danger', !!(view.target && view.target.dangerous));
+  };
+
   function bindMonsterImages(host) {
     if (!host.querySelectorAll) return;
     host.querySelectorAll('[data-monster-image]').forEach(function (button) {
