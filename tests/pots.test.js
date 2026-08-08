@@ -208,6 +208,27 @@ assert.equal(
   'a duplicated CE phase signature must remain ambiguous',
 );
 
+const exactFingerprint = 'A'.repeat(64);
+assert.equal(
+  Pots.matchIsland([
+    {
+      id: 'wrong-ce', rowId: 32, dc: 101, territory: 1346, fingerprint: 'B'.repeat(64),
+      cePhases: [{ fateId: 49, status: 2, popTime: ceDeadline }],
+    },
+    {
+      id: 'exact-fate', rowId: 33, dc: 101, territory: 1346, fingerprint: exactFingerprint,
+      cePhases: [],
+    },
+  ], {
+    territory: 1346,
+    fingerprint: exactFingerprint,
+    fingerprints: [exactFingerprint],
+    cePhases: [{ fateId: 49, status: 2, popTime: ceDeadline }],
+  }, 101, 15).id,
+  'exact-fate',
+  'an exact FATE fingerprint must outrank a coincidental CE phase match',
+);
+
 const livenessRows = [{
   id: 34,
   tracker_id: 'liveness',

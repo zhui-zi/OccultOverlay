@@ -402,8 +402,28 @@
         return number(item.territory, 0) === territory;
       });
 
-      // A CE popTime is the server-provided deadline for its current status,
-      // so the tuple remains precise even when received immediately on entry.
+      // A real FATE start fingerprint is stronger than a CE phase snapshot.
+      // Check it first so a coincidental CE deadline cannot select another island.
+      var hashes = evidence.fingerprints || [];
+      if (hashes.length) {
+        var exact = String(evidence.fingerprint || '').toUpperCase();
+        if (exact) {
+          var exactMatches = scoped.filter(function (item) {
+            return String(item.fingerprint || '').toUpperCase() === exact;
+          });
+          if (exactMatches.length === 1) return exactMatches[0];
+          // Duplicate rows with the same exact fingerprint describe one instance.
+          if (exactMatches.length > 1) return newestIsland(exactMatches);
+        }
+        var fingerprintMatches = scoped.filter(function (item) {
+          return item.fingerprint && hashes.indexOf(String(item.fingerprint).toUpperCase()) >= 0;
+        });
+        if (fingerprintMatches.length === 1) return fingerprintMatches[0];
+        if (fingerprintMatches.length > 1) return null;
+      }
+
+      // A CE popTime is useful supporting evidence, but one phase deadline can
+      // coincide across instances and must not override a FATE fingerprint.
       var ceSignals = evidence.cePhases || [];
       if (ceSignals.length) {
         var bestCeScore = 0;
@@ -424,24 +444,6 @@
           ceMatches.push(item);
         });
         if (ceMatches.length === 1) return ceMatches[0];
-      }
-
-      var hashes = evidence.fingerprints || [];
-      if (hashes.length) {
-        var exact = String(evidence.fingerprint || '').toUpperCase();
-        if (exact) {
-          var exactMatches = scoped.filter(function (item) {
-            return String(item.fingerprint || '').toUpperCase() === exact;
-          });
-          if (exactMatches.length === 1) return exactMatches[0];
-          // Duplicate rows with the same exact fingerprint describe one instance.
-          if (exactMatches.length > 1) return newestIsland(exactMatches);
-        }
-        var fingerprintMatches = scoped.filter(function (item) {
-          return item.fingerprint && hashes.indexOf(String(item.fingerprint).toUpperCase()) >= 0;
-        });
-        if (fingerprintMatches.length === 1) return fingerprintMatches[0];
-        if (fingerprintMatches.length > 1) return null;
       }
 
       var ends = evidence.ends || [];

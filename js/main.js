@@ -1125,8 +1125,9 @@
         preciseMatched: preciseMatched,
         ceMatched: ceMatched,
         exactFingerprint: exactFingerprint,
-        authorized: !!history && (ceMatched >= 1 || exactFingerprint ||
-          preciseMatched >= 2 || (local >= MIN_ISLAND_EVIDENCE && matched >= MIN_ISLAND_EVIDENCE))
+        authorized: !!history && (exactFingerprint || preciseMatched >= 2 ||
+          ceMatched >= 2 || (ceMatched >= 1 && preciseMatched >= 1) ||
+          (local >= MIN_ISLAND_EVIDENCE && matched >= MIN_ISLAND_EVIDENCE))
       };
     },
 

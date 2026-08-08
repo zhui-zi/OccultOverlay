@@ -381,10 +381,10 @@ assert.match(styles, /\.rbtn\[data-layer\^="pot"\]::after\s*\{[^}]*border-radius
   'Magic Pot direction markers must use solid circular badges');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=121/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=121/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=121') < index.indexOf('js/treasure.js?v=121'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=121') < index.indexOf('js/map.js?v=121'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=122/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=122/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=122') < index.indexOf('js/treasure.js?v=122'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=122') < index.indexOf('js/map.js?v=122'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
@@ -679,7 +679,28 @@ const ceBindingStatus = sandbox.OC.App.islandBindingEvidenceStatus(
   '',
 );
 assert.equal(ceBindingStatus.ceMatched, 1);
-assert.equal(ceBindingStatus.authorized, true, 'one unique CE phase signature must authorize a binding');
+assert.equal(ceBindingStatus.authorized, false, 'one CE phase signature must remain provisional');
+const twoCeBindingStatus = sandbox.OC.App.islandBindingEvidenceStatus(
+  {
+    cePhases: [
+      { fateId: 49, status: 2, popTime: ceDeadline },
+      { fateId: 50, status: 1, popTime: ceDeadline + 300 },
+    ],
+    events: [],
+    ends: [],
+  },
+  {
+    ce: [
+      { fate_id: 49, state: 2, pop_time: ceDeadline },
+      { fate_id: 50, state: 1, pop_time: ceDeadline + 300 },
+    ],
+    fate: [],
+    pot: [],
+  },
+  '',
+);
+assert.equal(twoCeBindingStatus.ceMatched, 2);
+assert.equal(twoCeBindingStatus.authorized, true, 'two independent CE phase signatures may authorize a binding');
 const exactBindingStatus = sandbox.OC.App.islandBindingEvidenceStatus(
   {
     fingerprint: 'EXACT-FATE',
