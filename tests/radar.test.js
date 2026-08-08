@@ -109,10 +109,10 @@ source.emit('combatants', [
   { ID: 0x40000006, BNpcID: 1800, PosX: 30, PosY: 10, PosZ: 0 },
 ]);
 targets = Radar.targets();
-assert.equal(targets.filter(target => target.kind !== 'carrot').length, 4, 'only four coffers are retained');
+assert.equal(targets.filter(target => target.kind !== 'carrot').length, 5, 'all live coffers are retained for map rendering');
 assert.deepEqual(
   Array.from(targets.filter(target => target.kind !== 'carrot'), target => target.slot),
-  [1, 2, 3, 4],
+  [1, 2, 3, 4, 5],
   'coffers keep stable numbered slots',
 );
 
@@ -124,6 +124,12 @@ source.emit('combatants', [
 ]);
 source.emit('log', 0, ['0'], '00:083E::Keita获得了“战利品”');
 assert.deepEqual(Array.from(Radar.targets(), target => target.kind), ['carrot']);
+source.emit('combatants', [
+  { ID: 0x40000010, BNpcID: 1789, PosX: 5, PosY: 0, PosZ: 0 },
+  { ID: 0x40000011, BNpcID: 2010139, PosX: 10, PosY: 0, PosZ: 0 },
+]);
+assert.deepEqual(Array.from(Radar.targets(), target => target.kind), ['carrot'],
+  'an opened coffer must not be re-added while its game object lingers');
 source.emit('log', 15, ['15', '', '10000001', 'Keita', '200BBE0'], '15:10000001:Keita:200BBE0:');
 assert.equal(Radar.targets().length, 0, 'using a nearby carrot clears it');
 
@@ -144,6 +150,20 @@ assert.equal(Radar.targets().length, 0, 'using a nearby carrot clears it');
   assert.equal(Radar.targets()[0].bnpcId, 1856);
 
   Radar.reset();
+  source.emit('combatants', [
+    { ID: 0x40000021, BNpcID: 1789, PosX: -12, PosY: 0, PosZ: 2 },
+  ]);
+  source.emit('combatants', []);
+  assert.equal(Radar.targets().length, 1, 'one incomplete snapshot must not flicker a live coffer');
+  source.emit('combatants', []);
+  assert.equal(Radar.targets().length, 0, 'a coffer missing from two full snapshots must disappear');
+
+  source.emit('combatants', [
+    { ID: 0x40000022, BNpcID: 1797, PosX: -8, PosY: 0, PosZ: 2 },
+  ]);
+  source.emit('log', 105, ['105', '', 'Remove', '40000022'], '');
+  assert.equal(Radar.targets().length, 0, 'an entity removal event must clear the exact coffer immediately');
+
   const alertCountBeforeScopeTest = alerts.length;
   radarCoffers = false;
   radarCarrots = true;

@@ -1334,21 +1334,30 @@
     updateRadar: function () {
       var host = document.getElementById('radar-panel');
       if (!host) return;
-      var list = OC.Radar && OC.Radar.targets ? OC.Radar.targets() : [];
+      var allTargets = OC.Radar && OC.Radar.targets ? OC.Radar.targets() : [];
+      var priorities = { carrot: 0, silver: 1, bronze: 2 };
+      var list = allTargets.slice().sort(function (a, b) {
+        var priority = (priorities[a.kind] == null ? 3 : priorities[a.kind]) -
+          (priorities[b.kind] == null ? 3 : priorities[b.kind]);
+        if (priority) return priority;
+        var aDistance = isFinite(a.distance) ? Number(a.distance) : Infinity;
+        var bDistance = isFinite(b.distance) ? Number(b.distance) : Infinity;
+        if (aDistance !== bDistance) return aDistance - bDistance;
+        return String(a.id || '').localeCompare(String(b.id || ''));
+      }).slice(0, 3);
       var radarEnabled = !!(OC.Settings.get('radarCoffers') || OC.Settings.get('radarCarrots'));
       var pinned = !!OC.Settings.get('radarPinned');
       var app = document.getElementById('app');
       var noMap = !!(app && app.classList && app.classList.contains && app.classList.contains('no-map'));
       if (pinned) host.classList.add('pinned'); else host.classList.remove('pinned');
-      if (!radarEnabled || (noMap ? !pinned : !list.length)) {
+      if (!radarEnabled || !allTargets.length || (noMap && !pinned)) {
         host.classList.add('hidden');
         host.innerHTML = '';
         this.updateRadarPlacement();
         if (document.documentElement) document.documentElement.style.setProperty('--toast-bottom', '10px');
         return;
       }
-      var h = '<div class="radar-head"><span>' + esc(t('radar_title')) + '</span><b>' + list.length + '</b></div>';
-      if (!list.length) h += '<div class="radar-empty">' + esc(t('radar_empty')) + '</div>';
+      var h = '<div class="radar-head"><span>' + esc(t('radar_title')) + '</span><b>' + allTargets.length + '</b></div>';
       list.forEach(function (target) {
         var slot = target.kind === 'carrot' ? 'C' : target.slot;
         var bearing = Number(target.bearing);

@@ -3,7 +3,6 @@
   'use strict';
 
   var OC = global.OC = global.OC || {};
-  var MAX_COFFERS = 4;
   var OCCULT_TERRITORIES = { 1252: true, 1346: true };
   var ABSOLUTE_KEYS = [
     'direction_north', 'direction_northeast', 'direction_east', 'direction_southeast',
@@ -15,6 +14,7 @@
   var enabled = true;
   var targets = {};
   var pending = {};
+  var suppressed = {};
   var sequence = 0;
   var changeHandlers = [];
   var alertHandlers = [];
@@ -128,18 +128,9 @@
       var target = targets[key];
       if (target.kind !== 'carrot') used[target.slot] = true;
     });
-    for (var slot = 1; slot <= MAX_COFFERS; slot++) if (!used[slot]) return slot;
-    return MAX_COFFERS;
-  }
-
-  function cofferTargets() {
-    return Object.keys(targets).map(function (key) { return targets[key]; })
-      .filter(function (target) { return target.kind !== 'carrot'; });
-  }
-
-  function removeOldestCoffer() {
-    var coffers = cofferTargets().sort(function (a, b) { return a.sequence - b.sequence; });
-    if (coffers.length >= MAX_COFFERS) delete targets[coffers[0].id];
+    var slot = 1;
+    while (used[slot]) slot++;
+    return slot;
   }
 
   function publicTarget(target) {
@@ -162,6 +153,11 @@
   function addOrUpdate(combatant, fallback) {
     var id = actorKey(combatant && combatant.ID != null ? combatant.ID : fallback && fallback.actorId);
     if (!id) return null;
+    if (Number(suppressed[id] || 0) > Date.now()) {
+      delete pending[id];
+      return null;
+    }
+    delete suppressed[id];
     var rawNpc = combatant && (
       combatant.BNpcID != null ? combatant.BNpcID :
       combatant.BNpcId != null ? combatant.BNpcId :
@@ -175,7 +171,6 @@
     var target = targets[id];
     var fresh = !target;
     if (fresh) {
-      if (kind !== 'carrot') removeOldestCoffer();
       target = targets[id] = {
         id: id,
         kind: kind,
@@ -190,6 +185,7 @@
     target.y = pos.y;
     target.z = pos.z;
     target.lastSeen = Date.now();
+    target.missingScans = 0;
     if (source && source.playerPos) updateMetrics(target, source.playerPos);
     delete pending[id];
     return { target: target, fresh: fresh };
@@ -221,12 +217,23 @@
     query(0);
   }
 
-  function handleEntityAdd(line) {
-    if (String(line[2] || '').toLowerCase() !== 'add') return false;
+  function handleEntityEvent(line) {
+    var event = String(line[2] || '').toLowerCase();
+    var actorId = line[3];
+    var key = actorKey(actorId);
+    if (event === 'remove') {
+      if (!key || (!targets[key] && !pending[key])) return false;
+      var changed = !!targets[key];
+      delete targets[key];
+      delete pending[key];
+      suppressed[key] = Date.now() + 15000;
+      if (changed) emitChange();
+      return true;
+    }
+    if (event !== 'add') return false;
     var rawNpc = findField(line, 'BNpcID');
     var kind = classify(rawNpc, true);
     if (!kind) return false;
-    var actorId = line[3];
     requestEntity(actorId, kind, npcId(rawNpc, true));
     return true;
   }
@@ -271,7 +278,7 @@
       source = overlay;
       enabled = settingEnabled();
       if (!source || !source.on) return this;
-      source.on('combatants', function (combatants) { Radar.scan(combatants); });
+      source.on('combatants', function (combatants) { Radar.scan(combatants, true); });
       source.on('position', function (player) { Radar.updatePlayer(player); });
       source.on('log', function (type, line, rawLine) { Radar.handleLog(type, line, rawLine); });
       source.on('zone', function () { Radar.reset(); });
@@ -290,16 +297,29 @@
       return enabled && this.targets().length > 0;
     },
 
-    scan: function (combatants) {
+    scan: function (combatants, completeSnapshot) {
       enabled = settingEnabled();
       if (!enabled || !inOccult()) return false;
       var found = [];
+      var seen = {};
+      var changed = false;
       (combatants || []).forEach(function (combatant) {
         var fallback = pending[actorKey(combatant && combatant.ID)];
         var result = addOrUpdate(combatant, fallback);
-        if (result && result.fresh) found.push(result.target);
+        if (!result) return;
+        seen[result.target.id] = true;
+        if (result.fresh) found.push(result.target);
       });
-      if (found.length || Object.keys(targets).length) emitChange();
+      if (completeSnapshot) {
+        Object.keys(targets).forEach(function (key) {
+          if (seen[key]) return;
+          targets[key].missingScans = Number(targets[key].missingScans || 0) + 1;
+          if (targets[key].missingScans < 2) return;
+          delete targets[key];
+          changed = true;
+        });
+      }
+      if (found.length || Object.keys(targets).length || changed) emitChange();
       found.forEach(emitAlert);
       return found.length > 0;
     },
@@ -315,7 +335,7 @@
     handleLog: function (type, line, rawLine) {
       if (!enabled || !inOccult()) return false;
       line = line || [];
-      if (Number(type) === 105) return handleEntityAdd(line);
+      if (Number(type) === 105) return handleEntityEvent(line);
       if (Number(type) === 15 && isCarrotUse(line, rawLine)) return this.removeNearest('carrot', 30);
       if (Number(type) === 0 && isSelfAcquisition(line, rawLine)) return this.removeNearest('coffer', 30);
       return false;
@@ -334,6 +354,7 @@
       });
       if (!best) return false;
       delete targets[best.id];
+      suppressed[best.id] = Date.now() + 15000;
       emitChange();
       return true;
     },
@@ -352,6 +373,7 @@
       var hadState = Object.keys(targets).length || Object.keys(pending).length;
       targets = {};
       pending = {};
+      suppressed = {};
       sequence = 0;
       if (hadState) emitChange();
     },

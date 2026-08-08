@@ -327,7 +327,7 @@ assert.match(resizeAnchorsRule[1], /pointer-events:\s*none/, 'resize anchor laye
 const treasureGuideRule = styles.match(/\.treasure-guide\s*\{([^}]*)\}/);
 assert.ok(treasureGuideRule, 'treasure guide style must exist');
 assert.match(treasureGuideRule[1], /left:\s*8px/, 'treasure guidance must stay against the left edge');
-assert.match(treasureGuideRule[1], /width:\s*min\(270px/, 'treasure guidance must be 25% narrower');
+assert.match(treasureGuideRule[1], /width:\s*min\(248px/, 'treasure guidance must match the fixed radar width');
 assert.match(treasureGuideRule[1], /background:\s*rgba\(14,\s*20,\s*30,\s*var\(--app-opacity\)\)/,
   'treasure guidance must follow the live opacity setting');
 assert.doesNotMatch(treasureGuideRule[1], /translateX/, 'left-aligned guidance must not retain centering transform');
@@ -350,13 +350,15 @@ assert.ok(mapLayerRule, 'map layer style must exist');
 assert.match(mapLayerRule[1], /right:\s*56px/, 'the map must stop before the right-side control rail');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=112/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=112/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=112') < index.indexOf('js/treasure.js?v=112'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=112') < index.indexOf('js/map.js?v=112'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=113/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=113/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=113') < index.indexOf('js/treasure.js?v=113'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=113') < index.indexOf('js/map.js?v=113'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 assert.match(mapSource, /preserveAspectRatio="xMidYMin meet"/,
   'the map must stay horizontally centered and align below the top overlays');
+assert.match(mapSource, /OC\.Radar\.targets\(\)/, 'the map must keep reading the full radar target list');
+assert.doesNotMatch(mapSource, /slice\(0,\s*3\)/, 'the fixed-panel row limit must not affect map markers');
 
 const radarClasses = new Set(['hidden']);
 const radarHost = {
@@ -410,6 +412,24 @@ assert.match(radarHost.innerHTML, /transform:rotate\(73\.2deg\)/, 'radar arrows 
 assert.match(radarHost.innerHTML, />East</);
 assert.match(radarHost.innerHTML, />42\.4 m</);
 
+const priorityTargets = [
+  { id: 'bronze-near', kind: 'bronze', slot: 2, labelKey: 'radar_bronze', bearing: 0, absoluteKey: 'direction_north', distance: 5 },
+  { id: 'silver-far', kind: 'silver', slot: 1, labelKey: 'radar_silver', bearing: 0, absoluteKey: 'direction_north', distance: 30 },
+  { id: 'carrot-far', kind: 'carrot', slot: 0, labelKey: 'radar_carrot', bearing: 0, absoluteKey: 'direction_north', distance: 50 },
+  { id: 'silver-near', kind: 'silver', slot: 3, labelKey: 'radar_silver', bearing: 0, absoluteKey: 'direction_north', distance: 10 },
+  { id: 'carrot-near', kind: 'carrot', slot: 0, labelKey: 'radar_carrot', bearing: 0, absoluteKey: 'direction_north', distance: 20 },
+];
+sandbox.OC.Radar.targets = () => priorityTargets;
+sandbox.OC.App.updateRadar();
+assert.equal((radarHost.innerHTML.match(/class="radar-row /g) || []).length, 3,
+  'the fixed radar must render at most three rows');
+assert.match(radarHost.innerHTML, /<b>5<\/b>/, 'the radar header must retain the full detected count');
+assert.ok(radarHost.innerHTML.indexOf('20.0 m') < radarHost.innerHTML.indexOf('50.0 m'),
+  'nearer carrots must render first');
+assert.ok(radarHost.innerHTML.indexOf('50.0 m') < radarHost.innerHTML.indexOf('10.0 m'),
+  'carrots must outrank closer silver coffers');
+assert.doesNotMatch(radarHost.innerHTML, /5\.0 m/, 'bronze coffers must yield to carrots and silver coffers');
+
 sandbox.OC.Radar.targets = () => [];
 radarPinned = true;
 sandbox.OC.App.updateRadar();
@@ -431,13 +451,15 @@ assert.equal(mapHost.style.bottom, '0px');
 noMap = true;
 sandbox.OC.Radar.targets = () => [];
 sandbox.OC.App.updateRadar();
-assert.equal(radarClasses.has('hidden'), false, 'a pinned radar must remain visible when the map is collapsed');
-assert.match(radarHost.innerHTML, /No coffer or carrot detected/);
+assert.equal(radarClasses.has('hidden'), true, 'a pinned radar must stay hidden when no target is detected');
+assert.equal(radarHost.innerHTML, '');
 assert.equal(radarHost.style.top, '160px', 'a pinned radar must move below the top overlays when the map is hidden');
 assert.equal(radarHost.style.bottom, 'auto');
+sandbox.OC.Radar.targets = () => [radarTarget];
+sandbox.OC.App.updateRadar();
+assert.equal(radarClasses.has('hidden'), false, 'a pinned radar with targets must remain visible when the map is collapsed');
 treasureGuideHidden = true;
 radarPinned = false;
-sandbox.OC.Radar.targets = () => [radarTarget];
 sandbox.OC.App.updateRadar();
 assert.equal(radarClasses.has('hidden'), true, 'an unpinned radar must collapse with the map even when a target exists');
 assert.equal(mapHost.style.top, '46px', 'bottom radar panels must not move the map');
