@@ -2,13 +2,13 @@
   'use strict';
   var OC = global.OC = global.OC || {};
   var LAYERS = [
-    { key: 'bronze', src: 'bronze', color: '#e0912f', r: 15 },
-    { key: 'silver', src: 'silver', color: '#e8eef5', r: 17 },
-    { key: 'potN', src: 'potNorth', color: '#4a90ff', r: 16, ring: true },
-    { key: 'potS', src: 'potSouth', color: '#ff8a3c', r: 16, ring: true },
-    { key: 'reroll', src: 'reroll', color: '#c56bff', r: 15, diamond: true },
-    { key: 'bunny', src: 'bunny', color: '#3ddb63', r: 15, tri: true },
-    { key: 'survey', src: 'survey', color: '#55e6d4', r: 15, square: true }
+    { key: 'bronze', src: 'bronze', color: '#e0912f', r: 15, icon: 'assets/map-icons/bronze-treasure.png' },
+    { key: 'silver', src: 'silver', color: '#e8eef5', r: 17, icon: 'assets/map-icons/silver-treasure.png' },
+    { key: 'potN', src: 'potNorth', color: '#4a90ff', r: 16, ring: true, icon: 'assets/map-icons/magic-pot.png' },
+    { key: 'potS', src: 'potSouth', color: '#ff8a3c', r: 16, ring: true, icon: 'assets/map-icons/magic-pot.png' },
+    { key: 'reroll', src: 'reroll', color: '#c56bff', r: 15, diamond: true, icon: 'assets/map-icons/reroll.png' },
+    { key: 'bunny', src: 'bunny', color: '#3ddb63', r: 15, tri: true, icon: 'assets/map-icons/carrot.png' },
+    { key: 'survey', src: 'survey', color: '#55e6d4', r: 15, square: true, icon: 'assets/map-icons/survey-point.png' }
   ];
   OC.MAP_LAYERS = LAYERS;
 
@@ -132,7 +132,8 @@
   }
 
   function radarSvg() {
-    var list = OC.Radar && OC.Radar.targets ? OC.Radar.targets() : [];
+    var list = OC.Radar && OC.Radar.mapTargets ? OC.Radar.mapTargets() :
+      OC.Radar && OC.Radar.targets ? OC.Radar.targets() : [];
     var center = (OC.MAP && OC.MAP.center) || 1024;
     var colors = { bronze: '#e0912f', silver: '#e8eef5', carrot: '#3ddb63' };
     var s = '';

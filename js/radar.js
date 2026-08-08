@@ -13,6 +13,7 @@
   var started = false;
   var enabled = true;
   var targets = {};
+  var mapTargets = {};
   var pending = {};
   var suppressed = {};
   var sequence = 0;
@@ -124,8 +125,8 @@
 
   function nextCofferSlot() {
     var used = {};
-    Object.keys(targets).forEach(function (key) {
-      var target = targets[key];
+    Object.keys(mapTargets).forEach(function (key) {
+      var target = mapTargets[key];
       if (target.kind !== 'carrot') used[target.slot] = true;
     });
     var slot = 1;
@@ -168,7 +169,7 @@
     var pos = horizontalPosition(combatant);
     if (!kind || !pos) return null;
 
-    var target = targets[id];
+    var target = targets[id] || mapTargets[id];
     var fresh = !target;
     if (fresh) {
       target = targets[id] = {
@@ -179,6 +180,8 @@
         sequence: ++sequence
       };
     }
+    targets[id] = target;
+    mapTargets[id] = target;
     target.kind = kind;
     target.bnpcId = bnpc;
     target.x = pos.x;
@@ -345,8 +348,8 @@
       var player = source && source.playerPos;
       if (!player) return false;
       var best = null;
-      Object.keys(targets).forEach(function (key) {
-        var target = targets[key];
+      Object.keys(mapTargets).forEach(function (key) {
+        var target = mapTargets[key];
         var isCoffer = target.kind !== 'carrot';
         if ((group === 'carrot' && isCoffer) || (group === 'coffer' && !isCoffer)) return;
         updateMetrics(target, player);
@@ -354,6 +357,7 @@
       });
       if (!best) return false;
       delete targets[best.id];
+      delete mapTargets[best.id];
       suppressed[best.id] = Date.now() + 15000;
       emitChange();
       return true;
@@ -369,9 +373,20 @@
         });
     },
 
+    mapTargets: function () {
+      return Object.keys(mapTargets).map(function (key) { return publicTarget(mapTargets[key]); })
+        .filter(function (target) { return kindEnabled(target.kind); })
+        .sort(function (a, b) {
+          if (a.kind === 'carrot' && b.kind !== 'carrot') return 1;
+          if (a.kind !== 'carrot' && b.kind === 'carrot') return -1;
+          return a.slot - b.slot;
+        });
+    },
+
     reset: function () {
-      var hadState = Object.keys(targets).length || Object.keys(pending).length;
+      var hadState = Object.keys(targets).length || Object.keys(mapTargets).length || Object.keys(pending).length;
       targets = {};
+      mapTargets = {};
       pending = {};
       suppressed = {};
       sequence = 0;

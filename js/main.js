@@ -1947,7 +1947,9 @@
     var h = '';
     L.forEach(function (l) {
       if (!OC.MAP.points[l.src] || !OC.MAP.points[l.src].length) return;
-      h += '<button class="rbtn' + (layers[l.key] ? ' on' : '') + '" data-layer="' + l.key + '" title="' + OC.i18n.t('layer_' + l.key) + '" style="--rc:' + l.color + '">' + OC.i18n.t('layer_short_' + l.key) + '</button>';
+      var label = OC.i18n.t('layer_' + l.key);
+      h += '<button class="rbtn' + (layers[l.key] ? ' on' : '') + '" data-layer="' + l.key + '" title="' + esc(label) + '" aria-label="' + esc(label) + '" style="--rc:' + l.color + '">' +
+        '<img class="rbtn-icon" src="' + esc(l.icon) + '" alt="" aria-hidden="true"></button>';
     });
     h += '<div class="rail-div"></div>';
     if (App.showsCnDcOverview()) h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + OC.i18n.t('panel_dcpots') + '">罐</button>';

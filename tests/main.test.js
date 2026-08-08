@@ -372,16 +372,37 @@ assert.doesNotMatch(toastsRule[1], /translateX/, 'left-aligned notifications mus
 const mapLayerRule = styles.match(/\.map-layer\s*\{([^}]*)\}/);
 assert.ok(mapLayerRule, 'map layer style must exist');
 assert.match(mapLayerRule[1], /right:\s*56px/, 'the map must stop before the right-side control rail');
+assert.match(styles, /\.rbtn-icon\s*\{[^}]*width:\s*30px[^}]*height:\s*30px/, 'rail icons must fit inside the circular controls');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=117/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=117/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=117') < index.indexOf('js/treasure.js?v=117'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=117') < index.indexOf('js/map.js?v=117'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=119/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=119/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=119') < index.indexOf('js/treasure.js?v=119'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=119') < index.indexOf('js/map.js?v=119'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
+const layerSandbox = {};
+layerSandbox.window = layerSandbox;
+vm.runInNewContext(mapSource, layerSandbox, { filename: '../js/map.js' });
+assert.deepEqual(JSON.parse(JSON.stringify(layerSandbox.OC.MAP_LAYERS.map(layer => [layer.key, layer.icon]))), [
+  ['bronze', 'assets/map-icons/bronze-treasure.png'],
+  ['silver', 'assets/map-icons/silver-treasure.png'],
+  ['potN', 'assets/map-icons/magic-pot.png'],
+  ['potS', 'assets/map-icons/magic-pot.png'],
+  ['reroll', 'assets/map-icons/reroll.png'],
+  ['bunny', 'assets/map-icons/carrot.png'],
+  ['survey', 'assets/map-icons/survey-point.png'],
+], 'rail controls must use the upstream Fast Switch game icons');
+Array.from(new Set(layerSandbox.OC.MAP_LAYERS.map(layer => layer.icon))).forEach(iconPath => {
+  const icon = fs.readFileSync(require.resolve('../' + iconPath));
+  assert.equal(icon.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', iconPath + ' must be a bundled PNG');
+});
+const mainSource = fs.readFileSync(require.resolve('../js/main.js'), 'utf8');
+assert.match(mainSource, /class="rbtn-icon"[^>]+esc\(l\.icon\)/, 'rail controls must render local icon images');
+assert.doesNotMatch(mainSource, /OC\.iconUrl\(l\.icon\)/, 'rail controls must not depend on a remote icon service');
+assert.doesNotMatch(mainSource, /OC\.i18n\.t\('layer_short_' \+ l\.key\)/, 'rail controls must not render abbreviated text');
 assert.match(mapSource, /preserveAspectRatio="xMidYMin meet"/,
   'the map must stay horizontally centered and align below the top overlays');
-assert.match(mapSource, /OC\.Radar\.targets\(\)/, 'the map must keep reading the full radar target list');
+assert.match(mapSource, /OC\.Radar\.mapTargets\(\)/, 'the map must read the persisted discovery target list');
 assert.doesNotMatch(mapSource, /slice\(0,\s*3\)/, 'the fixed-panel row limit must not affect map markers');
 assert.match(mapSource, /class="treasure-wrap"/, 'the map must include a dedicated dynamic treasure layer');
 assert.match(mapSource, /OC\.Treasure\.view\(\)/, 'the dynamic treasure layer must read the live candidate set');

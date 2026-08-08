@@ -157,6 +157,8 @@ html, body {
   color: #0b0f16; background: var(--rc, var(--accent));
   border-color: var(--rc, var(--accent)); box-shadow: 0 0 12px var(--rc, var(--accent));
 }
+.rbtn-icon { width: 30px; height: 30px; object-fit: contain; pointer-events: none; }
+.rbtn:not(.on) .rbtn-icon { opacity: .72; }
 .rbtn.panel { font-size: 17px; }
 .rail-div { width: 22px; height: 1px; flex: 0 0 1px; background: var(--line); margin: 3px 0; }
 

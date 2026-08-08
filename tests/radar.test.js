@@ -157,12 +157,27 @@ assert.equal(Radar.targets().length, 0, 'using a nearby carrot clears it');
   assert.equal(Radar.targets().length, 1, 'one incomplete snapshot must not flicker a live coffer');
   source.emit('combatants', []);
   assert.equal(Radar.targets().length, 0, 'a coffer missing from two full snapshots must disappear');
+  assert.equal(Radar.mapTargets().length, 1, 'a discovered coffer must remain on the map after leaving the live snapshot');
+  source.emit('log', 0, ['0'], '00:083E::Keita获得了“战利品”');
+  assert.equal(Radar.mapTargets().length, 0, 'opening a coffer must clear its persisted map marker');
 
   source.emit('combatants', [
     { ID: 0x40000022, BNpcID: 1797, PosX: -8, PosY: 0, PosZ: 2 },
   ]);
   source.emit('log', 105, ['105', '', 'Remove', '40000022'], '');
   assert.equal(Radar.targets().length, 0, 'an entity removal event must clear the exact coffer immediately');
+  assert.equal(Radar.mapTargets().length, 1, 'an entity removal event must not erase a discovered map marker');
+  Radar.reset();
+
+  source.emit('combatants', [
+    { ID: 0x40000023, BNpcID: 2010139, PosX: -6, PosY: 0, PosZ: 2 },
+  ]);
+  source.emit('combatants', []);
+  source.emit('combatants', []);
+  assert.equal(Radar.targets().length, 0, 'a carrot outside the live snapshot must leave the fixed radar');
+  assert.equal(Radar.mapTargets().length, 1, 'a discovered carrot must remain on the map');
+  source.emit('log', 15, ['15', '', '10000001', 'Keita', '200BBE0'], '15:10000001:Keita:200BBE0:');
+  assert.equal(Radar.mapTargets().length, 0, 'using a carrot must clear its persisted map marker');
 
   const alertCountBeforeScopeTest = alerts.length;
   radarCoffers = false;
