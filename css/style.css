@@ -161,11 +161,15 @@ html, body {
 .rbtn:not(.on) .rbtn-icon { opacity: .72; }
 .rbtn[data-layer="potN"] { --pot-direction: #3178d4; --pot-label: 'N'; }
 .rbtn[data-layer="potS"] { --pot-direction: #d86420; --pot-label: 'S'; }
-.rbtn[data-layer^="pot"]::after {
-  content: var(--pot-label); position: absolute; right: -1px; bottom: -1px; width: 16px; height: 16px;
+.rbtn[data-layer="reroll"] { --pot-direction: #8b3fc0; }
+.rbtn[data-layer^="pot"]::after,
+.rbtn[data-layer="reroll"]::after {
+  position: absolute; right: -1px; bottom: -1px; width: 16px; height: 16px;
   pointer-events: none; border-radius: 50%; background: var(--pot-direction); color: #fff;
   box-shadow: 0 0 0 2px #141b25; font: 700 10px/16px Arial, sans-serif; text-align: center;
 }
+.rbtn[data-layer^="pot"]::after { content: var(--pot-label); }
+.rbtn[data-layer="reroll"]::after { content: attr(data-layer-label); }
 .rbtn.panel { font-size: 17px; }
 .rail-div { width: 22px; height: 1px; flex: 0 0 1px; background: var(--line); margin: 3px 0; }
 

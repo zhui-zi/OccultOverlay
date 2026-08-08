@@ -1949,7 +1949,8 @@
     L.forEach(function (l) {
       if (!OC.MAP.points[l.src] || !OC.MAP.points[l.src].length) return;
       var label = OC.i18n.t('layer_' + l.key);
-      h += '<button class="rbtn' + (layers[l.key] ? ' on' : '') + '" data-layer="' + l.key + '" title="' + esc(label) + '" aria-label="' + esc(label) + '" style="--rc:' + l.color + '">' +
+      var marker = l.key === 'reroll' ? ' data-layer-label="' + esc(OC.i18n.t('layer_short_reroll')) + '"' : '';
+      h += '<button class="rbtn' + (layers[l.key] ? ' on' : '') + '" data-layer="' + l.key + '"' + marker + ' title="' + esc(label) + '" aria-label="' + esc(label) + '" style="--rc:' + l.color + '">' +
         '<img class="rbtn-icon" src="' + esc(l.icon) + '" alt="" aria-hidden="true"></button>';
     });
     h += '<div class="rail-div"></div>';

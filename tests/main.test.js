@@ -377,14 +377,18 @@ assert.match(styles, /\.rbtn\[data-layer="potN"\]\s*\{[^}]*--pot-label:\s*'N'/,
   'the north Magic Pot control must carry an N marker');
 assert.match(styles, /\.rbtn\[data-layer="potS"\]\s*\{[^}]*--pot-label:\s*'S'/,
   'the south Magic Pot control must carry an S marker');
-assert.match(styles, /\.rbtn\[data-layer\^="pot"\]::after\s*\{[^}]*border-radius:\s*50%[^}]*background:\s*var\(--pot-direction\)[^}]*color:\s*#fff/,
-  'Magic Pot direction markers must use solid circular badges');
+assert.match(styles, /\.rbtn\[data-layer="reroll"\]\s*\{[^}]*--pot-direction:\s*#8b3fc0/,
+  'the reroll control must carry a distinct badge color');
+assert.match(styles, /\.rbtn\[data-layer\^="pot"\]::after,\s*\.rbtn\[data-layer="reroll"\]::after\s*\{[^}]*border-radius:\s*50%[^}]*background:\s*var\(--pot-direction\)[^}]*color:\s*#fff/,
+  'Magic Pot and reroll markers must use matching solid circular badges');
+assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*attr\(data-layer-label\)/,
+  'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=122/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=122/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=122') < index.indexOf('js/treasure.js?v=122'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=122') < index.indexOf('js/map.js?v=122'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=123/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=123/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=123') < index.indexOf('js/treasure.js?v=123'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=123') < index.indexOf('js/map.js?v=123'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
@@ -405,7 +409,8 @@ Array.from(new Set(layerSandbox.OC.MAP_LAYERS.map(layer => layer.icon))).forEach
 const mainSource = fs.readFileSync(require.resolve('../js/main.js'), 'utf8');
 assert.match(mainSource, /class="rbtn-icon"[^>]+esc\(l\.icon\)/, 'rail controls must render local icon images');
 assert.doesNotMatch(mainSource, /OC\.iconUrl\(l\.icon\)/, 'rail controls must not depend on a remote icon service');
-assert.doesNotMatch(mainSource, /OC\.i18n\.t\('layer_short_' \+ l\.key\)/, 'rail controls must not render abbreviated text');
+assert.match(mainSource, /l\.key === 'reroll'[^\n]+OC\.i18n\.t\('layer_short_reroll'\)/,
+  'the reroll icon must render its localized short marker');
 assert.match(mapSource, /preserveAspectRatio="xMidYMin meet"/,
   'the map must stay horizontally centered and align below the top overlays');
 assert.match(mapSource, /OC\.Radar\.mapTargets\(\)/, 'the map must read the persisted discovery target list');
