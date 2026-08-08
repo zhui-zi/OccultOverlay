@@ -147,7 +147,7 @@ html, body {
 .rail::-webkit-scrollbar-track { background: transparent; }
 .rail::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 2px; }
 .rbtn {
-  width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; cursor: pointer;
+  position: relative; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; cursor: pointer;
   background: var(--glass); border: 1.5px solid var(--line); color: var(--fg-dim);
   font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center;
   backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.4); transition: .15s;
@@ -159,6 +159,16 @@ html, body {
 }
 .rbtn-icon { width: 30px; height: 30px; object-fit: contain; pointer-events: none; }
 .rbtn:not(.on) .rbtn-icon { opacity: .72; }
+.rbtn[data-layer="potN"] { --pot-direction: #4a90ff; --pot-shape: polygon(50% 0, 100% 100%, 0 100%); }
+.rbtn[data-layer="potS"] { --pot-direction: #ff8a3c; --pot-shape: polygon(0 0, 100% 0, 50% 100%); }
+.rbtn[data-layer^="pot"]::before {
+  content: ''; position: absolute; right: 0; bottom: 0; width: 13px; height: 13px;
+  pointer-events: none; border-radius: 50%; background: rgba(8,12,18,0.9); box-shadow: 0 0 0 1px rgba(255,255,255,0.7);
+}
+.rbtn[data-layer^="pot"]::after {
+  content: ''; position: absolute; right: 3px; bottom: 3px; width: 7px; height: 7px;
+  pointer-events: none; background: var(--pot-direction); clip-path: var(--pot-shape);
+}
 .rbtn.panel { font-size: 17px; }
 .rail-div { width: 22px; height: 1px; flex: 0 0 1px; background: var(--line); margin: 3px 0; }
 

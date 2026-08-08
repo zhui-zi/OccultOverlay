@@ -373,12 +373,18 @@ const mapLayerRule = styles.match(/\.map-layer\s*\{([^}]*)\}/);
 assert.ok(mapLayerRule, 'map layer style must exist');
 assert.match(mapLayerRule[1], /right:\s*56px/, 'the map must stop before the right-side control rail');
 assert.match(styles, /\.rbtn-icon\s*\{[^}]*width:\s*30px[^}]*height:\s*30px/, 'rail icons must fit inside the circular controls');
+assert.match(styles, /\.rbtn\[data-layer="potN"\]\s*\{[^}]*#4a90ff[^}]*polygon\(50% 0,\s*100% 100%,\s*0 100%\)/,
+  'the north Magic Pot control must carry a blue upward marker');
+assert.match(styles, /\.rbtn\[data-layer="potS"\]\s*\{[^}]*#ff8a3c[^}]*polygon\(0 0,\s*100% 0,\s*50% 100%\)/,
+  'the south Magic Pot control must carry an orange downward marker');
+assert.match(styles, /\.rbtn\[data-layer\^="pot"\]::before\s*\{[^}]*border-radius:\s*50%/,
+  'Magic Pot direction markers must remain visible over either button state');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=119/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=119/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=119') < index.indexOf('js/treasure.js?v=119'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=119') < index.indexOf('js/map.js?v=119'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=120/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=120/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=120') < index.indexOf('js/treasure.js?v=120'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=120') < index.indexOf('js/map.js?v=120'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
