@@ -141,6 +141,7 @@ html, body {
   position: absolute; top: 8px; right: 8px; bottom: 8px; z-index: 6;
   display: flex; flex-direction: column; gap: 7px; align-items: center;
   overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
+  background: rgba(0, 0, 0, 0.01);
   padding-right: 4px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.25) transparent;
 }
 .rail::-webkit-scrollbar { width: 4px; }

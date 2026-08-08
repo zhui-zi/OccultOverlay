@@ -372,6 +372,10 @@ assert.doesNotMatch(toastsRule[1], /translateX/, 'left-aligned notifications mus
 const mapLayerRule = styles.match(/\.map-layer\s*\{([^}]*)\}/);
 assert.ok(mapLayerRule, 'map layer style must exist');
 assert.match(mapLayerRule[1], /right:\s*56px/, 'the map must stop before the right-side control rail');
+const railRule = styles.match(/\.rail\s*\{([^}]*)\}/);
+assert.ok(railRule, 'right-side control rail style must exist');
+assert.match(railRule[1], /background:\s*rgba\(0,\s*0,\s*0,\s*0\.01\)/,
+  'the control rail must keep a nonzero alpha hit target for locked Browsingway overlays');
 assert.match(styles, /\.rbtn-icon\s*\{[^}]*width:\s*30px[^}]*height:\s*30px/, 'rail icons must fit inside the circular controls');
 assert.match(styles, /\.rbtn\[data-layer="potN"\]\s*\{[^}]*--pot-label:\s*'N'/,
   'the north Magic Pot control must carry an N marker');
@@ -385,10 +389,10 @@ assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*att
   'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=123/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=123/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=123') < index.indexOf('js/treasure.js?v=123'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=123') < index.indexOf('js/map.js?v=123'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=124/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=124/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=124') < index.indexOf('js/treasure.js?v=124'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=124') < index.indexOf('js/map.js?v=124'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
