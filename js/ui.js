@@ -30,7 +30,7 @@
     });
     return h + '</span>';
   };
-  // 关键奖励后缀：南征显示半魂晶颜色，北征显示消幻晶型号。
+  // Key reward suffixes: Demiatma colors for South Horn and Phantom Dispeller types for North Horn.
   var REWARD_BADGES = {
     47744: ['青', '#4aa3ff'], 47745: ['碧', '#2ec4b6'], 47746: ['绿', '#3ddb63'],
     47747: ['橙', '#ff8a3c'], 47748: ['紫', '#b061ff'], 47749: ['黄', '#ffce4d'],
@@ -43,7 +43,7 @@
     });
     return out;
   };
-  // 仅显示玩家已开启播报的关键奖励后缀。
+  // Show suffixes only for key rewards enabled in the alert settings.
   UI.rewardSuffixIfWanted = function (drops) {
     var want = OC.Settings.get('alertColors') || {};
     return UI.rewardSuffix((drops || []).filter(function (id) { return want[id]; }));
@@ -72,7 +72,7 @@
     return h + '</span>';
   };
 
-  // ---- 撒娇罐总览（国服四大区）----
+  // ---- Magic Pot overview for the four CN regions ----
   UI.renderDcPots = function (host, list, loading) {
     var current = now();
     var visible = (list || []).filter(function (item) {
@@ -105,7 +105,7 @@
     });
   };
 
-  // ---- 岛屿详情：CE / FATE / 罐 ----
+  // ---- Island details: CE / FATE / Magic Pot ----
   UI.renderBattlePanel = function (host, hist, id, locating) {
     var n = now();
     var h = '<div class="panel-head">' + t('panel_battle') + (id ? ' · ' + esc(id) : '') +
@@ -238,7 +238,7 @@
   function avgInterval(e) {
     var r = e.respawn_times;
     if (r && r.length) { var s = 0; r.forEach(function (x) { s += x; }); return Math.round(s / r.length); }
-    return 1800; // 缺省 30 分钟
+    return 1800; // Default to 30 minutes.
   }
   function span(cls, kind, val) {
     return '<span class="' + cls + '" data-tk="' + kind + '" data-tv="' + val + '">' + UI.timerText(kind, val) + '</span>';
@@ -302,7 +302,7 @@
       }
       var base = e.last_seen > 0 ? e.last_seen : (e.death_time > 0 ? e.death_time : 0);
       if (base > 0) { var na = base + avgInterval(e); return span('bdg ' + (n >= na ? 'canpop' : 'gone'), 'cd', na); }
-      return span('bdg canpop', 'canpop', 0); // 从未出现视为可触发
+      return span('bdg canpop', 'canpop', 0); // Treat a never-seen encounter as triggerable.
     }
     if (type === 'pot') {
       if (potStatus && !potStatus.alive && potStatus.side === def.side)
@@ -316,7 +316,7 @@
     return '<span class="bdg unk">' + t('unknown') + '</span>';
   }
 
-  // 计时文本（render 与每秒 tick 复用）
+  // Timer text shared by render and the one-second tick.
   UI.timerText = function (kind, val, now) {
     now = now || Math.floor(Date.now() / 1000);
     switch (kind) {
@@ -329,7 +329,7 @@
     }
     return '';
   };
-  // 每秒只更新计时文本，不重绘整个面板（避免滚动被顶回 / 闪烁）
+  // Update only timer text each second to preserve scroll position and avoid flicker.
   UI.tickPanel = function () {
     var now = Math.floor(Date.now() / 1000);
     var expiredPot = false;
@@ -343,7 +343,7 @@
     return expiredPot;
   };
 
-  // ---- 通知 ----
+  // ---- Notifications ----
   var last = {};
   UI.notify = function (kind, title, body, key) {
     var k = key || (kind + ':' + title), tn = Date.now();
@@ -375,7 +375,7 @@
     } catch (e) {}
   }
   UI.beep = beep;
-  // 使用 ACT 自带 TTS（OverlayPlugin），不调用系统 TTS；未连接则返回 false 退回提示音
+  // Use OverlayPlugin TTS instead of system TTS; return false to fall back to a tone when disconnected.
   UI.speak = function (text) {
     if (!OC.Settings.get('useTts')) return false;
     if (OC.Overlay && OC.Overlay.connected && OC.Overlay.say(text)) return true;

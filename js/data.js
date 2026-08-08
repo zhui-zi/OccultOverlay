@@ -33,10 +33,10 @@
     }
   };
 
-  // --- 后端与图标服务 -----------------------------------------------------
+  // --- Backend and icon services -----------------------------------------
   OC.BACKEND = {
     url: 'https://infi.ovh/api/OccultTrackerV3',
-    // 公开匿名 JWT（role: anon），与官方站点一致
+    // Public anonymous JWT (role: anon), matching the official site.
     anonKey:
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.Ur6wgi_rD4dr3uLLvbLoaEvfLCu4QFWdrF-uHRtbl_s',
     iconBase: 'https://beta.xivapi.com/api/1/asset?format=png&path='
@@ -47,7 +47,7 @@
     return OC.BACKEND.iconBase + encodeURIComponent(texPath);
   };
 
-  // --- 大区 / 数据中心 ----------------------------------------------------
+  // --- Regions and data centers -----------------------------------------
   OC.DATACENTERS = {
     1: { name: 'Elemental', region: 'Japan' },
     2: { name: 'Gaia', region: 'Japan' },
@@ -67,11 +67,11 @@
     201: { name: 'Eorzea', region: 'Korea' }
   };
 
-  // --- 时间常量（秒），取自数据源 ----------------------------------------
+  // --- Time constants in seconds, sourced from the data provider --------
   OC.TIMERS = {
     FATE_WINDOW_MIN: 1800, // 30min
     FATE_WINDOW_MAX: 7200, // 2h
-    CE_COOLDOWN: 3600,     // CE 冷却参考值（近似，可在设置里调整）
+    CE_COOLDOWN: 3600,     // Approximate CE cooldown; configurable in settings.
     RESPAWN: 3600
   };
 
@@ -91,20 +91,20 @@
     misc: { zh: '其他', en: 'Misc', color: '#9aa0a6' }
   };
 
-  // --- 掉落物（item_id -> 定义） -----------------------------------------
+  // --- Drops (item_id -> definition) ------------------------------------
   OC.ITEMS = {
-    // 半魂晶 Demiatma
+    // Demiatma
     47744: { cat: 'demiatma', img: 'ui/icon/026000/026025.tex', name: { zh: '青色半魂晶', en: 'Azurite Demiatma', ja: '青晶のデミアートマ' } },
     47745: { cat: 'demiatma', img: 'ui/icon/026000/026035.tex', name: { zh: '碧色半魂晶', en: 'Verdigris Demiatma', ja: '碧晶のデミアートマ' } },
     47746: { cat: 'demiatma', img: 'ui/icon/026000/026034.tex', name: { zh: '绿色半魂晶', en: 'Malachite Demiatma', ja: '緑晶のデミアートマ' } },
     47747: { cat: 'demiatma', img: 'ui/icon/026000/026026.tex', name: { zh: '橙色半魂晶', en: 'Realgar Demiatma', ja: '橙晶のデミアートマ' } },
     47748: { cat: 'demiatma', img: 'ui/icon/026000/026027.tex', name: { zh: '紫色半魂晶', en: 'Caput Mortuum Demiatma', ja: '紫晶のデミアートマ' } },
     47749: { cat: 'demiatma', img: 'ui/icon/026000/026029.tex', name: { zh: '黄色半魂晶', en: 'Orpiment Demiatma', ja: '黄晶のデミアートマ' } },
-    // 消幻晶 Phantom Dispeller
+    // Phantom Dispeller
     50974: { cat: 'dispeller', img: 'ui/icon/026000/026229.tex', name: { zh: '消幻晶α', en: 'Phantom Dispeller α', ja: 'ファントムディスペラーα' } },
     50975: { cat: 'dispeller', img: 'ui/icon/026000/026231.tex', name: { zh: '消幻晶β', en: 'Phantom Dispeller β', ja: 'ファントムディスペラーβ' } },
     50976: { cat: 'dispeller', img: 'ui/icon/026000/026230.tex', name: { zh: '消幻晶γ', en: 'Phantom Dispeller γ', ja: 'ファントムディスペラーγ' } },
-    // 调查记录 Exploration Notes
+    // Exploration Notes
     47728: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：封印大妖', en: 'Notes on the Cloister Demon', ja: '探査記録:クロイスターデーモン' } },
     47729: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：神秘偶像', en: 'Notes on the Mythic Idol', ja: '探査記録:ミシカルアイドル' } },
     47730: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：狂战士', en: 'Notes on the Crescent Berserker', ja: '探査記録:クレセント・バーサーカー' } },
@@ -116,7 +116,7 @@
     47736: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：大理石龙', en: 'Notes on the Marble Dragon', ja: '探査記録:マーブルドラゴン' } },
     47737: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：魔导牛头', en: 'Notes on Magitaur', ja: '探査記録:マギタウロス' } },
     47738: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：撒娇罐', en: 'Notes on Persistent Pots', ja: '探査記録:おねだりポット' } },
-    // 灵魂碎晶 Soul Shard
+    // Soul Shard
     47751: { cat: 'soulshard', img: 'ui/icon/026000/026681.tex', name: { zh: '灵魂碎晶：狂战士', en: "Berserker's Soul Shard", ja: 'ソウルシャード:バーサーカー' } },
     47752: { cat: 'soulshard', img: 'ui/icon/026000/026681.tex', name: { zh: '灵魂碎晶：游侠', en: "Ranger's Soul Shard", ja: 'ソウルシャード:狩人' } },
     47757: { cat: 'soulshard', img: 'ui/icon/026000/026681.tex', name: { zh: '灵魂碎晶：预言者', en: "Oracle's Soul Shard", ja: 'ソウルシャード:予言士' } },
@@ -133,14 +133,14 @@
     51986: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：赤龙', en: 'Notes on the Claret Dragon', ja: '探査記録:ルブルムドラゴン' } },
     51987: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：雪石膏之剑', en: 'Notes on the Alabaster Blade', ja: '探査記録:アラバスターブレード' } },
     51988: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：卡洛菲斯提莉二重身', en: 'Notes on Conjured Calofisteri', ja: '探査記録:カロフィステリ・ダブル' } },
-    // 饰品 Accessory
+    // Accessories
     49826: { cat: 'accessory', img: 'ui/icon/055000/055562_hr1.tex', name: { zh: '新月魔战士耳环', en: 'Occult Earrings of Blood', ja: 'クレセントマギ・ファイターイヤリング' } },
     49827: { cat: 'accessory', img: 'ui/icon/055000/055107_hr1.tex', name: { zh: '新月魔战士项链', en: 'Occult Necklace of Blood', ja: 'クレセントマギ・ファイターネックレス' } },
     49828: { cat: 'accessory', img: 'ui/icon/055000/055905_hr1.tex', name: { zh: '新月魔战士手镯', en: 'Occult Bracelet of Blood', ja: 'クレセントマギ・ファイターブレスレット' } },
     49831: { cat: 'accessory', img: 'ui/icon/055000/055562_hr1.tex', name: { zh: '新月魔法师耳环', en: 'Occult Earrings of Magic', ja: 'クレセントマギ・ソーサラーイヤリング' } },
     49832: { cat: 'accessory', img: 'ui/icon/055000/055107_hr1.tex', name: { zh: '新月魔法师项链', en: 'Occult Necklace of Magic', ja: 'クレセントマギ・ソーサラーネックレス' } },
     49833: { cat: 'accessory', img: 'ui/icon/055000/055905_hr1.tex', name: { zh: '新月魔法师手镯', en: 'Occult Bracelet of Magic', ja: 'クレセントマギ・ソーサラーブレスレット' } },
-    // 其他 Misc
+    // Miscellaneous
     47739: { cat: 'misc', img: 'ui/icon/065000/065121.tex', name: { zh: '魔纹起动证：力之塔', en: 'Sanguine Cipher', ja: '魔紋起動証:力の塔' } },
     47740: { cat: 'misc', img: 'ui/icon/026000/026527.tex', name: { zh: '古旧钱箱（辅助道具）', en: 'Occult Coffer', ja: 'サポートアイテム:古びた銭箱' } },
     47741: { cat: 'misc', img: 'ui/icon/020000/020603.tex', name: { zh: '魔晶药水', en: 'Occult Potion', ja: 'マギ・ポーション' } },
@@ -148,7 +148,7 @@
     48008: { cat: 'misc', img: 'ui/icon/026000/026187.tex', name: { zh: '大妖异的契约书', en: 'Voidsent Contract', ja: '大妖異の契約書' } }
   };
 
-  // --- 普通 FATE（fate_id -> 定义） --------------------------------------
+  // --- Standard FATEs (fate_id -> definition) ---------------------------
   OC.FATES = {
     1962: { name: { zh: '涌潮海魔—纳木', en: 'Rough Waters', ja: '波起こしの海魔「ナンム」' }, drops: [47744], encounter_id: 28 },
     1963: { name: { zh: '古代怪石—金色石面', en: 'The Golden Guardian', ja: '金色の怪石「ゴールデンブロックス」' }, drops: [47744], encounter_id: 14 },
@@ -176,7 +176,7 @@
     2084: { name: { zh: '高傲的雷兽—新月女王', en: 'Thunderregnum', ja: '気高き雷獣「クレセントレギナ」' }, drops: [50975], weakness: ['fire'], encounter_id: 0 }
   };
 
-  // --- 撒娇罐 Pots（fate_id -> 定义） -----------------------------------
+  // --- Magic Pots (fate_id -> definition) -------------------------------
   OC.POTS = {
     1976: { name: { zh: '幸福的魔法罐（北）', en: 'Pleading Pots (North)', ja: 'しあわせのマジックポット (北)' }, territory: 1252, side: 'north', drops: [47749, 47738], encounter_id: 40 },
     1977: { name: { zh: '瑟瑟发抖的魔法罐（南）', en: 'Persistent Pots (South)', ja: 'カチカチのマジックポット (南)' }, territory: 1252, side: 'south', drops: [47745, 47737], encounter_id: 18 },
@@ -184,8 +184,8 @@
     2073: { name: { zh: '被吹飞的魔法罐(南)', en: 'In a Pot of Bother (South)', ja: '飛ばされのマジックポット (南)' }, territory: 1346, side: 'south', drops: [50975], weakness: ['lightning'], encounter_id: 0 }
   };
 
-  // --- 危命任务 CE（encounter_id -> 定义） -------------------------------
-  // spawn_type=true 表示由特定怪物（monster）击杀触发。
+  // --- Critical Encounters (encounter_id -> definition) -----------------
+  // spawn_type=true means kills of a specific monster trigger the encounter.
   OC.CES = {
     33: { name: { zh: '脑髓爱好者—夺心魔', en: 'Scourge of the Mind', ja: '脳髄愛好家「マインドフレイア」' }, drops: [49831, 49826, 47744], spawn_type: true, monster: { zh: '新月鬼鱼', en: 'Crescent Monk', ja: 'クレセント・モンク' }, monster_image: 'assets/trigger-monsters/33.png' },
     34: { name: { zh: '黑色连队', en: 'The Black Regiment', ja: '黒の連隊' }, drops: [49831, 49826, 47749, 47752, 47732], spawn_type: false },
@@ -223,12 +223,12 @@
     64: { name: { zh: '两岐塔 魔之塔', en: 'The Forked Tower: Magic', ja: 'フォークタワー：魔の塔' }, drops: [], spawn_type: false, type: 'tower' }
   };
 
-  // --- 撒娇罐时刻表常量（分钟），取自社区实测 ----------------------------
+  // --- Magic Pot schedule constants in minutes, based on community data -
   OC.POT_SCHEDULE = {
-    firstMin: 5,     // 副本开启后 5 分钟第一只（北）
-    intervalMin: 30, // 之后每 30 分钟交替 北/南
-    instanceMaxMin: 180 // 副本最长寿命
-    // 偶数序号=北(North / 1976)，奇数序号=南(South / 1977)
+    firstMin: 5,     // First spawn (North) five minutes after instance creation.
+    intervalMin: 30, // Alternate North/South every 30 minutes.
+    instanceMaxMin: 180 // Maximum instance lifetime.
+    // Even index = North (1976); odd index = South (1977).
   };
 
   OC.localName = function (nameObj, lang) {

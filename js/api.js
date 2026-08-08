@@ -44,7 +44,7 @@
       });
     },
 
-    /** 按数据库主键读取已确认的实例，避免同 tracker_id 的旧/重复行串岛。 */
+    /** Read a confirmed instance by primary key to avoid stale or duplicate tracker_id rows. */
     fetchTrackerRow: function (rowId) {
       var url = OC.BACKEND.url + '?id=eq.' + encodeURIComponent(rowId) + '&limit=1';
       return fetch(url, { headers: headers(), cache: 'no-store' }).then(function (r) {
@@ -112,7 +112,7 @@
       });
     },
 
-    /** 按 DR 实例指纹直接查询本岛，避免先下载整个大区的活跃记录。 */
+    /** Query this island by its DR fingerprint without downloading all active regional records. */
     fetchIslandByFingerprints: function (fingerprints, territory, datacenter) {
       fingerprints = (fingerprints || []).filter(function (value, index, all) {
         return /^[0-9A-F]{64}$/i.test(String(value)) && all.indexOf(value) === index;
@@ -146,7 +146,7 @@
       });
     },
 
-    /** 只更新已经严格绑定的数据库主键，避免 tracker_id 重复记录串岛。 */
+    /** Update only a strictly bound primary key to avoid duplicate tracker_id rows. */
     updateIslandTracker: function (rowId, record) {
       var url = OC.BACKEND.url + '?id=eq.' + encodeURIComponent(rowId);
       return fetch(url, {

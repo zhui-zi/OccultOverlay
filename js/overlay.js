@@ -4,8 +4,8 @@
 
   var OC = global.OC = global.OC || {};
 
-  // 新月岛（South Horn / North Horn）区域判定。
-  // 官方 territoryId 若与默认不符，可在设置里覆盖；同时用区域名兜底匹配。
+  // Occult Crescent (South Horn/North Horn) territory detection.
+  // Override the default territoryId in settings if needed; zone names provide a fallback.
   var OCCULT_TERRITORY_IDS = [1252, 1346];
   var OCCULT_NAME_RE = /occult|crescent|south horn|north horn|新月|南征|北征|隠世|クレセント|południ|kreszent/i;
   var DUPLICATE_ZONE_SIGNAL_MS = 10000;
@@ -106,8 +106,8 @@
     Overlay.fateSnapshotUntil = Math.floor(Date.now() / 1000) + INITIAL_FATE_SYNC_SEC;
   }
 
-  // onFateEvent 由网络包解析产生（cactbot/IINACT FateWatcher），全岛可见、即时，
-  // 与玩家距离无关；Add 可提供实例识别证据，Update 只证明当前仍存活。
+  // onFateEvent comes from cactbot/IINACT FateWatcher packet parsing and is immediate
+  // across the island regardless of distance. Add identifies an instance; Update only proves liveness.
   var SUBSCRIBE = ['ChangeZone', 'ChangePrimaryPlayer', 'LogLine', 'onFateEvent'];
 
   var ws = null;
@@ -124,8 +124,8 @@
   }
 
   function getWsUrl() {
-    // OverlayPlugin 会以 OVERLAY_WS 或 HOST_PORT 传入 ws 地址（HOST_PORT 常为 faker 地址，
-    // 必须原样连接以便注入的 WebSocket faker 桥接到游戏内存）。
+    // OverlayPlugin passes the WebSocket address through OVERLAY_WS or HOST_PORT.
+    // HOST_PORT is often a faker address and must remain unchanged so its bridge can reach game memory.
     var m = /[?&]OVERLAY_WS=([^&]+)/.exec(location.search);
     if (m) return decodeURIComponent(m[1]);
     var hp = /[?&]HOST_PORT=([^&]+)/.exec(location.search);
@@ -251,7 +251,7 @@
         if (!me) return;
         if (!Overlay.playerName && me.Name) Overlay.playerName = me.Name;
         if (Overlay.playerId == null && me.ID != null) Overlay.playerId = me.ID;
-        // 跨区旅行时以“当前世界”为准（CurrentWorldID），而非home世界(WorldID)
+        // During cross-world travel, use CurrentWorldID instead of the home WorldID.
         var wid = me.CurrentWorldID || me.CurrentWorld || me.WorldID;
         if (wid) setPlayerWorld(wid);
         if (me.PosX == null) return;
@@ -263,8 +263,8 @@
           h: Number(me.Heading)
         };
         Overlay.emit('combatants', arr);
-        // FATE/CE 状态一律以 258/259 内存数据为准；
-        // 战斗单位名字是模糊匹配，会把普通怪误判成 FATE/CE，故不再使用。
+        // Use 258/259 memory data for all FATE/CE states. Combatant-name matching is
+        // fuzzy and can misclassify normal monsters, so it is intentionally unused.
         Overlay.emit('position', Overlay.playerPos);
       }, function () {
         positionPollPending = false;
@@ -295,7 +295,7 @@
   }
 
   // onFateEvent: { type, eventType:'add'|'remove'|'update', fateID:Number, progress:Number }
-  // 由网络包解析（FateWatcher）产生，全岛可见且即时，与玩家距离无关。
+  // Parsed from network packets by FateWatcher; immediate island-wide and distance-independent.
   // Some hosts expose a real start epoch. Otherwise Add is trusted only after
   // the initial snapshot window has elapsed.
   function handleFateEvent(d) {
@@ -317,7 +317,7 @@
       startQuality: explicitStart > 0 ? 'exact' : 'observed',
       endQuality: eventType === 'remove' ? 'direct' : 'observed',
       source: 'onFateEvent'
-    }); // add / update = 存在；remove = 结束
+    }); // add/update = active; remove = ended.
   }
 
   var lastZoneSignal = null;
@@ -351,7 +351,7 @@
     var type = parseInt(line[0], 10);
     Overlay.emit('log', type, line, d.rawLine || '');
 
-    // 01 = ChangeZone（部分环境只发 LogLine 不发 ChangeZone 事件）
+    // 01 = ChangeZone; some environments emit only LogLine, not ChangeZone events.
     if (type === 1) {
       setZone(parseInt(line[2], 16), line[3]);
       return;
@@ -368,14 +368,14 @@
 
     if (Overlay.debugRaw) { try { Overlay.debugRaw(line); } catch (e) {} }
 
-    // 258 FateDirector / 259 CEDirector：由 ACT 读取内存产生，
-    // 与距离无关且即时，是获取全岛 FATE/CE 状态的最佳来源。
+    // 258 FateDirector / 259 CEDirector come from ACT memory reads. They are immediate,
+    // distance-independent, and the best source of island-wide FATE/CE state.
     if (type === 258) { handleFateDirector(line); return; }
     if (type === 259) { handleCeDirector(line); return; }
 
-    // 系统消息 / 战斗日志：尝试从文本匹配 CE/FATE 名称触发通知。
-    // ACT 环境无法稳定拿到内存态 FATE 列表，这里做“文本兜底”，
-    // 主上报仍以数据面板按钮 + 共享 tracker 数据为准。
+    // System/combat logs: match CE/FATE names as a notification fallback.
+    // ACT cannot always provide a reliable in-memory FATE list, so text matching is
+    // supplemental; data-panel controls and shared tracker data remain authoritative.
     if (type === 0 || type === 257 /* 0x101 */ || type === 561) {
       var text = line[line.length - 1] || '';
       detectFromText(text);
@@ -389,7 +389,7 @@
       ['zh', 'en', 'ja'].forEach(function (lang) {
         var n = nameObj[lang];
         if (!n) return;
-        // 取「」内怪名或整名
+        // Extract the monster name inside brackets or use the full name.
         var core = (/[「『](.+?)[」』]/.exec(n) || [null, n])[1];
         if (core && core.length >= 2) _matchIndex.push({ kind: kind, id: id, needle: core });
       });
@@ -409,13 +409,13 @@
           encounterId: m.id, fateId: m.id, status: 'spawned',
           name: m.kind === 'ce' ? OC.CES[m.id].name : (OC.POTS[m.id] || OC.FATES[m.id]).name
         });
-        return; // 每行只匹配一次
+        return; // Match each line only once.
       }
     }
   }
 
-  // ---- 内存态 FATE/CE（258/259 director 行）-----------------------------
-  // Overlay.memActive: { id: true } 当前岛上正在进行的 FATE/CE（与距离无关）
+  // ---- In-memory FATE/CE state (258/259 director lines) -----------------
+  // Overlay.memActive: { id: true } for active island FATEs/CEs, independent of distance.
   Overlay.memActive = {};
   // Overlay.memMeta preserves trusted live start evidence. Initial snapshot
   // packets only prove that the event is alive; a new zero-progress pot Update
@@ -425,17 +425,31 @@
   function memChanged(id, active, detail) {
     id = Number(id);
     if (!id) return;
-    // 只接受新月岛已知的 CE/FATE/魔法罐，过滤其它区域或无关的 director 数据
+    // Accept only known Occult Crescent CEs, FATEs, and Magic Pots; reject unrelated director data.
     if (!OC.CES[id] && !OC.FATES[id] && !OC.POTS[id]) return;
     detail = detail || {};
     var was = !!Overlay.memActive[id];
     var observedAt = Number(detail.observedAt) || Math.floor(Date.now() / 1000);
     var meta = Overlay.memMeta[id] = Overlay.memMeta[id] || {};
+    var source = String(detail.source || '');
+    var isDirector = source === 'FateDirector' || source === 'CEDirector';
+    var ignoreSecondaryLiveness = !isDirector && source === 'onFateEvent' && meta.directorSeen;
+    if (isDirector) {
+      meta.directorSeen = true;
+      meta.directorActive = !!active;
+    } else if (ignoreSecondaryLiveness) {
+      // FateWatcher and director packets can arrive out of order. Once the local
+      // director has spoken for this encounter, secondary events may refine an
+      // exact start time but must not toggle its visible lifetime.
+      active = !!meta.directorActive;
+    }
     var gainedExactStart = false;
     var cePhaseChanged = false;
     meta.active = !!active;
-    meta.lastSeen = observedAt;
-    meta.source = detail.source || meta.source || '';
+    if (!ignoreSecondaryLiveness) {
+      meta.lastSeen = observedAt;
+      meta.source = source || meta.source || '';
+    }
     if (detail.ceStatus != null) {
       var nextCeStatus = Math.max(0, Number(detail.ceStatus) || 0);
       var nextCePopTime = Number(detail.cePopTime) || 0;
@@ -469,7 +483,7 @@
       }
       meta.deathEpoch = null;
     }
-    if (!active) {
+    if (!active && !ignoreSecondaryLiveness) {
       meta.deathEpoch = observedAt;
       meta.deathQuality = String(detail.endQuality || 'observed');
     }
@@ -532,7 +546,7 @@
     if (isNaN(ceKey)) return;
     var id = ceKeyToId(ceKey, Overlay.territoryId);
     if (!id) return;
-    var status = parseInt(line[7], 16) || 0;   // 0=未激活 1=招募人手 2=准备开始 3=战斗中
+    var status = parseInt(line[7], 16) || 0;   // 0=inactive, 1=recruiting, 2=preparing, 3=in combat.
     var popTime = parseInt(line[2], 16) || 0;
     if (popTime < 1000000000) popTime = 0;
     var was = !!Overlay.memActive[id];
@@ -590,7 +604,7 @@
       try { global.OverlayPluginApi.callHandler(JSON.stringify(obj), function () {}); return true; } catch (e) {}
     }
     if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify(obj)); return true; } catch (e) {} }
-    return false; // 未连接 ACT：由调用方回退到 window.open
+    return false; // When ACT is disconnected, let the caller fall back to window.open.
   };
 
   Overlay.say = function (text) {
@@ -603,8 +617,8 @@
   };
 
   Overlay.start = function () {
-    // 与 cactbot 官方接入方式一致：显式 WS 参数存在时只走 WS，
-    // 否则只等待内置浏览器注入 API，避免失败的 WS 重试覆盖已连接状态。
+    // Match cactbot integration: use only WebSocket when an explicit WS parameter exists;
+    // otherwise wait for the embedded-browser API so failed retries cannot replace a live connection.
     wsUrl = getWsUrl();
     transportMode = wsUrl ? 'ws' : 'legacy';
     if (transportMode === 'ws') connectWs();

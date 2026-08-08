@@ -187,6 +187,37 @@ snapshot.sandbox.dispatchOverlayEvent({
 assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2074].spawnEpoch, 1785195089);
 assert.equal(snapshot.sandbox.OC.Overlay.memMeta[2074].spawnTrusted, true);
 
+const sourceOrder = loadOverlay('');
+sourceOrder.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: ['258', '2026-08-08T14:08:10.118+08:00', 'Add', '0000', '0000081A', '00000000'],
+});
+sourceOrder.sandbox.dispatchOverlayEvent({
+  type: 'onFateEvent',
+  eventType: 'remove',
+  fateID: 2074,
+});
+assert.equal(
+  sourceOrder.sandbox.OC.Overlay.memActive[2074],
+  true,
+  'a secondary Remove must not hide an encounter owned by FateDirector',
+);
+sourceOrder.sandbox.dispatchOverlayEvent({
+  type: 'LogLine',
+  line: ['258', '2026-08-08T14:09:58.446+08:00', 'Remove', '0000', '0000081A', '00000000'],
+});
+assert.equal(sourceOrder.sandbox.OC.Overlay.memActive[2074], undefined);
+sourceOrder.sandbox.dispatchOverlayEvent({
+  type: 'onFateEvent',
+  eventType: 'update',
+  fateID: 2074,
+});
+assert.equal(
+  sourceOrder.sandbox.OC.Overlay.memActive[2074],
+  undefined,
+  'a secondary Update must not revive an encounter ended by FateDirector',
+);
+
 const duplicateZone = loadOverlay('');
 let zoneEvents = 0;
 duplicateZone.sandbox.OC.Overlay.on('zone', () => { zoneEvents++; });

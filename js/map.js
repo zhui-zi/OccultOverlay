@@ -153,7 +153,7 @@
 
   function highlightsSvg() {
     var ids = (OC.State && OC.State.highlights) || [];
-    // 实时坐标优先：bossPos 来自 getCombatants（走近 boss 时更新），否则用静态表
+    // Prefer live coordinates from getCombatants when near the boss; otherwise use static data.
     var bossPos = (OC.Overlay && OC.Overlay.bossPos) || {};
     var center = (OC.MAP && OC.MAP.center) || 1024;
     var s = '';
@@ -179,7 +179,7 @@
     var center = (OC.MAP && OC.MAP.center) || 1024;
     var x = pp.x + center, y = pp.z + center;
     var g = '<g class="you">';
-    // 面向：柔和的锥形视野扇（heading 弧度，0=朝南=向下）
+    // Facing: a soft conical field of view; heading is radians, with 0 facing south/down.
     if (pp.h != null) {
       var d = { x: Math.sin(pp.h), y: Math.cos(pp.h) };
       var pr = { x: Math.cos(pp.h), y: -Math.sin(pp.h) };
@@ -197,7 +197,7 @@
 
   function marker(x, y, L) {
     var c = L.color, r = L.r;
-    // 白色描边光晕，保证在地图上清晰可见
+    // Add a white outline glow for map visibility.
     var halo = 'stroke="#0a0f16" stroke-width="4"';
     if (L.diamond) {
       return '<path d="M' + x + ' ' + (y - r) + ' L' + (x + r) + ' ' + y + ' L' + x + ' ' + (y + r) + ' L' + (x - r) + ' ' + y + ' Z" fill="' + c + '" ' + halo + '/>';

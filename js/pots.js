@@ -56,8 +56,8 @@
     var death = number(entry && entry.death_time, -1);
     if (spawn <= 0 || (death > 0 && death >= spawn)) return false;
 
-    // 云端结束包可能丢失。一个仍标记存活、但已超过完整刷新周期的记录
-    // 不能继续压住后续预测。
+    // The cloud may miss an end packet. A record still marked alive after a full
+    // refresh cycle must not suppress later predictions.
     return now - spawn < RESPAWN;
   }
 
@@ -75,8 +75,8 @@
     var spawn = number(anchor.spawn_time, -1);
     if (spawn <= 0 || now < spawn) return null;
 
-    // 只推算实际观测锚点之后的紧邻一轮。若预计时刻已经过去，必须等待
-    // 新一轮 Add 更新锚点，不能拿旧记录继续按 30 分钟无限外推。
+    // Predict only the next cycle after an observed anchor. Once its ETA passes,
+    // wait for a new Add anchor instead of extrapolating old data indefinitely.
     var nextEpoch = spawn + RESPAWN;
     if (now >= nextEpoch) return null;
     var anchorSide = sideOf(anchor.fate_id);
@@ -232,9 +232,10 @@
     },
 
     /**
-     * 计算一组 pot_history 的当前状态。
-     * 只返回存活状态或最近一次实测出现所锚定的下一轮；过期锚点返回 null。
-     * 返回 { alive, etaSec, nextEpoch, side, anchorEpoch, anchorId, cycles } 或 null。
+     * Calculate the current state from a pot_history set.
+     * Return only a live state or the next cycle anchored by the latest observed spawn;
+     * return null for an expired anchor.
+     * Returns { alive, etaSec, nextEpoch, side, anchorEpoch, anchorId, cycles } or null.
      */
     status: function (potArr, now) {
       now = number(now, Math.floor(Date.now() / 1000));
@@ -259,8 +260,9 @@
     },
 
     /**
-     * 按参考模块的规则合并云端与本地 pot_history。
-     * 同一 fate_id 保留 last_seen 更新的记录；相同时优先补全 death_time。
+     * Merge cloud and local pot_history using the reference module's rules.
+     * For each fate_id, keep the newer last_seen record and prefer a populated
+     * death_time when timestamps match.
      */
     merge: function (shared, local) {
       var byId = {};
@@ -280,7 +282,7 @@
       return POT_IDS.map(function (id) { return byId[id]; }).filter(Boolean);
     },
 
-    // 取“当前/最近”的目标 id：按 last_seen / spawn_time 最大者
+    // Select the current or latest target by the greatest last_seen/spawn_time.
     currentId: function (arr) {
       var best = 0, id = null;
       (arr || []).forEach(function (entry) {
@@ -291,8 +293,8 @@
     },
 
     /**
-     * 全部活跃岛列表（不依赖撒娇罐数据），用于识别玩家所在岛。
-     * 返回 [{ id, rowId, fingerprint, dc, lastUpdate, aliveIds:[], activeEvents:[] }]
+     * List all active islands independently of Magic Pot data to identify the player's island.
+     * Returns [{ id, rowId, fingerprint, dc, lastUpdate, aliveIds:[], activeEvents:[] }].
      */
     islandList: function (rows, now) {
       now = number(now, Math.floor(Date.now() / 1000));
@@ -489,8 +491,8 @@
     },
 
     /**
-     * 大区总览。重复记录优先按参考模块的 last_fate 指纹归并，
-     * 旧记录没有指纹时才退回罐刷新序列签名。
+     * Region overview. Merge duplicate records by the reference module's last_fate
+     * fingerprint, falling back to the Pot spawn-sequence signature for legacy rows.
      */
     dcOverview: function (rows, now) {
       now = number(now, Math.floor(Date.now() / 1000));

@@ -27,7 +27,7 @@
     openPanel: null,
     settingsSection: 'general',
     collapsed: false,
-    _dc: [],        // 撒娇罐总览数据（去重排序后）
+    _dc: [],        // Deduplicated and sorted Magic Pot overview data.
     _dcTick: 0,
 
     trackerCheckDelayMs: function () {
@@ -220,9 +220,9 @@
       this.updateMapVisible();
     },
 
-    // 构造与 DR 相同的实例证据：大区 + 最新可信普通 FATE + Add 时间。
-    // 进岛/重连时 OverlayPlugin 重放的 Add 不是出生时间，不参与指纹。
-    // Remove 时间可用于稍后与云端历史唯一匹配。
+    // Build the same instance evidence as DR: region + latest trusted standard FATE + Add time.
+    // OverlayPlugin replays Add on zone entry/reconnect, so those timestamps are not spawn evidence.
+    // Remove timestamps can later identify a unique cloud-history match.
     instanceEvidence: function () {
       var meta = OC.Overlay.memMeta || {};
       var events = [];
@@ -336,8 +336,8 @@
       };
     },
 
-    // 已经严格绑定本岛后，后续可信 FATE Add 仍属于同一实例。
-    // 立即推进绑定指纹，避免等待共享记录回写期间把本岛罐时误判为未知。
+    // After strict island binding, later trusted FATE Add events still belong to this instance.
+    // Advance the bound fingerprint immediately to avoid unknown Pot timing while shared data catches up.
     adoptTrustedFateContext: function (fateId, spawnEpoch) {
       var context = this.trackerContext(fateId, spawnEpoch);
       if (context && this.myIslandRowId) this.myIslandFingerprint = context.fingerprint;
@@ -401,8 +401,8 @@
       return id;
     },
 
-    // 仅接受 DR 指纹或唯一的本地 Add 时间匹配。普通“同 FATE 正在进行”
-    // 在多岛环境没有区分度，不能用于显示魔法罐倒计时。
+    // Accept only a DR fingerprint or a unique local Add-time match. A shared active FATE
+    // cannot distinguish concurrent islands and must not authorize a Magic Pot countdown.
     resolveMyIsland: function () {
       var all = this._islands || [];
       var pdc = OC.Overlay.playerDc;
@@ -441,13 +441,13 @@
         var bound = this.bindMatchedIsland(matched, record);
         if (bound) return bound;
       }
-      // 强证据绑定后保持到换区/断线；云端列表短暂掉线不能让正确实例丢失。
+      // Keep strong-evidence binding until zone change/disconnect; a cloud outage must not drop it.
       if (this.myIslandRowId) return this.myIslandId;
       return null;
     },
 
-    // 参考 AutoPopper/DR：有 Add 指纹后直接按 last_fate 查询，而不是等待
-    // 当前数据服务器对应的数据中心记录下载完成。查询结果仍需通过同一套严格匹配。
+    // Follow AutoPopper/DR: query last_fate directly once an Add fingerprint exists instead
+    // of waiting for all data-center records. Apply the same strict matching to the result.
     locateMyIslandFast: function (force) {
       if (this.resolveMyIsland()) return Promise.resolve(true);
       var evidence = this.instanceEvidence();
@@ -798,7 +798,7 @@
       return this._uploadChain;
     },
 
-    // 每次区域/实例切换或断线都清空；即便 territoryId 相同也重新识别。
+    // Clear on every zone/instance change or disconnect; re-identify even if territoryId is unchanged.
     resetIsland: function (preserveLocal) {
       this.myIslandId = null; this.myIslandRowId = null; this.myIslandFingerprint = '';
       this.myIslandDatacenter = 0; this.myIslandTerritory = 0;
@@ -819,7 +819,7 @@
       this._island = null; this._potAlertedFor = null; this._alerted = {};
       this._highlightMissingSince = {};
       this._lastIslandFetch = 0; this._lastDcFetch = 0;
-      if (!preserveLocal) this._localPot = null; // 换本后本机观测的罐状态作废
+      if (!preserveLocal) this._localPot = null; // Local Pot observations expire after an instance change.
       State.detail = null; State.detailId = null;
       State.detailLocating = this.openPanel === 'battle';
       if (!preserveLocal) {
@@ -833,10 +833,10 @@
       if (State.detailLocating) this.renderPanel();
     },
 
-    // 不在新月岛时完全隐藏悬浮窗；在岛内则按折叠状态决定是否显示地图
+    // Hide the overlay off-island; on-island map visibility follows the collapsed state.
     updateMapVisible: function () {
       var app = document.getElementById('app'); if (!app) return;
-      // 未连接游戏=独立/调试模式，保持显示
+      // Keep visible when disconnected for standalone/debug mode.
       var outside = OC.Overlay.connected && !OC.Overlay.inOccult;
       app.style.display = outside ? 'none' : '';
       var toasts = document.getElementById('toasts');
@@ -862,19 +862,19 @@
     renderPanel: function () {
       var pop = document.getElementById('popover');
       if (this.openPanel === 'dcpots' && !this.showsCnDcOverview()) return this.closePanel();
-      // 保持滚动位置（面板每秒重绘，避免被顶回最上）
+      // Preserve scroll position while the panel redraws each second.
       var oldBody = pop.querySelector('.panel-body');
       var scroll = oldBody ? oldBody.scrollTop : 0;
       if (this.openPanel === 'dcpots') OC.UI.renderDcPots(pop, this._dc, !this._dcLoaded);
       else if (this.openPanel === 'battle') OC.UI.renderBattlePanel(pop, State.detail, State.detailId, State.detailLocating);
       else if (this.openPanel === 'settings') this.renderSettings(pop);
-      pop.classList.toggle('compact', this.openPanel === 'dcpots'); // 魔法罐总览用紧凑样式
+      pop.classList.toggle('compact', this.openPanel === 'dcpots'); // Use compact styling for the Pot overview.
       var newBody = pop.querySelector('.panel-body');
       if (newBody && scroll) newBody.scrollTop = scroll;
     },
 
-    // 顶部罐计时始终打开本岛详情；未严格定位时停留在本岛定位状态，
-    // 不回退到与右侧“罐”按钮重复的四大区总览。
+    // The top Pot timer always opens local-island details. Before strict identification,
+    // keep the locator view instead of duplicating the regional overview button.
     showMyIsland: function () {
       var id = this.resolveMyIsland();
       if (id) return this.showIsland(id, this.myIslandRowId);
@@ -917,8 +917,8 @@
     },
 
     updateChips: function () {
-      // 网络数据每 5 秒刷新一次；两次请求之间仍需按当前时间推进 30 分钟轮次，
-      // 否则倒计时到 0 后会停在“即将出现”。
+      // Network data refreshes every five seconds. Advance the 30-minute cycle locally
+      // between requests so the countdown does not remain at "soon" after reaching zero.
       if (this._dcRows) {
         this._dc = OC.Pots.dcOverview(this._dcRows, now());
       }
@@ -1185,11 +1185,11 @@
       State.detailLocating = this.openPanel === 'battle';
     },
 
-    // 本机可信 Add/Remove 不等待实例匹配；云端时间只允许来自严格确认的实例。
+    // Trusted local Add/Remove events do not wait for instance matching; cloud time requires strict confirmation.
     localPotInfo: function () {
-      // 当前指纹会随 FATE 轮换，不能拿它重复否决已确认的本岛；改用累计的
-      // 独立 Add/Remove 信号复核绑定，并始终锁定 territory + datacenter。
-      // 本机 director 仍在下方纠正云端罐子的存活状态。
+      // The current fingerprint changes as FATEs rotate and must not repeatedly reject a
+      // confirmed island. Revalidate with accumulated independent Add/Remove signals while
+      // locking territory + data center. Local director state still corrects Pot liveness below.
       var cloudTimingAuthorized = this.boundIslandEvidenceStatus().authorized;
       var cloud = cloudTimingAuthorized && this._island && this._island.pot;
       if ((!cloud || !cloud.length) && cloudTimingAuthorized) {
@@ -1241,8 +1241,8 @@
       var merged = OC.Pots.merge(cloud || [], localHistory);
       var status = OC.Pots.status(merged, now());
 
-      // update 事件可能是悬浮窗重载后才收到的首个信号，没有可靠 spawn_time。
-      // 此时只确认“正在进行”和方位，不伪造下一轮的精确时间。
+      // Update may be the first event after an overlay reload and has no reliable spawn_time.
+      // Confirm only liveness and side; do not fabricate an exact next-cycle time.
       if (activeId) {
         var side = (OC.POTS[activeId] || {}).side || null;
         if (!status) return {
@@ -1255,7 +1255,7 @@
       return status;
     },
 
-    // 当前岛正在进行的 FATE/CE 胶囊（随界面缩放；带掉落颜色后缀）
+    // Active island FATE/CE chips scale with the UI and include colored drop suffixes.
     updateActive: function () {
       var box = document.getElementById('chips-active');
       if (!box) return;
@@ -1429,7 +1429,7 @@
           App.refreshRail();
         }
         OC.Map.updatePlayer(document.getElementById('mapLayer'));
-        App.refreshHighlights();   // 视野内的 boss 也纳入高亮
+        App.refreshHighlights();   // Include nearby bosses in highlights.
         if (App.resolveMyIsland()) App.pollMyIsland(true);
         else App.locateMyIslandFast();
       });
@@ -1485,12 +1485,12 @@
       var tn = Date.now();
       if (throttled && this._lastDcFetch && tn - this._lastDcFetch < 3000) return;
       this._lastDcFetch = tn;
-      // 30 分钟窗口：岛屿上报间隔可能较长，窗口太窄会导致识别不到所在岛
+      // Use a 30-minute window because long report intervals can otherwise hide the current island.
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 1252;
       OC.Api.fetchDcPots(this.trackerDatacenters(), 1800, territory).then(function (rows) {
         App._dcRows = rows;
         App._dc = OC.Pots.dcOverview(rows);
-        App._islands = OC.Pots.islandList(rows);  // 全部活跃岛（用于识别所在岛，不依赖罐数据）
+        App._islands = OC.Pots.islandList(rows);  // All active islands for identification, independent of Pot data.
         App._dcLoaded = true;
         var boundBefore = App.myIslandRowId;
         var resolved = App.resolveMyIsland();
@@ -1524,7 +1524,7 @@
     },
 
     pollMyIsland: function (throttled) {
-      // 不在新月岛时不拉取本岛数据（避免残留数据触发提示）
+      // Do not fetch island data off-island; stale data could trigger alerts.
       if (OC.Overlay.connected && !OC.Overlay.inOccult) { this._island = null; return; }
       var tn = Date.now();
       if (throttled && this._lastIslandFetch && tn - this._lastIslandFetch < 3000) return;
@@ -1540,11 +1540,11 @@
       }).catch(function () {});
     },
 
-    // 地图高亮 = 本机内存态 ∪ 已严格定位到本岛的云端状态。
+    // Map highlights combine local memory state with cloud state strictly bound to this island.
     refreshHighlights: function () {
-      // 258 FateDirector 是本机全岛状态，优先用于 FATE/魔法罐。
-      // 部分 ACT/游戏版本在北征完全不产出 259 CEDirector，因此 CE 必须合并
-      // 已通过 territory + world/DC + 玩家实例证据严格绑定的本岛 tracker。
+      // 258 FateDirector is local island-wide state and takes priority for FATEs/Magic Pots.
+      // Some ACT/game versions emit no 259 CEDirector in North Horn, so merge CEs from the
+      // island tracker strictly bound by territory + world/DC + player-instance evidence.
       var ids = [];
       Object.keys(OC.Overlay.memActive || {}).forEach(function (k) {
         var id = Number(k); if (ids.indexOf(id) < 0) ids.push(id);
@@ -1555,6 +1555,10 @@
         var shared = trustLocalOnly ? isl.ce : isl.ce.concat(isl.fate).concat(isl.pot);
         shared.forEach(function (e) {
           var id = Number(e.fate_id);
+          var localMeta = (OC.Overlay.memMeta || {})[id];
+          // A local 259 state is authoritative for this CE. Use the shared
+          // tracker only when this ACT session has no director evidence for it.
+          if (trustLocalOnly && OC.CES[id] && localMeta && localMeta.directorSeen) return;
           var active = OC.POTS[id] ? isActiveCandidate(e) : isAlive(e, isl.lastUpdate);
           if (active && id && ids.indexOf(id) < 0) ids.push(id);
         });
@@ -1597,7 +1601,7 @@
       this.notifyEncounter(kind, id, def);
     },
 
-    // 播报筛选：总开关优先；关闭时使用魔法罐和当前区域关键奖励筛选。
+    // Alert filtering: the global switch takes priority; otherwise use Pot and zone reward filters.
     notifyEncounter: function (kind, id, def) {
       if (OC.Settings.get('alertAllEncounters')) {
         this.fireAlert(kind, t('notify_' + kind) + ' · ' + nm(def.name), 'spawn:' + id);
@@ -1616,13 +1620,13 @@
       if (hit) this.fireAlert(kind, nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')), 'spawn:' + id);
     },
 
-    // 岛上 FATE/CE 刷新时提示：同一目标在“存活期间”只提示一次
-    // （云端 spawn_time 会被不同上报者反复更新，不能用它判断“新出现”）
+    // Alert once per active lifetime when an island FATE/CE appears. Different reporters
+    // repeatedly update cloud spawn_time, so it cannot identify a new spawn.
     checkIslandAlerts: function (h) {
-      // 岛内 FATE/魔法罐以本机 258 为准；北征 CE 在部分 ACT 版本没有 259，
-      // 因此允许已严格绑定到本岛的 tracker 补足 CE 播报。
+      // Use local 258 state for island FATEs/Magic Pots. Some ACT versions lack 259 for
+      // North Horn CEs, so a strictly bound island tracker may supplement CE alerts.
       var ceFallbackOnly = OC.Overlay.connected && OC.Overlay.inOccult;
-      var first = !this._island;                 // 首次拉取该岛：只建立基线，不提示
+      var first = !this._island;                 // First island fetch establishes a baseline without alerts.
       var alerted = this._alerted = this._alerted || {};
       ['ce', 'fate', 'pot'].forEach(function (tp) {
         if (ceFallbackOnly && tp !== 'ce') return;
@@ -1630,13 +1634,13 @@
           var key = tp + ':' + e.fate_id;
           var active = tp === 'pot' ? isActiveCandidate(e) : isAlive(e, h.lastUpdate);
           if (!active) {
-            // 云端可能滞后/抖动：内存仍显示进行中时不要解除提示锁，否则会重复播报
+            // Do not release the alert lock while memory shows active; cloud lag would duplicate alerts.
             if (!(OC.Overlay.memActive || {})[e.fate_id]) delete alerted[key];
             return;
           }
-          if (alerted[key]) return;                            // 存活期间已提示过
+          if (alerted[key]) return;                            // Already alerted during this active lifetime.
           alerted[key] = 1;
-          if (first) return;                                   // 基线不提示
+          if (first) return;                                   // Do not alert for the baseline.
           var def = tp === 'ce' ? OC.CES[e.fate_id] : tp === 'pot' ? OC.POTS[e.fate_id] : OC.FATES[e.fate_id];
           if (!def) return;
           App.notifyEncounter(tp, e.fate_id, def);
@@ -1644,13 +1648,13 @@
       });
     },
 
-    // 撒娇罐：预计出现前 3 分钟提示（而非出现时）
+    // Magic Pot: alert three minutes before the expected spawn, not at spawn time.
     checkPotPreAlert: function () {
       if (!OC.Settings.get('alertPot')) return;
       var mine = this.localPotInfo();
       if (!mine || mine.alive || !mine.nextEpoch) return;
       var eta = mine.nextEpoch - Math.floor(Date.now() / 1000);
-      // 用“取整到 5 分钟”的窗口做标记，避免各上报者时间戳抖动导致重复提示
+      // Key alerts by a five-minute bucket to avoid duplicates from reporter timestamp jitter.
       var slot = Math.round(mine.nextEpoch / 300);
       if (eta > 0 && eta <= 180 && this._potAlertedFor !== slot) {
         this._potAlertedFor = slot;
@@ -1660,18 +1664,18 @@
     },
 
     fireAlert: function (kind, msg, dedupKey) {
-      // 不在新月岛时不提示（避免播报其它岛/无关数据）
+      // Do not alert off-island; this prevents unrelated or other-island announcements.
       if (OC.Overlay.connected && !OC.Overlay.inOccult) return;
       var now = Date.now();
       var key = dedupKey || msg;
-      // 出现类提示用长窗口（10 分钟）：同一次出现持续数分钟，短窗口会重复播报
+      // Use a ten-minute spawn-alert window because a single spawn remains active for several minutes.
       var ttl = /^spawn:/.test(key) ? 600000 : 60000;
       this._alertLast = this._alertLast || {};
       if (this._alertLast[key] && now - this._alertLast[key] < ttl) return;
-      // 跨实例去重：同一浏览器/悬浮窗开了多个实例时，只让第一个播报
+      // Deduplicate across overlay instances so only the first instance announces an alert.
       if (!claimAlert(key, ttl, now)) { this._alertLast[key] = now; return; }
       this._alertLast[key] = now;
-      // 排队播报：同一时刻多个提示时依次播放，避免 TTS 叠在一起
+      // Queue simultaneous alerts to prevent overlapping TTS playback.
       this._alertQueue = this._alertQueue || [];
       this._alertQueue.push({ kind: kind, msg: msg });
       this._drainAlerts();
@@ -1691,7 +1695,7 @@
 
     startLoops: function () {
       setInterval(function () { App.fetchDc(); }, 5000);
-      // 每秒：更新胶囊 + 面板计时文本（不重绘，避免滚动被顶回/闪烁）+ 撒娇罐提前提示
+      // Each second: update chips, timer text without redraw, and advance Pot warning alerts.
       setInterval(function () {
         App.updateChips();
         App.checkPotPreAlert();
@@ -1844,19 +1848,19 @@
     }
   };
 
-  // 跨实例提示去重：用 localStorage 记录已播报的 key（同源共享）。
-  // 多个悬浮窗实例/标签页同时运行时，避免同一条提示被读好几遍。
+  // Deduplicate alerts across instances with origin-shared localStorage keys.
+  // This prevents repeated announcements from multiple overlays or tabs.
   var ALERT_LS = 'occultOverlay.alerts';
   function claimAlert(key, ttl, now) {
     try {
       var map = JSON.parse(localStorage.getItem(ALERT_LS) || '{}');
-      if (map[key] && now - map[key] < ttl) return false; // 已有实例播报过
+      if (map[key] && now - map[key] < ttl) return false; // Another instance already announced it.
       map[key] = now;
-      // 清理过期项，避免无限增长
+      // Remove expired entries to prevent unbounded growth.
       Object.keys(map).forEach(function (k) { if (now - map[k] > 1800000) delete map[k]; });
       localStorage.setItem(ALERT_LS, JSON.stringify(map));
       return true;
-    } catch (e) { return true; } // localStorage 不可用时不阻断提示
+    } catch (e) { return true; } // Do not block alerts when localStorage is unavailable.
   }
 
   function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }

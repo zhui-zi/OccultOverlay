@@ -369,10 +369,10 @@ assert.ok(mapLayerRule, 'map layer style must exist');
 assert.match(mapLayerRule[1], /right:\s*56px/, 'the map must stop before the right-side control rail');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=115/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=115/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=115') < index.indexOf('js/treasure.js?v=115'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=115') < index.indexOf('js/map.js?v=115'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=116/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=116/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=116') < index.indexOf('js/treasure.js?v=116'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=116') < index.indexOf('js/map.js?v=116'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 assert.match(mapSource, /preserveAspectRatio="xMidYMin meet"/,
   'the map must stay horizontally centered and align below the top overlays');
@@ -551,6 +551,19 @@ assert.deepEqual(
 sandbox.OC.State.highlights = [];
 sandbox.OC.App._highlightMissingSince = {};
 sandbox.OC.Overlay.memActive = {};
+sandbox.OC.Overlay.memMeta = {
+  49: { active: false, directorSeen: true, directorActive: false, source: 'CEDirector' },
+};
+sandbox.OC.App.refreshHighlights();
+assert.deepEqual(
+  Array.from(sandbox.OC.State.highlights),
+  [],
+  'an ended local CEDirector state must suppress a stale active cloud CE',
+);
+sandbox.OC.State.highlights = [];
+sandbox.OC.App._highlightMissingSince = {};
+sandbox.OC.Overlay.memActive = {};
+sandbox.OC.Overlay.memMeta = {};
 sandbox.OC.App._island = {
   lastUpdate: trackerNow,
   ce: [{ fate_id: 64, spawn_time: 0, death_time: 0, last_seen: trackerNow, state: 3 }],
