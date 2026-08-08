@@ -159,15 +159,12 @@ html, body {
 }
 .rbtn-icon { width: 30px; height: 30px; object-fit: contain; pointer-events: none; }
 .rbtn:not(.on) .rbtn-icon { opacity: .72; }
-.rbtn[data-layer="potN"] { --pot-direction: #4a90ff; --pot-shape: polygon(50% 0, 100% 100%, 0 100%); }
-.rbtn[data-layer="potS"] { --pot-direction: #ff8a3c; --pot-shape: polygon(0 0, 100% 0, 50% 100%); }
-.rbtn[data-layer^="pot"]::before {
-  content: ''; position: absolute; right: 0; bottom: 0; width: 13px; height: 13px;
-  pointer-events: none; border-radius: 50%; background: rgba(8,12,18,0.9); box-shadow: 0 0 0 1px rgba(255,255,255,0.7);
-}
+.rbtn[data-layer="potN"] { --pot-direction: #3178d4; --pot-label: 'N'; }
+.rbtn[data-layer="potS"] { --pot-direction: #d86420; --pot-label: 'S'; }
 .rbtn[data-layer^="pot"]::after {
-  content: ''; position: absolute; right: 3px; bottom: 3px; width: 7px; height: 7px;
-  pointer-events: none; background: var(--pot-direction); clip-path: var(--pot-shape);
+  content: var(--pot-label); position: absolute; right: -1px; bottom: -1px; width: 16px; height: 16px;
+  pointer-events: none; border-radius: 50%; background: var(--pot-direction); color: #fff;
+  box-shadow: 0 0 0 2px #141b25; font: 700 10px/16px Arial, sans-serif; text-align: center;
 }
 .rbtn.panel { font-size: 17px; }
 .rail-div { width: 22px; height: 1px; flex: 0 0 1px; background: var(--line); margin: 3px 0; }
