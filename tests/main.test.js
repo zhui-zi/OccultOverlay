@@ -364,15 +364,20 @@ assert.match(styles, /#app\.no-map \.radar-panel:not\(\.pinned\)\s*\{\s*display:
   'collapsing the map must hide an unpinned radar');
 assert.doesNotMatch(styles, /\.toast-radar\s*\{[^}]*border-left/,
   'radar alert popups must not use a left accent stripe');
+const toastsRule = styles.match(/(?:^|\n)#toasts\s*\{([^}]*)\}/);
+assert.ok(toastsRule, 'toast container style must exist');
+assert.match(toastsRule[1], /left:\s*8px/, 'popup notifications must stay against the left edge');
+assert.match(toastsRule[1], /align-items:\s*flex-start/, 'stacked notifications must share a left edge');
+assert.doesNotMatch(toastsRule[1], /translateX/, 'left-aligned notifications must not retain centering transform');
 const mapLayerRule = styles.match(/\.map-layer\s*\{([^}]*)\}/);
 assert.ok(mapLayerRule, 'map layer style must exist');
 assert.match(mapLayerRule[1], /right:\s*56px/, 'the map must stop before the right-side control rail');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=116/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=116/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=116') < index.indexOf('js/treasure.js?v=116'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=116') < index.indexOf('js/map.js?v=116'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=117/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=117/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=117') < index.indexOf('js/treasure.js?v=117'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=117') < index.indexOf('js/map.js?v=117'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 assert.match(mapSource, /preserveAspectRatio="xMidYMin meet"/,
   'the map must stay horizontally centered and align below the top overlays');

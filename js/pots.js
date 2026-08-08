@@ -181,6 +181,13 @@
       }).sort(function (a, b) { return a - b; });
   }
 
+  function newestIsland(items) {
+    return (items || []).slice().sort(function (a, b) {
+      return number(b.lastUpdate, 0) - number(a.lastUpdate, 0) ||
+        number(b.rowId, 0) - number(a.rowId, 0);
+    })[0] || null;
+  }
+
   function sameIds(left, right) {
     left = sortedIds(left);
     right = sortedIds(right);
@@ -427,7 +434,8 @@
             return String(item.fingerprint || '').toUpperCase() === exact;
           });
           if (exactMatches.length === 1) return exactMatches[0];
-          if (exactMatches.length > 1) return null;
+          // Duplicate rows with the same exact fingerprint describe one instance.
+          if (exactMatches.length > 1) return newestIsland(exactMatches);
         }
         var fingerprintMatches = scoped.filter(function (item) {
           return item.fingerprint && hashes.indexOf(String(item.fingerprint).toUpperCase()) >= 0;
@@ -455,19 +463,32 @@
           endMatches.push(item);
         });
         if (endMatches.length === 1) return endMatches[0];
-        if (endMatches.length > 1) return null;
+        // Two independent Remove timestamps identify one logical instance even
+        // when multiple reporters created duplicate tracker rows for it.
+        if (endMatches.length > 1) {
+          return bestEndScore >= 2 ? newestIsland(endMatches) : null;
+        }
       }
 
       var signals = evidence.events || [];
-      var candidates = scoped.filter(function (item) {
-        return signals.some(function (signal) {
+      var bestEventScore = 0;
+      var candidates = [];
+      scoped.forEach(function (item) {
+        var score = signals.filter(function (signal) {
           return (item.activeEvents || []).some(function (remote) {
             return number(remote.fateId, 0) === number(signal.fateId, 0) &&
               Math.abs(number(remote.spawnEpoch, 0) - number(signal.spawnEpoch, 0)) <= tolerance;
           });
-        });
+        }).length;
+        if (!score || score < bestEventScore) return;
+        if (score > bestEventScore) {
+          bestEventScore = score;
+          candidates = [];
+        }
+        candidates.push(item);
       });
-      return candidates.length === 1 ? candidates[0] : null;
+      if (candidates.length === 1) return candidates[0];
+      return candidates.length > 1 && bestEventScore >= 2 ? newestIsland(candidates) : null;
     },
 
     /**

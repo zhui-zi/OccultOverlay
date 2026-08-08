@@ -273,6 +273,94 @@ assert.equal(
   'a unique Remove timestamp must confirm the cloud row',
 );
 
+const duplicateEndedIslands = [
+  {
+    id: 'duplicate-old',
+    rowId: 42,
+    dc: 101,
+    lastUpdate: 4100,
+    endEvents: [{ fateId: 1964, deathEpoch: 3000 }, { fateId: 1965, deathEpoch: 4000 }],
+  },
+  {
+    id: 'duplicate-new',
+    rowId: 43,
+    dc: 101,
+    lastUpdate: 4200,
+    endEvents: [{ fateId: 1964, deathEpoch: 3002 }, { fateId: 1965, deathEpoch: 3999 }],
+  },
+];
+assert.equal(
+  Pots.matchIsland(
+    duplicateEndedIslands,
+    {
+      ends: [
+        { fateId: 1964, deathEpoch: 3004 },
+        { fateId: 1965, deathEpoch: 3998 },
+      ],
+      events: [],
+    },
+    101,
+    15,
+  ).id,
+  'duplicate-new',
+  'two matching Remove timestamps must collapse duplicate rows to the freshest reporter',
+);
+assert.equal(
+  Pots.matchIsland(
+    duplicateEndedIslands,
+    { ends: [{ fateId: 1964, deathEpoch: 3004 }], events: [] },
+    101,
+    15,
+  ),
+  null,
+  'one matching Remove timestamp must keep duplicate rows ambiguous',
+);
+
+const duplicateActiveIslands = [
+  {
+    id: 'active-old',
+    rowId: 44,
+    dc: 101,
+    lastUpdate: 4300,
+    activeEvents: [{ fateId: 1964, spawnEpoch: 3000 }, { fateId: 1965, spawnEpoch: 4000 }],
+  },
+  {
+    id: 'active-new',
+    rowId: 45,
+    dc: 101,
+    lastUpdate: 4400,
+    activeEvents: [{ fateId: 1964, spawnEpoch: 3001 }, { fateId: 1965, spawnEpoch: 4002 }],
+  },
+];
+assert.equal(
+  Pots.matchIsland(
+    duplicateActiveIslands,
+    {
+      events: [
+        { fateId: 1964, spawnEpoch: 3000 },
+        { fateId: 1965, spawnEpoch: 4000 },
+      ],
+    },
+    101,
+    15,
+  ).id,
+  'active-new',
+  'two matching Add timestamps must collapse duplicate rows to the freshest reporter',
+);
+
+const duplicateFingerprint = 'D'.repeat(64);
+assert.equal(
+  Pots.matchIsland([
+    { id: 'fingerprint-old', rowId: 46, dc: 101, lastUpdate: 4500, fingerprint: duplicateFingerprint },
+    { id: 'fingerprint-new', rowId: 47, dc: 101, lastUpdate: 4600, fingerprint: duplicateFingerprint },
+  ], {
+    fingerprint: duplicateFingerprint,
+    fingerprints: [duplicateFingerprint],
+  }, 101, 15).id,
+  'fingerprint-new',
+  'an exact fingerprint must collapse duplicate rows to the freshest reporter',
+);
+
 const consistentRows = [{
   id: 50,
   tracker_id: 'snapshot-mine',
