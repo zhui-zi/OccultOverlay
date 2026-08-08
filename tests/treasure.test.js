@@ -115,6 +115,12 @@ function startNorth(context) {
   assert.equal(view.mode, 'initial');
   assert.equal(view.side, 'north');
   assert.equal(view.candidateCount, 30);
+  assert.equal(view.candidates.length, 30, 'an active session must expose every current map candidate');
+  assert.deepEqual(
+    [view.candidates[0].x, view.candidates[0].z],
+    Array.from(context.sandbox.OC.MAPS[1346].points.potNorth[0]),
+    'map candidates must preserve their world coordinates',
+  );
 
   const originalPool = sandbox.OC.MAPS[1346].points.potNorth;
   const firstMatches = Treasure.refineCandidates(originalPool, overlay.playerPos, '正东');
@@ -122,6 +128,7 @@ function startNorth(context) {
   overlay.emit('log', 0, logLine('0839', directionMessage('正东'), '2026-08-04T07:37:00.0000000+08:00'));
   view = Treasure.view();
   assert.equal(view.candidateCount, firstMatches.length);
+  assert.equal(view.candidates.length, firstMatches.length, 'direction refinement must update the map candidate set');
   assert.ok(view.target);
   assert.ok(view.candidateCount < 30);
 
@@ -154,6 +161,7 @@ function startNorth(context) {
   view = Treasure.view();
   assert.equal(view.mode, 'reroll');
   assert.equal(view.candidateCount, 20);
+  assert.equal(view.candidates.length, 20);
   assert.equal(view.status, 'waiting-direction');
 
   overlay.playerPos = { x: -839.7816, y: 62.5782, z: 737.0380 };
@@ -168,11 +176,14 @@ function startNorth(context) {
   assert.ok(view.target);
   assert.equal(view.safeCount, 0);
   assert.equal(view.target.dangerous, true, 'North Horn reroll points must show a danger warning');
+  assert.ok(view.candidates.every((candidate) => candidate.dangerous),
+    'the dynamic map layer must receive danger state for every North Horn reroll candidate');
 
   overlay.emit('log', 0, logLine('08B0', '其他人的“指引财宝”状态效果消失了。', '2026-08-04T08:23:14.0000000+08:00'));
   assert.equal(Treasure.view().active, true);
   overlay.emit('log', 0, logLine('08B0', '吴邪的“指引财宝”状态效果消失了。', '2026-08-04T08:23:15.0000000+08:00'));
   assert.equal(Treasure.view().active, false);
+  assert.equal(Treasure.view().candidates.length, 0, 'ending the session must clear the dynamic map candidates');
   assert.equal(Treasure.view().lastReason, 'buff-lost');
 }
 

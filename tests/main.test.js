@@ -75,6 +75,7 @@ const sandbox = {
     },
     Map: {
       updateHighlights() {},
+      updateTreasure() {},
       updateRadar() {},
     },
     Radar: {
@@ -368,15 +369,18 @@ assert.ok(mapLayerRule, 'map layer style must exist');
 assert.match(mapLayerRule[1], /right:\s*56px/, 'the map must stop before the right-side control rail');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=114/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=114/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=114') < index.indexOf('js/treasure.js?v=114'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=114') < index.indexOf('js/map.js?v=114'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=115/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=115/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=115') < index.indexOf('js/treasure.js?v=115'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=115') < index.indexOf('js/map.js?v=115'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 assert.match(mapSource, /preserveAspectRatio="xMidYMin meet"/,
   'the map must stay horizontally centered and align below the top overlays');
 assert.match(mapSource, /OC\.Radar\.targets\(\)/, 'the map must keep reading the full radar target list');
 assert.doesNotMatch(mapSource, /slice\(0,\s*3\)/, 'the fixed-panel row limit must not affect map markers');
+assert.match(mapSource, /class="treasure-wrap"/, 'the map must include a dedicated dynamic treasure layer');
+assert.match(mapSource, /OC\.Treasure\.view\(\)/, 'the dynamic treasure layer must read the live candidate set');
+assert.match(mapSource, /treasure-target-ring/, 'the selected treasure target must stand out from other candidates');
 
 const radarClasses = new Set(['hidden']);
 const radarHost = {

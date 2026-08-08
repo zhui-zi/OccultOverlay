@@ -415,14 +415,23 @@
         lastDirection: state.lastDirection,
         mismatch: state.mismatch,
         candidateCount: state.candidates.length,
+        candidates: [],
         safeCount: 0,
         dangerCount: 0,
         target: null,
         lastReason: state.lastReason
       };
       if (!state.active) return view;
+      var context = sessionContext();
+      view.candidates = state.candidates.map(function (candidate) {
+        return {
+          x: candidate.x,
+          z: candidate.z,
+          dangerous: isDanger(candidate, context)
+        };
+      });
       var position = overlay && overlay.playerPos;
-      var selected = selectTarget(state.candidates, position, sessionContext());
+      var selected = selectTarget(state.candidates, position, context);
       view.safeCount = selected.safeCount;
       view.dangerCount = selected.dangerCount;
       if (!state.target || !position) return view;

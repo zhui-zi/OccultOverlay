@@ -143,7 +143,10 @@
       }
       this.wireOverlay();
       if (OC.Treasure) {
-        OC.Treasure.onChange(function (view) { App.updateTreasureGuide(view); });
+        OC.Treasure.onChange(function (view) {
+          OC.Map.updateTreasure(document.getElementById('mapLayer'));
+          App.updateTreasureGuide(view);
+        });
         OC.Treasure.start(OC.Overlay);
       }
       this.updateRadar();

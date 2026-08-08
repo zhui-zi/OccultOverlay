@@ -56,6 +56,7 @@
       });
       s += '</g>';
 
+      s += '<g class="treasure-wrap">' + treasureSvg() + '</g>';
       s += '<g class="radar-wrap">' + radarSvg() + '</g>';
       s += '<g class="hi-wrap">' + highlightsSvg() + '</g>';
       s += '<g class="you-wrap">' + youMarker() + '</g>';
@@ -80,6 +81,14 @@
       wrap.innerHTML = highlightsSvg();
     },
 
+    updateTreasure: function (container) {
+      container = container || document.getElementById('mapLayer');
+      if (!container) return;
+      var wrap = container.querySelector('.treasure-wrap');
+      if (!wrap) return this.render(container);
+      wrap.innerHTML = treasureSvg();
+    },
+
     updateRadar: function (container) {
       container = container || document.getElementById('mapLayer');
       if (!container) return;
@@ -93,6 +102,34 @@
       this.render(container);
     }
   };
+
+  function treasureSvg() {
+    var view = OC.Treasure && OC.Treasure.view ? OC.Treasure.view() : null;
+    var map = OC.MAP || {};
+    if (!view || !view.active || Number(view.territory) !== Number(map.territory)) return '';
+    var center = map.center || 1024;
+    var color = view.mode === 'reroll' ? '#c56bff' : view.side === 'south' ? '#ff8a3c' : '#4a90ff';
+    var target = view.target;
+    var s = '';
+    (view.candidates || []).forEach(function (candidate) {
+      if (!isFinite(candidate.x) || !isFinite(candidate.z)) return;
+      var x = Number(candidate.x) + center;
+      var y = Number(candidate.z) + center;
+      var isTarget = target && Math.abs(Number(target.x) - Number(candidate.x)) < 0.001 &&
+        Math.abs(Number(target.z) - Number(candidate.z)) < 0.001;
+      var stroke = candidate.dangerous ? '#ff5c5c' : color;
+      s += '<g class="treasure-candidate' + (candidate.dangerous ? ' dangerous' : '') +
+        (isTarget ? ' target' : '') + '">' +
+        '<circle cx="' + x + '" cy="' + y + '" r="18" fill="' + color +
+        '" fill-opacity="0.32" stroke="#071019" stroke-width="7"/>' +
+        '<circle cx="' + x + '" cy="' + y + '" r="14" fill="none" stroke="' + stroke +
+        '" stroke-width="5"' + (candidate.dangerous ? ' stroke-dasharray="6 5"' : '') + '/>' +
+        (isTarget ? '<circle class="treasure-target-ring" cx="' + x + '" cy="' + y +
+          '" r="29" fill="none" stroke="#fff" stroke-width="6"/>' : '') +
+        '</g>';
+    });
+    return s;
+  }
 
   function radarSvg() {
     var list = OC.Radar && OC.Radar.targets ? OC.Radar.targets() : [];
