@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
@@ -14,7 +15,7 @@ for (const file of ['../js/data.js', '../data/mapPoints.js']) {
 }
 
 const OC = sandbox.OC;
-// EN/JA game-name assertions mirror EurekaTrackerAutoPopper@a43ae95.
+// EN/JA game-name and trigger-image assertions mirror EurekaTrackerAutoPopper@840f246.
 assert.equal(OC.TERRITORIES[1346].mapId, 1135);
 assert.deepEqual(Array.from(OC.TERRITORIES[1346].mapIds), [1135, 1244]);
 assert.equal(OC.TERRITORIES[1346].fateIds.length, 11);
@@ -72,6 +73,22 @@ for (const id of [49, 50, 53, 55]) {
   assert.equal(OC.CES[id].monster_image, `assets/trigger-monsters/${id}.png`);
   const image = fs.readFileSync(require.resolve(`../${OC.CES[id].monster_image}`));
   assert.equal(image.toString('ascii', 1, 4), 'PNG');
+}
+const triggerImageHashes = {
+  33: '3ce26c1af30f3ebf3360a5597ff132acb589f7392e818f8c7155321c2b171493',
+  37: '42a98eeb3476278f3b30c685d48ffbe67d1617effe3a1a493e8636cdf02023ee',
+  39: '81f3c87be5cfd9acea325e37b86bd410e381dda0eb5b103c1bf3e261615a4501',
+  41: '444d3fc61ca1745205ddcd36f5e58f0bfad0691f48063169756e7373daa28932',
+  42: '3dd9186eac982932924aac353fa8ce962a0a3e6b8acf117415dd1db5b7c2bdcb',
+  44: 'f17d418fe9e80662d33f9c1fd52bdbd4403575c628d18b3af46ed846469c4d74',
+  49: '680c818b372bb4d0203cda288d5f8fe9c6e2320981dbd735e9b598d42feabaec',
+  50: '175baf21e927b7f6c429700016820ea2008533c2c20d7de93b542142fc3bf09b',
+  53: 'e3e7000a1e5525bfa8a90ae3409b9a32ff1ab20970105158d51fc66e8c579534',
+  55: '5db868f682d8b6cb42fdbf856e5f4a8a107ae4cca8a8b1819d1cec5f5b8b9e8f',
+};
+for (const [id, expected] of Object.entries(triggerImageHashes)) {
+  const image = fs.readFileSync(require.resolve(`../assets/trigger-monsters/${id}.png`));
+  assert.equal(crypto.createHash('sha256').update(image).digest('hex'), expected);
 }
 assert.equal(OC.ITEMS[49831].name.en, 'Occult Earrings of Magic');
 assert.equal(OC.ITEMS[49832].name.en, 'Occult Necklace of Magic');

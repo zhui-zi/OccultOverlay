@@ -65,6 +65,7 @@ const sandbox = {
     Overlay: {
       territoryId: 1346,
       playerDc: 103,
+      playerWorld: 1177,
       connected: true,
       inOccult: true,
       memActive: {},
@@ -180,6 +181,23 @@ for (let i = 0; i < 100; i += 1) {
   const delay = sandbox.OC.App.trackerCheckDelayMs();
   assert.ok(delay >= 2500 && delay < 4000, 'tracker lookup jitter must stay within the upstream range');
 }
+const trackerFingerprint = 'A'.repeat(64);
+const trackerRecord = sandbox.OC.App.buildLocalTrackerRecord(trackerFingerprint, {
+  fingerprint: trackerFingerprint,
+  fateId: 2074,
+  spawnEpoch: 1786123456,
+});
+assert.equal(trackerRecord.version, 'OccultOverlay-v73-dev');
+assert.equal(trackerRecord.server, 1177);
+assert.equal(trackerRecord.fate, 2074);
+assert.equal(trackerRecord.fate_timestamp, 1786123456);
+const unmatchedTrackerRecord = sandbox.OC.App.buildLocalTrackerRecord('B'.repeat(64), {
+  fingerprint: trackerFingerprint,
+  fateId: 2074,
+  spawnEpoch: 1786123456,
+});
+assert.equal(unmatchedTrackerRecord.fate, undefined, 'debug fields must match the uploaded fingerprint');
+assert.equal(unmatchedTrackerRecord.fate_timestamp, undefined);
 
 const towerProgress = {
   fate_id: 64,
@@ -350,10 +368,10 @@ assert.ok(mapLayerRule, 'map layer style must exist');
 assert.match(mapLayerRule[1], /right:\s*56px/, 'the map must stop before the right-side control rail');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=113/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=113/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=113') < index.indexOf('js/treasure.js?v=113'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=113') < index.indexOf('js/map.js?v=113'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=114/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=114/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=114') < index.indexOf('js/treasure.js?v=114'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=114') < index.indexOf('js/map.js?v=114'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 assert.match(mapSource, /preserveAspectRatio="xMidYMin meet"/,
   'the map must stay horizontally centered and align below the top overlays');

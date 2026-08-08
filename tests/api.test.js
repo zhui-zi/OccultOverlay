@@ -55,7 +55,10 @@ vm.runInContext(fs.readFileSync('js/api.js', 'utf8'), sandbox);
   assert.equal(requestedUrl, 'https://example.test/trackers');
   assert.equal(requestedOptions.method, 'POST');
   assert.deepEqual(JSON.parse(requestedOptions.body), record);
-  assert.equal(requestedOptions.headers.Prefer, 'return=representation');
+  assert.equal(
+    requestedOptions.headers.Prefer,
+    'return=representation, resolution=ignore-duplicates, on_conflict=last_fate',
+  );
 
   const updated = await sandbox.OC.Api.updateIslandTracker(7, record);
   assert.equal(updated.id, 7);

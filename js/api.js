@@ -133,7 +133,10 @@
     createIslandTracker: function (record) {
       return fetch(OC.BACKEND.url, {
         method: 'POST',
-        headers: headers({ 'Content-Type': 'application/json', Prefer: 'return=representation' }),
+        headers: headers({
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation, resolution=ignore-duplicates, on_conflict=last_fate'
+        }),
         body: JSON.stringify(record)
       }).then(function (r) {
         if (!r.ok) throw new Error('新建实例失败 HTTP ' + r.status);

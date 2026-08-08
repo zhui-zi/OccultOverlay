@@ -17,7 +17,7 @@
   }
   var CN_DCS = [101, 102, 103, 104];
   var GLOBAL_DCS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-  var TRACKER_VERSION = 'OccultOverlay-v72-dev';
+  var TRACKER_VERSION = 'OccultOverlay-v73-dev';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
   var MIN_ISLAND_EVIDENCE = 3;
 
@@ -601,13 +601,13 @@
       return true;
     },
 
-    buildLocalTrackerRecord: function (fingerprint) {
+    buildLocalTrackerRecord: function (fingerprint, context) {
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
       var dc = Number(OC.Overlay.playerDc) || 0;
       var def = OC.TERRITORIES && OC.TERRITORIES[territory];
       if (!def || !dc || !this.isDatacenterInScope(dc) || !/^[0-9A-F]{64}$/i.test(String(fingerprint || ''))) return null;
       var shared = this._island || {};
-      return {
+      var record = {
         version: TRACKER_VERSION,
         territory: territory,
         tracker_type: 1,
@@ -618,6 +618,14 @@
         fate_history: JSON.stringify(this.localTrackerHistory(def.fateIds, shared.fate)),
         pot_history: JSON.stringify(this.localTrackerHistory(def.potIds, shared.pot, true))
       };
+      var server = Number(OC.Overlay.playerWorld) || 0;
+      if (server) record.server = server;
+      if (context && String(context.fingerprint || '').toUpperCase() === record.last_fate &&
+          OC.FATES[Number(context.fateId)] && Number(context.spawnEpoch) > 0) {
+        record.fate = Number(context.fateId);
+        record.fate_timestamp = Number(context.spawnEpoch);
+      }
+      return record;
     },
 
     // AutoPopper-compatible missing-instance state machine. Only scheduled
@@ -636,7 +644,7 @@
             var found = App.bindIslandRows(rows, context, context.dc);
             if (found) {
               App._missingTrackerChecks[checkKey] = 0;
-              App.queueIslandUpload(null, true);
+              App.queueIslandUpload(null, true, context);
               App.updateChips();
               return true;
             }
@@ -645,7 +653,7 @@
           }
           if (App.myIslandRowId) {
             App._missingTrackerChecks[checkKey] = 0;
-            App.queueIslandUpload(context.fingerprint, true);
+            App.queueIslandUpload(context.fingerprint, true, context);
             return true;
           }
 
@@ -657,7 +665,7 @@
           App._missingTrackerChecks[checkKey] =
             Number(App._missingTrackerChecks[checkKey] || 0) + 1;
           if (App._missingTrackerChecks[checkKey] < 2) return false;
-          var record = App.buildLocalTrackerRecord(context.fingerprint);
+          var record = App.buildLocalTrackerRecord(context.fingerprint, context);
           if (!record) return false;
           return OC.Api.createIslandTracker(record).then(function (created) {
             if (context.generation !== (App._locateGeneration || 0)) return false;
@@ -724,9 +732,10 @@
       });
     },
 
-    queueIslandUpload: function (fingerprint, immediate) {
+    queueIslandUpload: function (fingerprint, immediate, context) {
       if (!this.myIslandRowId || !OC.Overlay.connected || !OC.Overlay.inOccult) return;
       this._pendingUploadFingerprint = fingerprint || this.instanceEvidence().fingerprint || this.myIslandFingerprint;
+      if (context) this._pendingTrackerContext = context;
       if (this._uploadTimer) clearTimeout(this._uploadTimer);
       this._uploadTimer = setTimeout(function () {
         App._uploadTimer = null;
@@ -758,8 +767,10 @@
           var fingerprint = App._pendingUploadFingerprint ||
             App.instanceEvidence().fingerprint || App.myIslandFingerprint;
           App._pendingUploadFingerprint = '';
+          var trackerContext = App._pendingTrackerContext;
+          App._pendingTrackerContext = null;
           var pendingTowerProgress = App._pendingTowerProgress;
-          var record = App.buildLocalTrackerRecord(fingerprint);
+          var record = App.buildLocalTrackerRecord(fingerprint, trackerContext);
           if (!record) return false;
           return OC.Api.updateIslandTracker(rowId, record).then(function (updated) {
             if (generation !== (App._locateGeneration || 0) ||
@@ -799,6 +810,7 @@
       this._missingTrackerChecks = {}; this._trackerCheckChain = Promise.resolve();
       this._uploadTimer = null; this._uploadChain = Promise.resolve();
       this._pendingUploadFingerprint = '';
+      this._pendingTrackerContext = null;
       this._pendingTowerProgress = null;
       this._previewIsland = null; this._dcRows = []; this._dc = []; this._islands = []; this._dcLoaded = false;
       this._island = null; this._potAlertedFor = null; this._alerted = {};
@@ -1162,6 +1174,7 @@
       if (this._uploadTimer) clearTimeout(this._uploadTimer);
       this._uploadTimer = null; this._uploadChain = Promise.resolve();
       this._pendingUploadFingerprint = '';
+      this._pendingTrackerContext = null;
       this._pendingTowerProgress = null;
       this._previewIsland = null; this._island = null;
       this._potAlertedFor = null; this._alerted = {};
@@ -1456,7 +1469,7 @@
         });
         else {
           App.queueIslandUpload(trustedFateContext && trustedFateContext.fingerprint,
-            detail.eventType === 'add');
+            detail.eventType === 'add', trustedFateContext);
           App.pollMyIsland(true);
         }
         if (!active && (OC.FATES[id] || OC.POTS[id])) {
