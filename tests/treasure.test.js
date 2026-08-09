@@ -8,6 +8,7 @@ function loadTreasure(territory = 1346, treasureGuide = true) {
   const handlers = {};
   let enabled = treasureGuide;
   const overlay = {
+    playerId: '10035AF8',
     playerName: '吴邪',
     territoryId: territory,
     inOccult: true,
@@ -65,6 +66,25 @@ function startNorth(context) {
   const at = Math.floor(Date.parse('2026-08-04T07:36:46.0000000+08:00') / 1000);
   context.overlay.emit('memActive', 2072, false, { eventType: 'remove', observedAt: at });
   context.overlay.emit('log', 0, logLine('08AE', '吴邪附加了“指引财宝”效果。'));
+}
+
+{
+  const context = loadTreasure();
+  startNorth(context);
+  assert.equal(context.Treasure.view().active, true);
+
+  context.overlay.emit('log', 30, [
+    '30', '2026-08-08T17:28:17.0000000+08:00', '5FB', '指引财宝', '0.00',
+    'E0000000', '', '1003F2CB', '古月方源丶', '00', '170763', '',
+  ]);
+  assert.equal(context.Treasure.view().active, true, 'another player status removal must not close the guide');
+
+  context.overlay.emit('log', 30, [
+    '30', '2026-08-08T17:28:18.6780000+08:00', '5FB', '指引财宝', '0.00',
+    'E0000000', '', '10035AF8', '吴邪', '00', '170763', '',
+  ]);
+  assert.equal(context.Treasure.view().active, false, 'the local 5FB status removal must close the guide');
+  assert.equal(context.Treasure.view().lastReason, 'buff-lost');
 }
 
 {

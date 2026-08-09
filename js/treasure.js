@@ -103,6 +103,25 @@
     return !name || message.indexOf(name) === 0;
   }
 
+  function actorId(value) {
+    if (value == null || value === '') return 0;
+    if (typeof value === 'number') return value >>> 0;
+    var text = String(value).trim();
+    var parsed = /^(?:0x)?[0-9a-f]+$/i.test(text)
+      ? parseInt(text.replace(/^0x/i, ''), 16)
+      : Number(text);
+    return isFinite(parsed) ? parsed >>> 0 : 0;
+  }
+
+  function playerOwnsStatusLine(line) {
+    var targetId = actorId(line && line[7]);
+    var playerId = actorId(overlay && overlay.playerId);
+    if (targetId && playerId) return targetId === playerId;
+    var targetName = String(line && line[8] || '');
+    var playerName = state.ownerName || String(overlay && overlay.playerName || '');
+    return !!playerName && targetName === playerName;
+  }
+
   function directionIndex(direction) {
     return DIRECTIONS.indexOf(direction);
   }
@@ -307,6 +326,13 @@
 
   function handleLog(type, line, raw) {
     if (!isEnabled()) return;
+    if (Number(type) === 30 && parseInt(line && line[2], 16) === 0x5FB && playerOwnsStatusLine(line)) {
+      buffActive = false;
+      buffSeenAt = 0;
+      lastPotKill = null;
+      Treasure.reset('buff-lost');
+      return;
+    }
     if (Number(type) === 258) {
       if (String(line && line[2] || '').toLowerCase() === 'remove') {
         handlePotTransition(parseInt(line[4], 16), false, {
