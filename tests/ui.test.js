@@ -13,7 +13,7 @@ const uiStrings = {
     tower_upcoming: 'More after completion', tower_history: 'Previous intervals',
     treasure_title: 'Magic Pot Treasure', treasure_reroll: 'Reroll coffer', treasure_candidates: 'Candidates',
     treasure_safe: 'Safe', treasure_reported: 'Reported', treasure_danger: 'Only dangerous points remain.',
-    direction_east: 'East',
+    direction_east: 'East', close: 'Close',
   },
   zh: {
     weakness: '弱点', tower: '两歧塔', last_seen: '上次', tower_predicted: '预计',
@@ -189,10 +189,16 @@ sandbox.OC.UI.renderTreasureGuide(guideHost, {
 assert.equal(guideClasses.has('hidden'), false);
 assert.equal(guideClasses.has('danger'), true);
 assert.match(guideHost.innerHTML, /Reroll coffer/);
+assert.match(guideHost.innerHTML, /data-treasure-close/);
+assert.match(guideHost.innerHTML, /aria-label="Close"/);
 assert.match(guideHost.innerHTML, />East</);
 assert.match(guideHost.innerHTML, /transform:rotate\(73\.2deg\)/, 'the arrow must use the exact live bearing');
 assert.match(guideHost.innerHTML, />↑<\/span>/);
 assert.match(guideHost.innerHTML, /42\.4 m/);
 assert.match(guideHost.innerHTML, /Only dangerous points remain/);
+
+sandbox.OC.UI.renderTreasureGuide(guideHost, { active: true, dismissed: true });
+assert.equal(guideClasses.has('hidden'), true, 'manual close must hide only the guide window');
+assert.equal(guideHost.innerHTML, '');
 
 console.log('ui tests passed');

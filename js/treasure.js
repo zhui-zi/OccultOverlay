@@ -41,6 +41,7 @@
       fateId: 0,
       side: '',
       ownerName: '',
+      dismissed: false,
       status: 'idle',
       lastDirection: '',
       pendingDirection: '',
@@ -220,6 +221,7 @@
       fateId: Number(kill.id) || 0,
       side: side,
       ownerName: overlay && String(overlay.playerName || ''),
+      dismissed: false,
       status: 'waiting-direction',
       lastDirection: '',
       pendingDirection: '',
@@ -404,9 +406,17 @@
       Treasure.reset('disabled');
     },
 
+    dismiss: function () {
+      if (!state.active || state.dismissed) return false;
+      state.dismissed = true;
+      notify();
+      return true;
+    },
+
     view: function () {
       var view = {
         active: state.active,
+        dismissed: state.dismissed,
         mode: state.mode,
         territory: state.territory,
         fateId: state.fateId,

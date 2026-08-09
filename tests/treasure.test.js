@@ -122,6 +122,13 @@ function startNorth(context) {
     'map candidates must preserve their world coordinates',
   );
 
+  assert.equal(Treasure.dismiss(), true, 'manual close must dismiss the current guide');
+  view = Treasure.view();
+  assert.equal(view.active, true, 'manual close must keep the treasure session active');
+  assert.equal(view.dismissed, true);
+  assert.equal(view.candidateCount, 30, 'manual close must preserve current map candidates');
+  assert.equal(Treasure.dismiss(), false, 'repeated close must not publish duplicate state changes');
+
   const originalPool = sandbox.OC.MAPS[1346].points.potNorth;
   const firstMatches = Treasure.refineCandidates(originalPool, overlay.playerPos, '正东');
   assert.ok(firstMatches.length > 1, 'fixture must leave several east candidates');
@@ -160,6 +167,7 @@ function startNorth(context) {
   overlay.emit('log', 0, logLine('0039', '给我更多的圣灵药，我就再帮你找一次财宝！', '2026-08-04T08:19:03.0000000+08:00'));
   view = Treasure.view();
   assert.equal(view.mode, 'reroll');
+  assert.equal(view.dismissed, false, 'a continuation must show the guide again');
   assert.equal(view.candidateCount, 20);
   assert.equal(view.candidates.length, 20);
   assert.equal(view.status, 'waiting-direction');

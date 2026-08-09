@@ -389,10 +389,10 @@ assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*att
   'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=126/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=126/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=126') < index.indexOf('js/treasure.js?v=126'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=126') < index.indexOf('js/map.js?v=126'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=127/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=127/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=127') < index.indexOf('js/treasure.js?v=127'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=127') < index.indexOf('js/map.js?v=127'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
@@ -411,6 +411,7 @@ Array.from(new Set(layerSandbox.OC.MAP_LAYERS.map(layer => layer.icon))).forEach
   assert.equal(icon.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', iconPath + ' must be a bundled PNG');
 });
 const mainSource = fs.readFileSync(require.resolve('../js/main.js'), 'utf8');
+assert.match(mainSource, /data-treasure-close[\s\S]+?OC\.Treasure\.dismiss/, 'the treasure close button must dismiss only the current guide');
 assert.match(mainSource, /class="rbtn-icon"[^>]+esc\(l\.icon\)/, 'rail controls must render local icon images');
 assert.doesNotMatch(mainSource, /OC\.iconUrl\(l\.icon\)/, 'rail controls must not depend on a remote icon service');
 assert.match(mainSource, /l\.key === 'reroll'[^\n]+OC\.i18n\.t\('layer_short_reroll'\)/,

@@ -104,7 +104,14 @@ html, body {
 .treasure-guide.hidden { display: none; }
 .treasure-guide.danger { border-color: #ff784f; box-shadow: 0 6px 24px rgba(0,0,0,0.55), 0 0 14px rgba(255,92,92,0.35); }
 .tg-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; color: #d8b4ff; }
+.tg-head-actions { display: flex; align-items: center; gap: 7px; }
 .tg-stage { color: var(--fg-dim); font-size: 11px; font-weight: 600; }
+.tg-close {
+  width: 18px; height: 18px; padding: 0; border: 1px solid var(--line); border-radius: 50%;
+  background: rgba(255,255,255,0.07); color: var(--fg-dim); cursor: pointer; pointer-events: auto;
+  font: 700 14px/16px system-ui, sans-serif;
+}
+.tg-close:hover { border-color: var(--pot); color: #fff; background: rgba(176,97,255,0.2); }
 .tg-route { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 6px 0 4px; }
 .tg-arrow { display: inline-block; width: 44px; text-align: center; color: #fff; font-size: 38px; line-height: 1; text-shadow: 0 0 10px var(--pot); transform-origin: center; }
 .tg-destination { display: flex; flex-direction: column; min-width: 92px; }

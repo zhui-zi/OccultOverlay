@@ -127,14 +127,17 @@
 
   UI.renderTreasureGuide = function (host, view) {
     if (!host) return;
-    if (!view || !view.active) {
+    if (!view || !view.active || view.dismissed) {
       host.classList.add('hidden');
       host.innerHTML = '';
       return;
     }
 
     var stage = view.mode === 'reroll' ? t('treasure_reroll') : t('treasure_initial');
-    var h = '<div class="tg-head"><span>' + esc(t('treasure_title')) + '</span><span class="tg-stage">' + esc(stage) + '</span></div>';
+    var closeLabel = esc(t('close'));
+    var h = '<div class="tg-head"><span>' + esc(t('treasure_title')) + '</span><span class="tg-head-actions">' +
+      '<span class="tg-stage">' + esc(stage) + '</span>' +
+      '<button type="button" class="tg-close" data-treasure-close title="' + closeLabel + '" aria-label="' + closeLabel + '">×</button></span></div>';
     if (view.status === 'waiting-position') {
       h += '<div class="tg-wait">' + esc(t('treasure_wait_position')) + '</div>';
     } else if (view.status === 'mismatch') {

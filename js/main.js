@@ -187,6 +187,11 @@
         App.updateActive();
         OC.UI.toast('fate', t('chips_hidden'), '');
       });
+      document.getElementById('treasure-guide').addEventListener('click', function (e) {
+        if (!e.target.closest('[data-treasure-close]')) return;
+        e.stopPropagation();
+        if (OC.Treasure && OC.Treasure.dismiss) OC.Treasure.dismiss();
+      });
       var pop = document.getElementById('popover');
       pop.addEventListener('click', function (e) {
         if (e.target.closest('[data-close]')) App.closePanel();
