@@ -163,8 +163,8 @@ assert.equal(i18nSandbox.OC.i18n.t('layer_short_reroll'), '再');
 
 assert.equal(OC.selectMap(1346), true);
 assert.equal(OC.MAP.background, 'https://pic.imgdd.cc/i/033yZEk5hNqakHejLVO4sm.png');
-assert.equal(OC.MAP.fallbackBackground, 'https://tu.keita.cc/i/2026/07/31/22o45s.png');
-assert.equal(OC.MAP.finalFallbackBackground, 'assets/map-north.png');
+assert.equal(OC.MAP.fallbackBackground, 'assets/map-north.png');
+assert.equal(OC.MAP.finalFallbackBackground, undefined);
 assert.equal(OC.MAP.points.bronze.length, 55);
 assert.equal(OC.MAP.points.silver.length, 7);
 assert.equal(OC.MAP.points.potNorth.length, 30);
@@ -184,8 +184,8 @@ assert.equal(OC.selectMap(1346, { y: -100 }), true);
 assert.equal(OC.MAP.mapId, 1244);
 assert.equal(OC.MAP.variant, 'subterrane');
 assert.equal(OC.MAP.background, 'https://pic.imgdd.cc/i/033yZEhkYMPHrMX1Bgz9HC.png');
-assert.equal(OC.MAP.fallbackBackground, 'https://tu.keita.cc/i/2026/07/31/22obp7.png');
-assert.equal(OC.MAP.finalFallbackBackground, 'assets/map-north-subterrane.png');
+assert.equal(OC.MAP.fallbackBackground, 'assets/map-north-subterrane.png');
+assert.equal(OC.MAP.finalFallbackBackground, undefined);
 assert.equal(OC.MAP.points.bronze.length, 5);
 assert.equal(OC.MAP.points.silver.length, 1);
 assert.equal(OC.MAP.points.potNorth.length, 0);
@@ -220,8 +220,8 @@ vm.runInNewContext(fs.readFileSync(require.resolve('../js/map.js'), 'utf8'), san
 const mapTarget = { innerHTML: '' };
 OC.Map.render(mapTarget);
 assert.match(mapTarget.innerHTML, /href="https:\/\/pic\.imgdd\.cc\/i\/033yZEk5hNqakHejLVO4sm\.png"/);
-assert.match(mapTarget.innerHTML, /data-fallback="https:\/\/tu\.keita\.cc\/i\/2026\/07\/31\/22o45s\.png"/);
-assert.match(mapTarget.innerHTML, /data-final-fallback="assets\/map-north\.png"/);
+assert.match(mapTarget.innerHTML, /data-fallback="assets\/map-north\.png"/);
+assert.doesNotMatch(mapTarget.innerHTML, /data-final-fallback=/);
 assert.match(mapTarget.innerHTML, /onerror="OC\.Map\.handleBackgroundError\(this\)"/);
 assert.match(mapTarget.innerHTML, /class="radar-mark radar-bronze"/);
 assert.match(mapTarget.innerHTML, /class="radar-label">1<\/text>/);
@@ -237,8 +237,6 @@ const backgroundImage = {
   remove() { this.removed = true; },
 };
 OC.Map.handleBackgroundError(backgroundImage);
-assert.equal(backgroundImage.attrs.href, 'https://tu.keita.cc/i/2026/07/31/22o45s.png');
-OC.Map.handleBackgroundError(backgroundImage);
 assert.equal(backgroundImage.attrs.href, 'assets/map-north.png');
 OC.Map.handleBackgroundError(backgroundImage);
 assert.equal(backgroundImage.removed, true);
@@ -249,8 +247,8 @@ assert.equal((mapTarget.innerHTML.match(/fill="#55e6d4"/g) || []).length, 13);
 
 assert.equal(OC.selectMap(1252), true);
 assert.equal(OC.MAP.background, 'https://pic.imgdd.cc/i/033yZEhvlCl64oDk6DXtrl.jpg');
-assert.equal(OC.MAP.fallbackBackground, 'https://tu.keita.cc/i/2026/07/31/22n0ew.png');
-assert.equal(OC.MAP.finalFallbackBackground, 'assets/map.png');
+assert.equal(OC.MAP.fallbackBackground, 'assets/map.png');
+assert.equal(OC.MAP.finalFallbackBackground, undefined);
 assert.equal(OC.MAP.points.survey.length, 12);
 
 console.log('data tests passed');
