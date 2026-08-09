@@ -389,10 +389,10 @@ assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*att
   'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=124/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=124/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=124') < index.indexOf('js/treasure.js?v=124'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=124') < index.indexOf('js/map.js?v=124'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=125/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=125/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=125') < index.indexOf('js/treasure.js?v=125'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=125') < index.indexOf('js/map.js?v=125'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
@@ -828,6 +828,61 @@ assert.equal(
   null,
   'a bound row with only two accumulated matches must not authorize a cloud prediction',
 );
+sandbox.OC.App._island = { ce: [], fate: strictFateHistory, pot: [cloudPot] };
+
+sandbox.OC.App._bindingConfirmed = true;
+sandbox.OC.App._bindingRolloverUntil = 0;
+sandbox.OC.App.instanceEvidence = () => ({
+  fingerprint: 'NEXT-FATE',
+  fingerprints: ['NEXT-FATE'],
+  events: [{ fateId: 2082, spawnEpoch: 1400, quality: 'direct' }],
+  ends: [],
+  cePhases: [],
+});
+sandbox.OC.App._island = {
+  ce: [],
+  fate: [{ fate_id: 2074, spawn_time: 1000, death_time: 1100, last_seen: 1100 }],
+  pot: [cloudPot],
+};
+let stableBoundStatus = sandbox.OC.App.boundIslandEvidenceStatus();
+assert.equal(stableBoundStatus.directlyAuthorized, false);
+assert.equal(stableBoundStatus.contradicted, false);
+assert.equal(
+  stableBoundStatus.authorized,
+  true,
+  'a confirmed binding must survive natural CE/FATE evidence rollover in the same scope',
+);
+assert.notEqual(
+  sandbox.OC.App.localPotInfo(),
+  null,
+  'a confirmed island countdown must not fall back to unknown when old phase evidence disappears',
+);
+
+sandbox.OC.App.instanceEvidence = () => ({
+  fingerprint: 'NEXT-FATE',
+  fingerprints: ['NEXT-FATE'],
+  events: [
+    { fateId: 2074, spawnEpoch: 1000 },
+    { fateId: 2075, spawnEpoch: 1200 },
+    { fateId: 2082, spawnEpoch: 1400 },
+  ],
+  ends: [],
+  cePhases: [],
+});
+sandbox.OC.App.trackerContext = () => ({ fingerprint: 'NEXT-FATE' });
+sandbox.OC.App.adoptTrustedFateContext(2082, 1400);
+let rolloverStatus = sandbox.OC.App.boundIslandEvidenceStatus();
+assert.equal(rolloverStatus.rolloverGrace, true);
+assert.equal(rolloverStatus.authorized, true, 'tracker writeback lag must not hide a confirmed countdown');
+sandbox.OC.App._bindingRolloverUntil = Date.now() - 1;
+rolloverStatus = sandbox.OC.App.boundIslandEvidenceStatus();
+assert.equal(rolloverStatus.contradicted, true);
+assert.equal(rolloverStatus.authorized, false, 'three persistent mismatches must still reject stale binding');
+sandbox.OC.App.trackerContext = originalTrackerContext;
+sandbox.OC.App._bindingConfirmed = false;
+sandbox.OC.App._bindingRolloverFingerprint = '';
+sandbox.OC.App._bindingRolloverUntil = 0;
+sandbox.OC.App.instanceEvidence = () => strictEvidence;
 sandbox.OC.App._island = { ce: [], fate: strictFateHistory, pot: [cloudPot] };
 
 sandbox.OC.App._localPot = { 2072: { active: true, lastSeen: 120 } };

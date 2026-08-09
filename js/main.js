@@ -19,6 +19,7 @@
   var GLOBAL_DCS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   var TRACKER_VERSION = 'OccultOverlay-v73-dev';
   var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
+  var BINDING_ROLLOVER_GRACE_MS = 15000;
   var MIN_ISLAND_EVIDENCE = 3;
 
   var State = OC.State = { highlights: [], detail: null, detailId: null, detailLocating: false };
@@ -340,11 +341,17 @@
     // Advance the bound fingerprint immediately to avoid unknown Pot timing while shared data catches up.
     adoptTrustedFateContext: function (fateId, spawnEpoch) {
       var context = this.trackerContext(fateId, spawnEpoch);
-      if (context && this.myIslandRowId) this.myIslandFingerprint = context.fingerprint;
+      if (context && this.myIslandRowId) {
+        this.myIslandFingerprint = context.fingerprint;
+        if (this._bindingConfirmed) {
+          this._bindingRolloverFingerprint = context.fingerprint;
+          this._bindingRolloverUntil = Date.now() + BINDING_ROLLOVER_GRACE_MS;
+        }
+      }
       return context;
     },
 
-    bindMatchedIsland: function (matched, record) {
+    bindMatchedIsland: function (matched, record, confirmed) {
       if (!matched) return null;
       if (this.myIslandRowId && Number(this.myIslandRowId) !== Number(matched.rowId)) {
         return null;
@@ -354,6 +361,14 @@
         record = this._previewIsland.record;
       }
       var changed = this.myIslandRowId !== matched.rowId;
+      if (changed) {
+        this._bindingConfirmed = !!confirmed;
+        this._bindingRolloverFingerprint = this._bindingConfirmed ? (matched.fingerprint || '') : '';
+        this._bindingRolloverUntil = this._bindingConfirmed
+          ? Date.now() + BINDING_ROLLOVER_GRACE_MS : 0;
+      } else if (confirmed) {
+        this._bindingConfirmed = true;
+      }
       this.myIslandRowId = matched.rowId;
       this.myIslandFingerprint = matched.fingerprint || '';
       this.myIslandId = matched.id || ('row:' + matched.rowId);
@@ -384,6 +399,7 @@
       var record = rows.filter(function (row) {
         return Number(row.id) === Number(matched.rowId);
       })[0];
+      var confirmed = !!this._bindingConfirmed;
       if (!this.myIslandRowId) {
         var bindingStatus = this.islandBindingEvidenceStatus(
           this.instanceEvidence(),
@@ -395,8 +411,9 @@
           record && record.last_fate
         );
         if (!bindingStatus.authorized) return null;
+        confirmed = true;
       }
-      var id = this.bindMatchedIsland(matched, record);
+      var id = this.bindMatchedIsland(matched, record, confirmed);
       if (!id) return null;
       return id;
     },
@@ -419,6 +436,7 @@
       }
       var matched = OC.Pots.matchIsland(all, evidence, pdc, 15);
       if (matched) {
+        var confirmed = !!this._bindingConfirmed;
         if (!this.myIslandRowId) {
           var record = (this._dcRows || []).filter(function (row) {
             return Number(row.id) === Number(matched.rowId);
@@ -437,8 +455,9 @@
             record && record.last_fate || matched.fingerprint
           );
           if (!bindingStatus.authorized) return null;
+          confirmed = true;
         }
-        var bound = this.bindMatchedIsland(matched, record);
+        var bound = this.bindMatchedIsland(matched, record, confirmed);
         if (bound) return bound;
       }
       // Keep strong-evidence binding until zone change/disconnect; a cloud outage must not drop it.
@@ -815,6 +834,9 @@
       this._pendingUploadFingerprint = '';
       this._pendingTrackerContext = null;
       this._pendingTowerProgress = null;
+      this._bindingConfirmed = false;
+      this._bindingRolloverFingerprint = '';
+      this._bindingRolloverUntil = 0;
       this._previewIsland = null; this._dcRows = []; this._dc = []; this._islands = []; this._dcLoaded = false;
       this._island = null; this._potAlertedFor = null; this._alerted = {};
       this._highlightMissingSince = {};
@@ -1166,7 +1188,22 @@
         history,
         record && record.last_fate || this.myIslandFingerprint
       );
-      status.authorized = this.boundIslandScopeMatches() && status.authorized;
+      var scopeMatches = this.boundIslandScopeMatches();
+      var directlyAuthorized = scopeMatches && status.authorized;
+      var rolloverFingerprint = String(this._bindingRolloverFingerprint || '').toUpperCase();
+      var rolloverMatches = rolloverFingerprint && (evidence.fingerprints || []).some(function (value) {
+        return String(value || '').toUpperCase() === rolloverFingerprint;
+      });
+      var rolloverGrace = scopeMatches && this._bindingConfirmed && rolloverMatches &&
+        Date.now() <= Number(this._bindingRolloverUntil || 0);
+      var contradicted = scopeMatches && status.available && !directlyAuthorized &&
+        status.local >= MIN_ISLAND_EVIDENCE && status.matched < MIN_ISLAND_EVIDENCE &&
+        !rolloverGrace;
+      status.directlyAuthorized = directlyAuthorized;
+      status.rolloverGrace = !!rolloverGrace;
+      status.contradicted = !!contradicted;
+      status.authorized = scopeMatches && !contradicted &&
+        (directlyAuthorized || !!this._bindingConfirmed);
       return status;
     },
 
@@ -1180,6 +1217,9 @@
       this._pendingUploadFingerprint = '';
       this._pendingTrackerContext = null;
       this._pendingTowerProgress = null;
+      this._bindingConfirmed = false;
+      this._bindingRolloverFingerprint = '';
+      this._bindingRolloverUntil = 0;
       this._previewIsland = null; this._island = null;
       this._potAlertedFor = null; this._alerted = {};
       State.detail = null; State.detailId = null;

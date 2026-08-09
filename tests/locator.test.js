@@ -194,6 +194,7 @@ for (const file of ['js/history.js', 'js/main.js']) {
   assert.equal(applied.record.id, 42);
   assert.equal(sandbox.OC.App.myIslandDatacenter, 103);
   assert.equal(sandbox.OC.App.myIslandTerritory, 1346);
+  assert.equal(sandbox.OC.App._bindingConfirmed, true, 'strict matching must latch confirmed binding state');
   assert.equal(fingerprintFetchCalls, 1, 'fast matching must use the fingerprint response without another fetch');
   clearTimeout(sandbox.OC.App._uploadTimer);
   sandbox.OC.App._uploadTimer = null;
