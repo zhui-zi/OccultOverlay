@@ -287,15 +287,9 @@
     }
 
     state.pendingDirection = '';
-    var previousTarget = state.target;
-    var available = state.candidates.filter(function (candidate) {
-      if (!previousTarget) return true;
-      return Math.abs(candidate.x - previousTarget.x) >= 0.001 || Math.abs(candidate.z - previousTarget.z) >= 0.001;
-    });
-    var matches = refineCandidates(available, position, direction);
+    var matches = refineCandidates(state.candidates, position, direction);
     if (!matches.length) {
-      // Keep the remaining untried set for recovery, but never select a point outside the reported sector.
-      state.candidates = available;
+      // Keep the previous set for recovery, but never select a point outside the reported sector.
       state.target = null;
       state.status = 'mismatch';
       state.mismatch = true;

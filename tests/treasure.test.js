@@ -62,15 +62,15 @@ function directionMessage(direction) {
   return `财宝好像是在${direction}方向很远的地方！`;
 }
 
-function startNorth(context) {
+function startSession(context, id = 2072) {
   const at = Math.floor(Date.parse('2026-08-04T07:36:46.0000000+08:00') / 1000);
-  context.overlay.emit('memActive', 2072, false, { eventType: 'remove', observedAt: at });
+  context.overlay.emit('memActive', id, false, { eventType: 'remove', observedAt: at });
   context.overlay.emit('log', 0, logLine('08AE', '吴邪附加了“指引财宝”效果。'));
 }
 
 {
   const context = loadTreasure();
-  startNorth(context);
+  startSession(context);
   assert.equal(context.Treasure.view().active, true);
 
   context.overlay.emit('log', 30, [
@@ -89,11 +89,11 @@ function startNorth(context) {
 
 {
   const context = loadTreasure(1346, false);
-  startNorth(context);
+  startSession(context);
   assert.equal(context.Treasure.view().active, false, 'disabled guidance must ignore qualifying ACT events');
 
   context.setTreasureGuide(true);
-  startNorth(context);
+  startSession(context);
   assert.equal(context.Treasure.view().active, true, 're-enabling must allow a future qualifying treasure session');
 
   context.setTreasureGuide(false);
@@ -228,6 +228,34 @@ function startNorth(context) {
   overlay.emit('zone', 999, 'Other zone', false);
   assert.equal(Treasure.view().active, false);
   assert.equal(Treasure.view().lastReason, 'zone-left');
+}
+
+{
+  const context = loadTreasure();
+  const { overlay, Treasure } = context;
+  const probes = [
+    { position: { x: -505.89, y: 0, z: 243.20 }, direction: 3, count: 7 },
+    { position: { x: -184.94, y: 0, z: 670.42 }, direction: 3, count: 4 },
+    { position: { x: -129.78, y: 0, z: 803.33 }, direction: 2, count: 2 },
+    { position: { x: 3.00, y: 0, z: 792.76 }, direction: 3, count: 1 },
+    { position: { x: 63.39, y: 0, z: 943.48 }, direction: 2, count: 1 },
+  ];
+
+  overlay.playerPos = probes[0].position;
+  startSession(context, 2073);
+  probes.forEach((probe, index) => {
+    overlay.playerPos = probe.position;
+    overlay.emit('position', overlay.playerPos);
+    overlay.emit('log', 0, logLine('0839', directionMessage(Treasure.directions[probe.direction])));
+    const view = Treasure.view();
+    assert.equal(view.candidateCount, probe.count, `probe ${index + 1} must preserve the live candidate path`);
+    assert.ok(view.target, `probe ${index + 1} must retain a target`);
+  });
+
+  const view = Treasure.view();
+  assert.equal(view.target.x, 210);
+  assert.equal(view.target.z, 916);
+  assert.equal(view.mismatch, false, 'a repeated direction toward the same coffer must retain that candidate');
 }
 
 {
