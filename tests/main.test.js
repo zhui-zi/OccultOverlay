@@ -389,10 +389,10 @@ assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*att
   'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=130/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=130/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=130') < index.indexOf('js/treasure.js?v=130'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=130') < index.indexOf('js/map.js?v=130'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=131/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=131/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=131') < index.indexOf('js/treasure.js?v=131'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=131') < index.indexOf('js/map.js?v=131'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
@@ -443,16 +443,6 @@ const statusChips = {
   offsetHeight: 30,
   getBoundingClientRect() { return { top: 8, bottom: 38, height: 30 }; },
 };
-const connectionChip = {
-  offsetTop: 8,
-  offsetHeight: 30,
-  getBoundingClientRect() { return { top: 8, bottom: 38, height: 30 }; },
-};
-const potChip = {
-  offsetTop: 8,
-  offsetHeight: 30,
-  getBoundingClientRect() { return { top: 8, bottom: 38, height: 30 }; },
-};
 let treasureGuideHidden = true;
 const treasureGuideHost = {
   offsetTop: 52,
@@ -477,8 +467,6 @@ sandbox.document.getElementById = id => ({
   mapLayer: mapHost,
   'radar-panel': radarHost,
   'status-chips': statusChips,
-  'chip-conn': connectionChip,
-  'chip-pot': potChip,
   'treasure-guide': treasureGuideHost,
 }[id] || originalGetElementById(id));
 sandbox.OC.Radar.targets = () => [radarTarget];
@@ -514,11 +502,8 @@ assert.equal(radarClasses.has('pinned'), true);
 assert.equal(radarHost.innerHTML, '');
 assert.equal(radarHost.style.top, '', 'pinning must not change radar placement while the map is visible');
 assert.equal(radarHost.style.bottom, '');
-assert.equal(mapHost.style.top, '46px', 'the map must remain below the persistent top chips');
+assert.equal(mapHost.style.top, '46px', 'the map must remain below the top status chips');
 assert.equal(mapHost.style.bottom, '0px', 'pinning must not change map placement while the map is visible');
-statusChips.getBoundingClientRect = () => ({ top: 8, bottom: 74, height: 66 });
-sandbox.OC.App.updateMapPlacement();
-assert.equal(mapHost.style.top, '46px', 'wrapped activity chips must not move the map canvas');
 sandbox.OC.Radar.targets = () => [radarTarget];
 sandbox.OC.App.updateRadar();
 assert.equal(radarClasses.has('hidden'), false, 'targets must remain visible while the map is expanded');

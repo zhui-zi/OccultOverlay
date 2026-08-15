@@ -1383,11 +1383,7 @@
         topEdge = Math.max(topEdge, edge);
       }
 
-      // Active encounter chips can wrap or briefly disappear while shared data
-      // refreshes. Anchor the map to the persistent chips so that activity
-      // changes never resize the map canvas.
-      includeTop(document.getElementById('chip-conn'));
-      includeTop(document.getElementById('chip-pot'));
+      includeTop(document.getElementById('status-chips'));
       includeTop(document.getElementById('treasure-guide'));
       if (noMap && OC.Settings.get('radarPinned')) includeTop(document.getElementById('radar-panel'));
 
