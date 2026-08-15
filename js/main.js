@@ -18,7 +18,8 @@
   var CN_DCS = [101, 102, 103, 104];
   var GLOBAL_DCS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   var TRACKER_VERSION = 'OccultOverlay-v73-dev';
-  var HIGHLIGHT_REMOVE_GRACE_MS = 7000;
+  var HIGHLIGHT_REMOVE_GRACE_MS = 15000;
+  var DIRECTOR_END_GRACE_MS = 7000;
   var BINDING_ROLLOVER_GRACE_MS = 15000;
   var MIN_ISLAND_EVIDENCE = 3;
 
@@ -1382,7 +1383,11 @@
         topEdge = Math.max(topEdge, edge);
       }
 
-      includeTop(document.getElementById('status-chips'));
+      // Active encounter chips can wrap or briefly disappear while shared data
+      // refreshes. Anchor the map to the persistent chips so that activity
+      // changes never resize the map canvas.
+      includeTop(document.getElementById('chip-conn'));
+      includeTop(document.getElementById('chip-pot'));
       includeTop(document.getElementById('treasure-guide'));
       if (noMap && OC.Settings.get('radarPinned')) includeTop(document.getElementById('radar-panel'));
 
@@ -1609,9 +1614,9 @@
           if (active && id && ids.indexOf(id) < 0) ids.push(id);
         });
       }
-      // ACT directors and the shared tracker can each miss one transient sample.
-      // Show new encounters immediately, but require a continuous absence before
-      // removing an existing capsule so a Remove/Add resync cannot make it flash.
+      // ACT directors and the shared tracker can each miss transient samples.
+      // Show new encounters immediately, but cover three five-second refresh
+      // intervals before removing a capsule so short gaps cannot make it flash.
       var activeNow = {};
       ids.forEach(function (id) { activeNow[id] = true; });
       var missingSince = this._highlightMissingSince = this._highlightMissingSince || {};
@@ -1623,7 +1628,10 @@
           return;
         }
         if (!missingSince[id]) missingSince[id] = timestamp;
-        if (timestamp - missingSince[id] < HIGHLIGHT_REMOVE_GRACE_MS) ids.push(id);
+        var meta = (OC.Overlay.memMeta || {})[id];
+        var grace = meta && meta.directorSeen && meta.directorActive === false
+          ? DIRECTOR_END_GRACE_MS : HIGHLIGHT_REMOVE_GRACE_MS;
+        if (timestamp - missingSince[id] < grace) ids.push(id);
         else delete missingSince[id];
       });
       ids.forEach(function (id) {
