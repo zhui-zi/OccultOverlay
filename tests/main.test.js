@@ -389,10 +389,10 @@ assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*att
   'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=131/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=131/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=131') < index.indexOf('js/treasure.js?v=131'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=131') < index.indexOf('js/map.js?v=131'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=132/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=132/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=132') < index.indexOf('js/treasure.js?v=132'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=132') < index.indexOf('js/map.js?v=132'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;

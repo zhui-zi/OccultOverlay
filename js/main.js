@@ -1306,26 +1306,61 @@
     updateActive: function () {
       var box = document.getElementById('chips-active');
       if (!box) return;
-      var html = '';
+      var chips = [];
       if (OC.Settings.get('showActiveChips')) {
         var ids = OC.State.highlights || [];
-        html = ids.map(function (id) {
+        chips = ids.map(function (id) {
           var isCe = !!OC.CES[id], isPot = !!OC.POTS[id];
           var def = isCe ? OC.CES[id] : isPot ? OC.POTS[id] : OC.FATES[id];
-          if (!def) return '';
-          if (isCe && def.type === 'tower' && !OC.Settings.get('alertTower')) return '';
+          if (!def) return null;
+          if (isCe && def.type === 'tower' && !OC.Settings.get('alertTower')) return null;
           var cls = isCe ? 'ce' : isPot ? 'pot' : 'fate';
           var weakness = isPot ? '' : OC.UI.weaknessIcons(def.weakness);
-          return '<div class="chip chip-act ' + cls + '"><span class="chip-act-name">' + weakness + OC.UI.esc(nm(def.name)) + '</span>' + rewardSuffix(def.drops) + '</div>';
-        }).join('');
+          var content = '<span class="chip-act-name">' + weakness + OC.UI.esc(nm(def.name)) + '</span>' + rewardSuffix(def.drops);
+          return {
+            id: Number(id),
+            cls: cls,
+            content: content,
+            html: '<div class="chip chip-act ' + cls + '" data-encounter-id="' + Number(id) + '">' + content + '</div>'
+          };
+        }).filter(function (chip) { return !!chip; });
       }
-      // Rebuilding identical nodes makes ACT's Chromium surface flash.
+      var html = chips.map(function (chip) { return chip.html; }).join('');
+      // Keep unchanged encounter nodes alive when another FATE/CE starts or ends.
+      // Replacing the whole container makes ACT's Chromium flash every capsule.
       if (box._ocActiveHtml === html) {
         this.updateRadarPlacement();
         return;
       }
       box._ocActiveHtml = html;
-      box.innerHTML = html;
+      if (!box.querySelectorAll || !box.insertBefore || !box.removeChild ||
+          !document.createElement) {
+        box.innerHTML = html;
+        this.updateRadarPlacement();
+        return;
+      }
+      var existing = {};
+      Array.prototype.forEach.call(box.querySelectorAll('[data-encounter-id]'), function (node) {
+        existing[Number(node.getAttribute('data-encounter-id'))] = node;
+      });
+      chips.forEach(function (chip, index) {
+        var node = existing[chip.id];
+        if (!node) {
+          node = document.createElement('div');
+          node.setAttribute('data-encounter-id', String(chip.id));
+        }
+        var nodeMarkup = chip.cls + '\n' + chip.content;
+        if (node._ocActiveMarkup !== nodeMarkup) {
+          node.className = 'chip chip-act ' + chip.cls;
+          node.innerHTML = chip.content;
+          node._ocActiveMarkup = nodeMarkup;
+        }
+        delete existing[chip.id];
+        if (box.children[index] !== node) box.insertBefore(node, box.children[index] || null);
+      });
+      Object.keys(existing).forEach(function (id) {
+        box.removeChild(existing[id]);
+      });
       this.updateRadarPlacement();
     },
 
@@ -1572,12 +1607,22 @@
 
     pollMyIsland: function (throttled) {
       // Do not fetch island data off-island; stale data could trigger alerts.
-      if (OC.Overlay.connected && !OC.Overlay.inOccult) { this._island = null; return; }
+      if (OC.Overlay.connected && !OC.Overlay.inOccult) {
+        this._island = null;
+        this.refreshHighlights();
+        return;
+      }
+      var id = this.myIslandId;
+      // Strict tracker binding is not required for local 258/259 liveness.
+      // A DC refresh must drop only unbound cloud state, never active local capsules.
+      if (!id) {
+        this._island = null;
+        this.refreshHighlights();
+        return;
+      }
       var tn = Date.now();
       if (throttled && this._lastIslandFetch && tn - this._lastIslandFetch < 3000) return;
       this._lastIslandFetch = tn;
-      var id = this.myIslandId;
-      if (!id) { this._island = null; OC.State.highlights = []; OC.Map.updateHighlights(document.getElementById('mapLayer')); return; }
       var rowId = this.myIslandRowId;
       var request = rowId ? OC.Api.fetchTrackerRow(rowId) : OC.Api.fetchTracker(id);
       request.then(function (rec) {
