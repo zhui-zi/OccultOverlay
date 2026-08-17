@@ -184,6 +184,18 @@
     } else if (view.complete) {
       h += '<div class="route-complete"><strong>✓ ' + esc(t('route_complete')) + '</strong>' +
         '<span>' + esc(t('route_complete_help')) + '</span></div>';
+    } else if (view.transition) {
+      var transition = view.transition;
+      var nextFloorKey = transition.nextLayerKey === 'subterrane' ? 'route_layer_subterrane' : 'route_layer_surface';
+      h += '<div class="route-transition"><div class="route-transition-step"><b>1</b><span><strong>' +
+        esc(t('route_transition_return')) + '</strong></span></div>';
+      if (transition.aetheryteKey) {
+        h += '<div class="route-transition-step"><b>2</b><span><strong>' + esc(t('route_transition_teleport')) +
+          '</strong><small>' + esc(t('route_aetheryte_' + transition.aetheryteKey)) + '</small></span></div>';
+      }
+      h += '</div><div class="tg-meta">' + esc(t('route_next_point')) + ' ' + Number(transition.nextRouteNumber) +
+        ' · ' + esc(t(nextFloorKey)) + '</div>' +
+        '<div class="route-transition-hint">' + esc(t('route_transition_help')) + '</div>';
     } else if (!view.target || view.status === 'waiting-position') {
       h += '<div class="route-empty">' + esc(t('route_wait_position')) + '</div>';
     } else {
@@ -206,7 +218,7 @@
     h += '<div class="route-actions">' +
       '<button type="button" data-route-action="previous"' + (!view || (!view.complete && !view.visited) ? ' disabled' : '') + '>' + esc(t('route_previous')) + '</button>' +
       '<button type="button" data-route-action="restart">' + esc(t('route_restart')) + '</button>' +
-      '<button type="button" data-route-action="next"' + (!view || view.complete || !view.target ? ' disabled' : '') + '>' + esc(t('route_next')) + '</button>' +
+      '<button type="button" data-route-action="next"' + (!view || view.complete || (!view.target && !view.transition) ? ' disabled' : '') + '>' + esc(t(view && view.transition ? 'route_continue' : 'route_next')) + '</button>' +
       '</div>';
     host.innerHTML = h;
     host.classList.remove('hidden');

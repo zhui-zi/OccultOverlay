@@ -17,7 +17,10 @@ const uiStrings = {
     route_complete: 'All coffer points visited', route_complete_help: 'Replan to start another lap.',
     route_wait_position: 'Reading player position…', route_progress: 'Patrol progress', route_point: 'Route point',
     route_layer_surface: 'Surface', route_layer_subterrane: 'Subterrane', route_change_layer: 'Next point is on',
-    route_previous: 'Previous', route_restart: 'Replan', route_next: 'Next',
+    route_transition_return: 'Use Return to reach base camp', route_transition_teleport: 'Then use the aethernet shard',
+    route_transition_help: 'Select Continue after completing these steps', route_next_point: 'Next route point',
+    route_aetheryte_sinking: 'Sinking Sanctuary',
+    route_previous: 'Previous', route_restart: 'Replan', route_next: 'Next', route_continue: 'Continue',
     direction_north: 'North', direction_east: 'East', close: 'Close',
   },
   zh: {
@@ -247,6 +250,31 @@ assert.match(routeHost.innerHTML, /Next point is on Subterrane/, 'a cross-layer 
 assert.match(routeHost.innerHTML, /data-route-action="previous"/);
 assert.match(routeHost.innerHTML, /data-route-action="restart"/);
 assert.match(routeHost.innerHTML, /data-route-action="next"/);
+
+sandbox.OC.UI.renderRouteGuide(routeHost, {
+  active: true,
+  supported: true,
+  complete: false,
+  status: 'transition',
+  progress: 12,
+  visited: 12,
+  total: 68,
+  transition: {
+    type: 'return-teleport',
+    aetheryteKey: 'sinking',
+    nextRouteNumber: 13,
+    nextLayerKey: 'surface',
+  },
+  target: null,
+});
+assert.match(routeHost.innerHTML, /class="route-transition"/);
+assert.match(routeHost.innerHTML, /Use Return to reach base camp/);
+assert.match(routeHost.innerHTML, /Then use the aethernet shard/);
+assert.match(routeHost.innerHTML, /Sinking Sanctuary/);
+assert.match(routeHost.innerHTML, /Next route point 13 · Surface/);
+assert.match(routeHost.innerHTML, />Continue<\/button>/);
+assert.doesNotMatch(routeHost.innerHTML, /class="tg-arrow"/, 'a transition must not point toward the distant next node');
+assert.doesNotMatch(routeHost.innerHTML, /data-route-action="next" disabled/, 'the transition continue button must stay enabled');
 
 sandbox.OC.UI.renderRouteGuide(routeHost, {
   active: true,

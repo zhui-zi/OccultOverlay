@@ -16,6 +16,7 @@
       order: [],
       index: 0,
       complete: false,
+      transition: null,
       arrivalKey: '',
       arrivalSamples: 0
     };
@@ -88,8 +89,24 @@
     return ordered;
   }
 
+  function transitionBetween(territory, from, to) {
+    var def = definition(territory);
+    if (!def || !def.transitions || !from || !to) return null;
+    var authored = def.transitions[String(from.nodeId) + ':' + String(to.nodeId)];
+    if (!authored) return null;
+    return {
+      type: authored.type || 'return',
+      aetheryteKey: authored.aetheryte || '',
+      fromNodeId: from.nodeId,
+      nextNodeId: to.nodeId,
+      nextRouteNumber: to.routeNumber,
+      nextMapId: to.mapId,
+      nextLayerKey: to.mapId === 1244 ? 'subterrane' : 'surface'
+    };
+  }
+
   function currentPoint() {
-    return !state.complete && state.order[state.index] || null;
+    return !state.complete && !state.transition && state.order[state.index] || null;
   }
 
   function pointKey(value) {
@@ -115,6 +132,7 @@
     state.order = buildOrder(territory, position);
     state.index = 0;
     state.complete = false;
+    state.transition = null;
     resetArrival();
     notify();
     return state.order.length > 0;
@@ -122,6 +140,22 @@
 
   function advance() {
     if (!state.order.length || state.complete) return false;
+    if (state.transition) {
+      state.transition = null;
+      state.index += 1;
+      resetArrival();
+      notify();
+      return true;
+    }
+    var from = state.order[state.index];
+    var to = state.order[state.index + 1];
+    var transition = transitionBetween(state.territory, from, to);
+    if (transition) {
+      state.transition = transition;
+      resetArrival();
+      notify();
+      return true;
+    }
     state.index += 1;
     if (state.index >= state.order.length) {
       state.index = state.order.length;
@@ -134,7 +168,9 @@
 
   function retreat() {
     if (!state.order.length) return false;
-    if (state.complete) {
+    if (state.transition) {
+      state.transition = null;
+    } else if (state.complete) {
       state.complete = false;
       state.index = state.order.length - 1;
     } else if (state.index > 0) {
@@ -210,6 +246,7 @@
         reset(territory, position);
         return true;
       }
+      if (state.transition) return false;
 
       var target = currentPoint();
       if (!target) return false;
@@ -245,6 +282,7 @@
 
     view: function (position) {
       var target = currentPoint();
+      var transition = state.transition;
       var def = definition(state.territory);
       var ready = validPosition(position) && !!target;
       var dx = ready ? target.x - Number(position.x) : NaN;
@@ -254,11 +292,19 @@
         active: state.active,
         supported: Route.supported(state.territory),
         territory: state.territory,
-        status: state.complete ? 'complete' : state.order.length ? (ready ? 'ready' : 'waiting-position') : 'waiting-position',
+        status: state.complete ? 'complete' : transition ? 'transition' : state.order.length ? (ready ? 'ready' : 'waiting-position') : 'waiting-position',
         complete: state.complete,
         total: state.order.length || Number(definition(state.territory) && definition(state.territory).points.length) || 0,
-        visited: Math.min(state.index, state.order.length),
+        visited: Math.min(state.index + (transition ? 1 : 0), state.order.length),
         progress: state.complete ? state.order.length : state.index + (state.order.length ? 1 : 0),
+        transition: transition && {
+          type: transition.type,
+          aetheryteKey: transition.aetheryteKey,
+          nextNodeId: transition.nextNodeId,
+          nextRouteNumber: transition.nextRouteNumber,
+          nextMapId: transition.nextMapId,
+          nextLayerKey: transition.nextLayerKey
+        },
         target: target && {
           x: target.x,
           y: target.y,
@@ -276,7 +322,7 @@
     },
 
     mapView: function () {
-      if (!state.active || state.complete || !state.order.length) return { active: false, points: [] };
+      if (!state.active || state.complete || state.transition || !state.order.length) return { active: false, points: [] };
       var def = definition(state.territory);
       return {
         active: true,

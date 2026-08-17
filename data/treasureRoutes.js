@@ -81,6 +81,15 @@
     },
     1346: {
       mode: 'loop',
+      // BOCCHI schema-v2 boundaries after resolving the current auto legs.
+      transitions: {
+        '2020:2070': { type: 'return-teleport', aetheryte: 'crown' },
+        '2073:2023': { type: 'return-teleport', aetheryte: 'sinking' },
+        '2071:2044': { type: 'return-teleport', aetheryte: 'moldering' },
+        '2045:2038': { type: 'return-teleport', aetheryte: 'suspended' },
+        '2041:2051': { type: 'return-teleport', aetheryte: 'unhallowed' },
+        '2069:2014': { type: 'return' }
+      },
       points: [
         [676.9965, 190.9779, 957.4468, 1135, 2014],
         [673.7398, 161.1653, 729.666, 1135, 2016],

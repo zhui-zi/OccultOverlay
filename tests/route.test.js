@@ -40,6 +40,18 @@ const expectedNorthNodeOrder = [
 ];
 assert.deepEqual(Array.from(routes[1346].points, (row) => row[4]), expectedNorthNodeOrder,
   'North Horn must preserve the current BOCCHI segment order');
+assert.deepEqual(Array.from(Object.entries(routes[1346].transitions), ([leg, transition]) => [
+  leg,
+  transition.type,
+  transition.aetheryte || '',
+]), [
+  ['2020:2070', 'return-teleport', 'crown'],
+  ['2073:2023', 'return-teleport', 'sinking'],
+  ['2071:2044', 'return-teleport', 'moldering'],
+  ['2045:2038', 'return-teleport', 'suspended'],
+  ['2041:2051', 'return-teleport', 'unhallowed'],
+  ['2069:2014', 'return', ''],
+], 'North Horn must preserve the resolved BOCCHI segment transitions');
 
 const north68 = routes[1346].points[67];
 const northOrder = Route._buildOrder(1346, { x: north68[0], y: north68[1], z: north68[2] });
@@ -59,7 +71,17 @@ Route.updatePosition(position, 1346);
 assert.equal(Route.view(position).target.routeNumber, 68, 'one position sample must not skip a point');
 Route.updatePosition(position, 1346);
 view = Route.view(position);
-assert.equal(view.target.routeNumber, 1, 'two position samples inside 12 yalms must advance the route');
+assert.equal(view.status, 'transition');
+assert.equal(view.target, null, 'a segment transition must replace the distant route target');
+assert.equal(view.transition.type, 'return');
+assert.equal(view.transition.aetheryteKey, '');
+assert.equal(view.transition.nextRouteNumber, 1);
+assert.equal(view.visited, 1);
+assert.equal(view.progress, 1);
+assert.equal(Route.mapView().active, false, 'segment transitions must hide distant map markers');
+Route.next();
+view = Route.view(position);
+assert.equal(view.target.routeNumber, 1, 'continuing after Return must reveal the next route point');
 assert.equal(view.progress, 2);
 assert.equal(Route.previous(), true);
 assert.equal(Route.view(position).target.routeNumber, 68, 'manual previous must restore the prior route point');
@@ -68,6 +90,31 @@ Route.pause();
 assert.equal(Route.isActive(), false);
 Route.open(1346, position);
 assert.equal(Route.view(position).target.routeNumber, 68, 'closing and reopening must preserve unfinished progress');
+
+const transitionCases = [
+  { from: 6, to: 7, aetheryte: 'crown' },
+  { from: 12, to: 13, aetheryte: 'sinking' },
+  { from: 28, to: 29, aetheryte: 'moldering' },
+  { from: 45, to: 46, aetheryte: 'suspended' },
+  { from: 58, to: 59, aetheryte: 'unhallowed' },
+];
+transitionCases.forEach(({ from, to, aetheryte }) => {
+  const row = routes[1346].points[from - 1];
+  position = { x: row[0], y: row[1], z: row[2] };
+  sandbox.OC.Overlay.playerPos = position;
+  Route.restartNearest(1346, position);
+  assert.equal(Route.view(position).target.routeNumber, from);
+  Route.next();
+  view = Route.view(position);
+  assert.equal(view.status, 'transition');
+  assert.equal(view.transition.type, 'return-teleport');
+  assert.equal(view.transition.aetheryteKey, aetheryte);
+  assert.equal(view.transition.nextRouteNumber, to);
+  assert.equal(view.target, null);
+  assert.equal(Route.mapView().active, false);
+  Route.next();
+  assert.equal(Route.view(position).target.routeNumber, to);
+});
 
 const north62 = routes[1346].points[61];
 position = { x: north62[0], y: north62[1], z: north62[2] };
@@ -83,6 +130,21 @@ assert.equal(Route.view(position).target.nodeId, 2072);
 assert.equal(Route.view(position).target.mapId, 1244, 'North Horn point 63 must enter the subterrane map');
 assert.ok(routes[1346].points.slice(62).every((row) => row[3] === 1244),
   'North Horn points 63 through 68 must remain on the subterrane map');
+
+const north1 = routes[1346].points[0];
+position = { x: north1[0], y: north1[1], z: north1[2] };
+sandbox.OC.Overlay.playerPos = position;
+Route.restartNearest(1346, position);
+let northTransitionCount = 0;
+let northAdvanceCount = 0;
+while (!Route.view(position).complete && northAdvanceCount < 100) {
+  if (Route.view(position).transition) northTransitionCount += 1;
+  Route.next();
+  northAdvanceCount += 1;
+}
+assert.equal(Route.view(position).complete, true, 'North Horn must complete after all points and transitions');
+assert.equal(northTransitionCount, 5, 'a basecamp start must cross all five authored segment boundaries');
+assert.equal(northAdvanceCount, 73, 'five transitions must add one confirmation step each');
 
 const south68 = routes[1252].points[67];
 const southOrder = Route._buildOrder(1252, { x: south68[0], y: south68[1], z: south68[2] });

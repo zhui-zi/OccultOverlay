@@ -360,6 +360,8 @@ assert.match(guideStackRule[1], /width:\s*min\(248px/, 'guidance windows must ma
 assert.match(guideStackRule[1], /flex-direction:\s*column/, 'simultaneous guidance windows must stack vertically');
 assert.match(styles, /\.route-guide\s*\{[^}]*--guide-color:\s*#70e7d2/,
   'patrol guidance must use the shared guide shell with its own accent');
+assert.match(styles, /\.route-transition-step\s*\{[^}]*grid-template-columns:\s*22px minmax\(0,\s*1fr\)/,
+  'patrol transitions must keep numbered instructions inside the guide width');
 const radarPanelRule = styles.match(/\.radar-panel\s*\{([^}]*)\}/);
 assert.ok(radarPanelRule, 'radar panel style must exist');
 assert.match(radarPanelRule[1], /left:\s*8px/, 'radar guidance must stay against the left edge');
@@ -399,13 +401,13 @@ assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*att
   'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=139/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=139/, 'the radar state machine must load in the overlay');
-assert.match(index, /js\/route\.js\?v=139/, 'the patrol state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=139') < index.indexOf('js/treasure.js?v=139'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('data/treasureRoutes.js?v=139') < index.indexOf('js/route.js?v=139'), 'patrol points must load before route planning');
-assert.ok(index.indexOf('js/route.js?v=139') < index.indexOf('js/map.js?v=139'), 'patrol state must load before map rendering');
-assert.ok(index.indexOf('js/radar.js?v=139') < index.indexOf('js/map.js?v=139'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=140/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=140/, 'the radar state machine must load in the overlay');
+assert.match(index, /js\/route\.js\?v=140/, 'the patrol state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=140') < index.indexOf('js/treasure.js?v=140'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('data/treasureRoutes.js?v=140') < index.indexOf('js/route.js?v=140'), 'patrol points must load before route planning');
+assert.ok(index.indexOf('js/route.js?v=140') < index.indexOf('js/map.js?v=140'), 'patrol state must load before map rendering');
+assert.ok(index.indexOf('js/radar.js?v=140') < index.indexOf('js/map.js?v=140'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
@@ -424,6 +426,10 @@ Array.from(new Set(layerSandbox.OC.MAP_LAYERS.map(layer => layer.icon))).forEach
   assert.equal(icon.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', iconPath + ' must be a bundled PNG');
 });
 const mainSource = fs.readFileSync(require.resolve('../js/main.js'), 'utf8');
+const i18nSource = fs.readFileSync(require.resolve('../js/i18n.js'), 'utf8');
+['卡纳克城塞', '沉没圣堂前', '腐坏的街道前', '浮游遗迹', '妖火渔村'].forEach(name => {
+  assert.match(i18nSource, new RegExp(name), name + ' must use the local Dalamud game name');
+});
 assert.match(mainSource, /data-treasure-close[\s\S]+?OC\.Treasure\.dismiss/, 'the treasure close button must dismiss only the current guide');
 assert.match(mainSource, /data-route-close[\s\S]+?OC\.Route\.pause/, 'the patrol close button must pause only its guide');
 assert.match(mainSource, /id="guide-stack"[\s\S]+?id="treasure-guide"[\s\S]+?id="route-guide"/,
