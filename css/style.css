@@ -103,6 +103,12 @@ html, body {
   width: min(248px, calc(100vw - 80px)); pointer-events: none;
 }
 .guide-stack.hidden { display: none; }
+.route-dock {
+  position: absolute; top: 100%; right: 64px; left: 8px; z-index: 7;
+  display: flex; justify-content: flex-start; pointer-events: none;
+}
+.route-dock.hidden { display: none; }
+.route-dock .route-guide { width: min(248px, 100%); zoom: var(--ui-scale, 1); }
 .treasure-guide {
   --guide-color: var(--pot); --guide-heading: #d8b4ff; --guide-glow: rgba(176,97,255,0.28);
   width: 100%; padding: 9px 12px;
@@ -197,6 +203,10 @@ html, body {
 .rbtn[data-layer^="pot"]::after { content: var(--pot-label); }
 .rbtn[data-layer="reroll"]::after { content: attr(data-layer-label); }
 .rbtn.panel { font-size: 17px; }
+.rail-tool-group {
+  display: flex; flex: 0 0 auto; flex-direction: column; align-items: center; gap: 2px;
+  padding: 2px; border: 1px solid var(--line); border-radius: 22px; background: rgba(14,20,30,0.52);
+}
 .rail-div { width: 22px; height: 1px; flex: 0 0 1px; background: var(--line); margin: 3px 0; }
 
 /* Popovers */
@@ -351,6 +361,7 @@ html, body {
 /* Collapsed and off-island states retain only the status chips. */
 #app.no-map .map-layer { display: none; }
 #app.no-map .rail { display: none; }
+#app.no-map .route-dock { display: none; }
 #app.no-map .radar-panel:not(.pinned) { display: none; }
 .chip-conn.clickable { cursor: pointer; }
 

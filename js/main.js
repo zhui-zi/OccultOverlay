@@ -176,6 +176,8 @@
       h += '</div>';
       h += '<div id="guide-stack" class="guide-stack hidden">';
       h += '<div id="treasure-guide" class="treasure-guide hidden" role="status" aria-live="polite"></div>';
+      h += '</div>';
+      h += '<div id="route-dock" class="route-dock hidden">';
       h += '<div id="route-guide" class="treasure-guide route-guide hidden" role="status" aria-live="polite"></div>';
       h += '</div>';
       h += '<div id="radar-panel" class="radar-panel hidden" role="status" aria-live="polite"></div>';
@@ -1417,12 +1419,14 @@
 
     updateGuideStack: function () {
       var stack = document.getElementById('guide-stack');
-      if (!stack || !stack.classList) return;
-      var visible = ['treasure-guide', 'route-guide'].some(function (id) {
-        var guide = document.getElementById(id);
-        return !!(guide && guide.classList && !guide.classList.contains('hidden'));
-      });
-      stack.classList.toggle('hidden', !visible);
+      var treasure = document.getElementById('treasure-guide');
+      var treasureVisible = !!(treasure && treasure.classList && !treasure.classList.contains('hidden'));
+      if (stack && stack.classList) stack.classList.toggle('hidden', !treasureVisible);
+      var dock = document.getElementById('route-dock');
+      var route = document.getElementById('route-guide');
+      var routeVisible = !!(route && route.classList && !route.classList.contains('hidden'));
+      if (dock && dock.classList) dock.classList.toggle('hidden', !routeVisible);
+      this.updateMapPlacement();
     },
 
     updateRadarPlacement: function () {
@@ -1474,6 +1478,16 @@
       var bottom = 0;
       layer.style.top = top + 'px';
       layer.style.bottom = bottom + 'px';
+      var routeDock = document.getElementById('route-dock');
+      if (routeDock && routeDock.style) {
+        var layerRect = !noMap && layer.getBoundingClientRect ? layer.getBoundingClientRect() : null;
+        if (layerRect && isFinite(layerRect.top) && isFinite(layerRect.width) && isFinite(layerRect.height)) {
+          var renderedMapSize = Math.min(Number(layerRect.width), Number(layerRect.height));
+          routeDock.style.top = Math.ceil(Number(layerRect.top) - appTop + renderedMapSize + 8) + 'px';
+        } else {
+          routeDock.style.top = '';
+        }
+      }
       return top;
     },
 
@@ -2154,19 +2168,24 @@
   function railHtml() {
     var L = OC.MAP_LAYERS, layers = OC.Settings.get('mapLayers');
     var h = '';
+    var treasureTools = '';
     L.forEach(function (l) {
       if (!OC.MAP.points[l.src] || !OC.MAP.points[l.src].length) return;
       var label = OC.i18n.t('layer_' + l.key);
       var marker = l.key === 'reroll' ? ' data-layer-label="' + esc(OC.i18n.t('layer_short_reroll')) + '"' : '';
-      h += '<button class="rbtn' + (layers[l.key] ? ' on' : '') + '" data-layer="' + l.key + '"' + marker + ' title="' + esc(label) + '" aria-label="' + esc(label) + '" style="--rc:' + l.color + '">' +
+      var button = '<button class="rbtn' + (layers[l.key] ? ' on' : '') + '" data-layer="' + l.key + '"' + marker + ' title="' + esc(label) + '" aria-label="' + esc(label) + '" style="--rc:' + l.color + '">' +
         '<img class="rbtn-icon" src="' + esc(l.icon) + '" alt="" aria-hidden="true"></button>';
+      if (l.key === 'survey') treasureTools += button;
+      else h += button;
     });
     h += '<div class="rail-div"></div>';
     var routeActive = !!(OC.Route && OC.Route.isActive && OC.Route.isActive());
-    h += '<button class="rbtn panel route' + (routeActive ? ' on' : '') + '" data-route-toggle title="' + esc(OC.i18n.t('panel_route')) + '" aria-label="' + esc(OC.i18n.t('panel_route')) + '" aria-pressed="' + (routeActive ? 'true' : 'false') + '" style="--rc:#70e7d2">' +
+    treasureTools += '<button class="rbtn panel route' + (routeActive ? ' on' : '') + '" data-route-toggle title="' + esc(OC.i18n.t('panel_route')) + '" aria-label="' + esc(OC.i18n.t('panel_route')) + '" aria-pressed="' + (routeActive ? 'true' : 'false') + '" style="--rc:#70e7d2">' +
       '<img class="rbtn-icon" src="assets/map-icons/treasure-patrol.png" alt="" aria-hidden="true"></button>';
-    if (App.showsCnDcOverview()) h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + esc(OC.i18n.t('panel_dcpots')) + '" aria-label="' + esc(OC.i18n.t('panel_dcpots')) + '">' +
+    if (App.showsCnDcOverview()) treasureTools += '<button class="rbtn panel dc" data-panel="dcpots" title="' + esc(OC.i18n.t('panel_dcpots')) + '" aria-label="' + esc(OC.i18n.t('panel_dcpots')) + '">' +
       '<img class="rbtn-icon" src="assets/map-icons/pot-overview.png" alt="" aria-hidden="true"></button>';
+    h += '<div class="rail-tool-group" data-rail-group="treasure-tools">' + treasureTools + '</div>';
+    h += '<div class="rail-div"></div>';
     h += '<button class="rbtn panel" data-panel="settings" title="' + OC.i18n.t('panel_settings') + '">⚙</button>';
     return h;
   }

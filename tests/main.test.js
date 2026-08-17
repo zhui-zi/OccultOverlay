@@ -360,6 +360,15 @@ assert.match(guideStackRule[1], /width:\s*min\(248px/, 'guidance windows must ma
 assert.match(guideStackRule[1], /flex-direction:\s*column/, 'simultaneous guidance windows must stack vertically');
 assert.match(styles, /\.route-guide\s*\{[^}]*--guide-color:\s*#70e7d2/,
   'patrol guidance must use the shared guide shell with its own accent');
+assert.match(treasureGuideRule[1], /pointer-events:\s*none/,
+  'guidance panels must keep the map clickable outside their action buttons');
+const routeDockRule = styles.match(/\.route-dock\s*\{([^}]*)\}/);
+assert.ok(routeDockRule, 'patrol guide dock style must exist');
+assert.match(routeDockRule[1], /position:\s*absolute/);
+assert.match(routeDockRule[1], /top:\s*100%/, 'patrol guidance must default below the available page');
+assert.match(routeDockRule[1], /pointer-events:\s*none/, 'the patrol dock must not create a full-width click blocker');
+assert.match(styles, /\.route-dock \.route-guide\s*\{[^}]*zoom:\s*var\(--ui-scale,\s*1\)/,
+  'patrol content scaling must not move its dock above the map edge');
 assert.match(styles, /\.route-transition-step\s*\{[^}]*grid-template-columns:\s*22px minmax\(0,\s*1fr\)/,
   'patrol transitions must keep numbered instructions inside the guide width');
 const radarPanelRule = styles.match(/\.radar-panel\s*\{([^}]*)\}/);
@@ -389,6 +398,8 @@ assert.ok(railRule, 'right-side control rail style must exist');
 assert.match(railRule[1], /background:\s*rgba\(0,\s*0,\s*0,\s*0\.01\)/,
   'the control rail must keep a nonzero alpha hit target for locked Browsingway overlays');
 assert.match(styles, /\.rbtn-icon\s*\{[^}]*width:\s*30px[^}]*height:\s*30px/, 'rail icons must fit inside the circular controls');
+assert.match(styles, /\.rail-tool-group\s*\{[^}]*flex-direction:\s*column[^}]*gap:\s*2px[^}]*border-radius:\s*22px/,
+  'the survey, patrol, and CN pot controls must share one compact vertical group');
 assert.match(styles, /\.rbtn\[data-layer="potN"\]\s*\{[^}]*--pot-label:\s*'N'/,
   'the north Magic Pot control must carry an N marker');
 assert.match(styles, /\.rbtn\[data-layer="potS"\]\s*\{[^}]*--pot-label:\s*'S'/,
@@ -401,13 +412,13 @@ assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*att
   'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=140/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=140/, 'the radar state machine must load in the overlay');
-assert.match(index, /js\/route\.js\?v=140/, 'the patrol state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=140') < index.indexOf('js/treasure.js?v=140'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('data/treasureRoutes.js?v=140') < index.indexOf('js/route.js?v=140'), 'patrol points must load before route planning');
-assert.ok(index.indexOf('js/route.js?v=140') < index.indexOf('js/map.js?v=140'), 'patrol state must load before map rendering');
-assert.ok(index.indexOf('js/radar.js?v=140') < index.indexOf('js/map.js?v=140'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=144/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=144/, 'the radar state machine must load in the overlay');
+assert.match(index, /js\/route\.js\?v=144/, 'the patrol state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=144') < index.indexOf('js/treasure.js?v=144'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('data/treasureRoutes.js?v=144') < index.indexOf('js/route.js?v=144'), 'patrol points must load before route planning');
+assert.ok(index.indexOf('js/route.js?v=144') < index.indexOf('js/map.js?v=144'), 'patrol state must load before map rendering');
+assert.ok(index.indexOf('js/radar.js?v=144') < index.indexOf('js/map.js?v=144'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
@@ -432,14 +443,20 @@ const i18nSource = fs.readFileSync(require.resolve('../js/i18n.js'), 'utf8');
 });
 assert.match(mainSource, /data-treasure-close[\s\S]+?OC\.Treasure\.dismiss/, 'the treasure close button must dismiss only the current guide');
 assert.match(mainSource, /data-route-close[\s\S]+?OC\.Route\.pause/, 'the patrol close button must pause only its guide');
-assert.match(mainSource, /id="guide-stack"[\s\S]+?id="treasure-guide"[\s\S]+?id="route-guide"/,
-  'Magic Pot and patrol guidance must share one stacked window region');
+assert.match(mainSource, /id="guide-stack"[\s\S]+?id="treasure-guide"[\s\S]+?id="route-dock"[\s\S]+?id="route-guide"/,
+  'Magic Pot guidance must float while patrol guidance uses a separate bottom dock');
 assert.doesNotMatch(mainSource, /includeTop\(document\.getElementById\('guide-stack'\)\)/,
-  'guidance windows must float over the map without participating in map placement');
+  'Magic Pot guidance must float without participating in map placement');
+assert.match(mainSource, /renderedMapSize[\s\S]+?routeDock\.style\.top/,
+  'patrol guidance must follow the rendered map bottom without resizing the map');
 assert.match(mainSource, /class="rbtn-icon"[^>]+esc\(l\.icon\)/, 'rail controls must render local icon images');
 assert.doesNotMatch(mainSource, /OC\.iconUrl\(l\.icon\)/, 'rail controls must not depend on a remote icon service');
 assert.match(mainSource, /l\.key === 'reroll'[^\n]+OC\.i18n\.t\('layer_short_reroll'\)/,
   'the reroll icon must render its localized short marker');
+assert.match(mainSource, /if \(l\.key === 'survey'\) treasureTools \+= button;/,
+  'the survey control must join the treasure tool group');
+assert.match(mainSource, /data-rail-group="treasure-tools"[^\n]+treasureTools/,
+  'the treasure tool controls must render inside one rail group');
 assert.ok(mainSource.indexOf('data-route-toggle') < mainSource.indexOf('data-panel="dcpots"'),
   'the patrol button must appear immediately above the pot overview button');
 assert.match(mainSource, /data-route-toggle[\s\S]+?assets\/map-icons\/treasure-patrol\.png/, 'the patrol button must use its generated icon');
@@ -488,7 +505,21 @@ const guideStackHost = {
   classList: { contains(name) { return name === 'hidden' && guideStackHidden; } },
   getBoundingClientRect() { return { top: 52, bottom: 52 + guideStackHeight, height: guideStackHeight }; },
 };
-const mapHost = { style: {} };
+let routeDockHidden = true;
+let routeDockHeight = 0;
+const routeDockHost = {
+  style: {},
+  get offsetHeight() { return routeDockHeight; },
+  classList: { contains(name) { return name === 'hidden' && routeDockHidden; } },
+  getBoundingClientRect() { return { top: 720 - routeDockHeight, bottom: 720, height: routeDockHeight }; },
+};
+const mapHost = {
+  style: {},
+  getBoundingClientRect() {
+    const top = Number.parseFloat(this.style.top || '0') || 0;
+    return { top, bottom: 720, width: 600, height: 720 - top };
+  },
+};
 let noMap = false;
 const appHost = {
   classList: { contains(name) { return name === 'no-map' && noMap; } },
@@ -506,6 +537,7 @@ sandbox.document.getElementById = id => ({
   'radar-panel': radarHost,
   'status-chips': statusChips,
   'guide-stack': guideStackHost,
+  'route-dock': routeDockHost,
 }[id] || originalGetElementById(id));
 sandbox.OC.Radar.targets = () => [radarTarget];
 sandbox.OC.App.updateRadar();
@@ -552,8 +584,12 @@ assert.equal(radarHost.style.top, '', 'an active Magic Pot guide must not move t
 assert.equal(mapHost.style.top, '46px', 'an active Magic Pot guide must float over the map without moving it');
 assert.equal(mapHost.style.bottom, '0px');
 guideStackHeight = 208;
+routeDockHidden = false;
+routeDockHeight = 208;
 sandbox.OC.App.updateRadarPlacement();
-assert.equal(mapHost.style.top, '46px', 'stacked Magic Pot and patrol guides must not resize the map');
+assert.equal(mapHost.style.top, '46px', 'the patrol dock must not move the top edge of the map');
+assert.equal(mapHost.style.bottom, '0px', 'the patrol guide must not resize the map');
+assert.equal(routeDockHost.style.top, '654px', 'the patrol guide must begin below the rendered square map');
 noMap = true;
 sandbox.OC.Radar.targets = () => [];
 sandbox.OC.App.updateRadar();
@@ -561,6 +597,7 @@ assert.equal(radarClasses.has('hidden'), true, 'a pinned radar must stay hidden 
 assert.equal(radarHost.innerHTML, '');
 assert.equal(radarHost.style.top, '46px', 'guide windows must not move the pinned radar');
 assert.equal(radarHost.style.bottom, 'auto');
+assert.equal(mapHost.style.bottom, '0px', 'a collapsed map must not retain the hidden patrol dock space');
 sandbox.OC.Radar.targets = () => [radarTarget];
 sandbox.OC.App.updateRadar();
 assert.equal(radarClasses.has('hidden'), false, 'a pinned radar with targets must remain visible when the map is collapsed');
