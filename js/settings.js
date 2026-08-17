@@ -3,7 +3,7 @@
 
   var OC = global.OC = global.OC || {};
   var KEY = 'occultOverlay.settings';
-  var SCHEMA_V = 10;
+  var SCHEMA_V = 11;
   var hostLanguage = null;
 
   function normalizeLanguage(value) {
@@ -21,6 +21,19 @@
 
   function effectiveLanguage(mode) {
     return mode === 'auto' ? systemLanguage() : (['zh', 'en', 'ja'].indexOf(mode) >= 0 ? mode : systemLanguage());
+  }
+
+  function normalizePotAlertMinutes(value) {
+    var values = Array.isArray(value) ? value : String(value == null ? '' : value).split(/[,;\s，；、]+/);
+    var seen = {};
+    var minutes = [];
+    values.forEach(function (item) {
+      var number = Number(item);
+      if (number !== Math.floor(number) || number < 1 || number > 30 || seen[number]) return;
+      seen[number] = true;
+      minutes.push(number);
+    });
+    return (minutes.length ? minutes : [3]).sort(function (a, b) { return b - a; });
   }
 
   var defaults = {
@@ -47,7 +60,8 @@
     useTts: true,               // Voice alerts; fall back to a tone when unavailable.
     alertAllEncounters: false,  // Announce all CEs, FATEs, and Magic Pots.
     alertTower: false,          // Announce Forked Tower spawns and show its chip.
-    alertPot: false,            // Alert when a Magic Pot spawns.
+    alertPot: false,            // Alert before a Magic Pot spawns.
+    potAlertMinutes: [3],       // Advance alert times in minutes.
     alertColors: {},            // Demiatma color alerts: { itemId: true }.
     _alertScope: 'dc',          // Alert scope: dc limits alerts to the current region.
     mapLayers: { bronze: false, silver: false, potN: false, potS: false, reroll: false, bunny: false, survey: false }
@@ -82,6 +96,7 @@
       if (['cn', 'global'].indexOf(out.dataRegion) < 0) {
         out.dataRegion = effectiveLanguage(out.lang) === 'zh' ? 'cn' : 'global';
       }
+      out.potAlertMinutes = normalizePotAlertMinutes(out.potAlertMinutes);
       return out;
     } catch (e) { return clone(defaults); }
   }
@@ -95,8 +110,15 @@
     get: function (k) { return k === 'lang' ? effectiveLanguage(data.lang) : data[k]; },
     getRaw: function (k) { return data[k]; },
     getAll: function () { return data; },
-    set: function (k, v) { data[k] = v; save(); return v; },
-    setMany: function (obj) { for (var k in obj) data[k] = obj[k]; save(); },
+    set: function (k, v) {
+      data[k] = k === 'potAlertMinutes' ? normalizePotAlertMinutes(v) : v;
+      save();
+      return data[k];
+    },
+    setMany: function (obj) {
+      for (var k in obj) data[k] = k === 'potAlertMinutes' ? normalizePotAlertMinutes(obj[k]) : obj[k];
+      save();
+    },
     toggleLayer: function (name) { data.mapLayers[name] = !data.mapLayers[name]; save(); return data.mapLayers[name]; },
     systemLanguage: systemLanguage,
     setSystemLanguage: function (value) {

@@ -18,6 +18,7 @@ let showActiveChips = true;
 let alertAllEncounters = false;
 let alertTower = false;
 let alertPot = false;
+let potAlertMinutes = [3];
 let alertColors = {};
 let treasureGuide = true;
 let radarCoffers = true;
@@ -107,6 +108,7 @@ const sandbox = {
         if (key === 'alertAllEncounters') return alertAllEncounters;
         if (key === 'alertTower') return alertTower;
         if (key === 'alertPot') return alertPot;
+        if (key === 'potAlertMinutes') return potAlertMinutes;
         if (key === 'alertColors') return alertColors;
         if (key === 'treasureGuide') return treasureGuide;
         if (key === 'radarCoffers') return radarCoffers;
@@ -121,6 +123,8 @@ const sandbox = {
         if (key === 'lang') currentLanguage = value;
         if (key === 'dataRegion') currentDataRegion = value;
         if (key === 'alertTower') alertTower = value;
+        if (key === 'alertPot') alertPot = value;
+        if (key === 'potAlertMinutes') potAlertMinutes = value;
         if (key === 'treasureGuide') treasureGuide = value;
         if (key === 'radarCoffers') radarCoffers = value;
         if (key === 'radarCarrots') radarCarrots = value;
@@ -151,7 +155,8 @@ const sandbox = {
     i18n: {
       t(key) {
         return {
-          notify_ce: 'CE', notify_fate: 'FATE', notify_pot: 'Pot',
+          notify_ce: 'CE', notify_fate: 'FATE', notify_pot: 'Pot', pot_north: 'N', pot_south: 'S',
+          pot_pre_alert: 'Pot spawning soon', minute_short: 'min',
           radar_empty: 'No coffer or carrot detected', radar_silver: 'Silver coffer', direction_east: 'East',
         }[key] || key;
       },
@@ -389,10 +394,10 @@ assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*att
   'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=132/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=132/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=132') < index.indexOf('js/treasure.js?v=132'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=132') < index.indexOf('js/map.js?v=132'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=133/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=133/, 'the radar state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=133') < index.indexOf('js/treasure.js?v=133'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('js/radar.js?v=133') < index.indexOf('js/map.js?v=133'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
@@ -1023,6 +1028,51 @@ sandbox.OC.App.fireAlert = function () { previewAlerted = true; };
 sandbox.OC.App.checkPotPreAlert();
 assert.equal(previewAlerted, false, 'read-only preview must never emit a pot pre-alert');
 sandbox.OC.App._previewIsland = null;
+
+const originalLocalPotInfo = sandbox.OC.App.localPotInfo;
+const potPreAlerts = [];
+const nextPotEpoch = 2000000000;
+potAlertMinutes = [10, 5, 3, 1];
+sandbox.OC.App.localPotInfo = function () {
+  return { alive: false, nextEpoch: nextPotEpoch, side: 'north' };
+};
+sandbox.OC.App.fireAlert = function (kind, message, key) {
+  potPreAlerts.push({ kind, message, key });
+};
+sandbox.OC.App._potAlertedFor = null;
+sandbox.Date = { now() { return (nextPotEpoch - 600) * 1000; } };
+sandbox.OC.App.checkPotPreAlert();
+sandbox.OC.App.checkPotPreAlert();
+sandbox.Date = { now() { return (nextPotEpoch - 300) * 1000; } };
+sandbox.OC.App.checkPotPreAlert();
+sandbox.Date = { now() { return (nextPotEpoch - 180) * 1000; } };
+sandbox.OC.App.checkPotPreAlert();
+sandbox.Date = { now() { return (nextPotEpoch - 60) * 1000; } };
+sandbox.OC.App.checkPotPreAlert();
+assert.deepEqual(potPreAlerts.map((entry) => entry.message), [
+  'Pot spawning soon · 10 min · N',
+  'Pot spawning soon · 5 min · N',
+  'Pot spawning soon · 3 min · N',
+  'Pot spawning soon · 1 min · N',
+]);
+assert.deepEqual(potPreAlerts.map((entry) => entry.key), [
+  'potpre:6666667:10',
+  'potpre:6666667:5',
+  'potpre:6666667:3',
+  'potpre:6666667:1',
+]);
+
+potPreAlerts.length = 0;
+sandbox.OC.App._potAlertedFor = null;
+sandbox.Date = { now() { return (nextPotEpoch - 120) * 1000; } };
+sandbox.OC.App.checkPotPreAlert();
+sandbox.OC.App.checkPotPreAlert();
+assert.deepEqual(potPreAlerts.map((entry) => entry.message), [
+  'Pot spawning soon · 3 min · N',
+], 'a late load must emit only the closest missed reminder without a burst');
+sandbox.Date = Date;
+sandbox.OC.App.localPotInfo = originalLocalPotInfo;
+potAlertMinutes = [3];
 alertPot = false;
 
 const alerts = [];
@@ -1086,10 +1136,22 @@ assert.deepEqual(alerts.slice(4).map((entry) => entry.message), [
   'Test FATE · Test Dispeller',
   'Test Pot',
 ]);
+alertPot = false;
+potAlertMinutes = [3];
 
+const potAlertGroup = { classList: { toggle(name, enabled) { this[name] = enabled; } } };
 const settingsControls = {
   '#s-op': { value: '0.9', addEventListener() {} },
   '#s-scale': { value: '1', addEventListener() {} },
+  '#a-pot': {
+    checked: false,
+    addEventListener(type, handler) { if (type === 'change') this.change = handler; },
+  },
+  '#a-pot-minutes': {
+    value: '3',
+    disabled: true,
+    addEventListener(type, handler) { this[type] = handler; },
+  },
   '#s-chips': { checked: true, addEventListener() {} },
   '#s-treasure': {
     checked: true,
@@ -1116,6 +1178,7 @@ const settingsControls = {
 const settingsPop = {
   innerHTML: '',
   querySelector(selector) {
+    if (selector === '[data-pot-alert-dependent]') return potAlertGroup;
     return settingsControls[selector] || null;
   },
   querySelectorAll() {
@@ -1133,6 +1196,7 @@ assert.match(settingsPop.innerHTML, /data-settings-page="treasure" role="tabpane
 assert.match(settingsPop.innerHTML, /settings_locale_title/);
 assert.match(settingsPop.innerHTML, /settings_display_title/);
 assert.match(settingsPop.innerHTML, /settings_alert_rules/);
+assert.match(settingsPop.innerHTML, /id="a-pot-minutes"[^>]+value="3"[^>]+disabled/);
 assert.match(settingsPop.innerHTML, /class="choice-grid lang-choice"/);
 assert.match(settingsPop.innerHTML, /data-lang="auto" aria-pressed="false">lang_auto/);
 assert.match(settingsPop.innerHTML, /class="choice-btn on" data-lang="en" aria-pressed="true">English/);
@@ -1156,6 +1220,16 @@ assert.match(settingsPop.innerHTML, /Test Dispeller/);
 assert.match(settingsPop.innerHTML, /Test Dispeller Beta/);
 assert.match(settingsPop.innerHTML, /Test Dispeller Gamma/);
 assert.doesNotMatch(settingsPop.innerHTML, /Test Demiatma/);
+
+assert.equal(settingsControls['#a-pot-minutes'].disabled, true, 'pot reminder times must be disabled with the alert');
+settingsControls['#a-pot'].checked = true;
+settingsControls['#a-pot'].change();
+assert.equal(alertPot, true, 'the pot alert switch must persist');
+assert.equal(settingsControls['#a-pot-minutes'].disabled, false, 'enabling pot alerts must enable the reminder editor');
+settingsControls['#a-pot-minutes'].value = '5，10; 3 5';
+settingsControls['#a-pot-minutes'].blur();
+assert.deepEqual(Array.from(potAlertMinutes), [10, 5, 3], 'the reminder editor must support multiple custom minutes');
+assert.equal(settingsControls['#a-pot-minutes'].value, '10, 5, 3', 'the reminder editor must show the normalized list');
 
 settingsControls['#s-treasure'].checked = false;
 settingsControls['#s-treasure'].change();

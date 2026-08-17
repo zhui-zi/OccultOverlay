@@ -29,6 +29,7 @@ assert.equal(settings.getRaw('lang'), 'auto');
 assert.equal(settings.get('lang'), 'ja');
 assert.equal(settings.get('dataRegion'), 'global');
 assert.equal(settings.get('alertTower'), false);
+assert.deepEqual(Array.from(settings.get('potAlertMinutes')), [3]);
 assert.equal(settings.get('treasureGuide'), true);
 assert.equal(settings.get('radarCoffers'), true);
 assert.equal(settings.get('radarCarrots'), true);
@@ -75,6 +76,12 @@ assert.equal(loaded.settings.get('radarPinned'), true, 'the pinned radar switch 
 loaded.settings.set('radarVoice', false);
 loaded = loadSettings('en-US', loaded.stored());
 assert.equal(loaded.settings.get('radarVoice'), false, 'the radar voice switch must survive reload independently');
+loaded.settings.set('potAlertMinutes', '5，10; 3 5 0 31 2.5');
+assert.deepEqual(Array.from(loaded.settings.get('potAlertMinutes')), [10, 5, 3], 'pot reminders must normalize, deduplicate, and sort');
+loaded = loadSettings('en-US', loaded.stored());
+assert.deepEqual(Array.from(loaded.settings.get('potAlertMinutes')), [10, 5, 3], 'custom pot reminders must survive reload');
+loaded.settings.set('potAlertMinutes', '');
+assert.deepEqual(Array.from(loaded.settings.get('potAlertMinutes')), [3], 'an empty reminder list must retain the safe default');
 
 settings = loadSettings('zh-Hans-CN').settings;
 assert.equal(settings.get('lang'), 'zh');

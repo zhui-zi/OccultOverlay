@@ -1743,19 +1743,29 @@
       });
     },
 
-    // Magic Pot: alert three minutes before the expected spawn, not at spawn time.
+    // Magic Pot: alert once at each configured time before the expected spawn.
     checkPotPreAlert: function () {
       if (!OC.Settings.get('alertPot')) return;
       var mine = this.localPotInfo();
       if (!mine || mine.alive || !mine.nextEpoch) return;
       var eta = mine.nextEpoch - Math.floor(Date.now() / 1000);
+      if (eta <= 0) return;
+      var minutes = normalizePotAlertMinutes(OC.Settings.get('potAlertMinutes'));
       // Key alerts by a five-minute bucket to avoid duplicates from reporter timestamp jitter.
       var slot = Math.round(mine.nextEpoch / 300);
-      if (eta > 0 && eta <= 180 && this._potAlertedFor !== slot) {
-        this._potAlertedFor = slot;
-        var side = mine.side === 'north' ? t('pot_north') : mine.side === 'south' ? t('pot_south') : '';
-        App.fireAlert('pot', t('pot_pre_alert') + (side ? ' · ' + side : ''), 'potpre');
-      }
+      var state = this._potAlertedFor;
+      if (!state || state.slot !== slot) state = this._potAlertedFor = { slot: slot, minutes: {} };
+      var due = minutes.filter(function (minute) {
+        return eta <= minute * 60 && !state.minutes[minute];
+      });
+      if (!due.length) return;
+      // On a late load, skip older missed alerts and announce only the closest configured time.
+      due.forEach(function (minute) { state.minutes[minute] = true; });
+      var reminder = Math.min.apply(Math, due);
+      var side = mine.side === 'north' ? t('pot_north') : mine.side === 'south' ? t('pot_south') : '';
+      var message = t('pot_pre_alert') + ' · ' + reminder + ' ' + t('minute_short');
+      if (side) message += ' · ' + side;
+      App.fireAlert('pot', message, 'potpre:' + slot + ':' + reminder);
     },
 
     fireAlert: function (kind, msg, dedupKey) {
@@ -1855,6 +1865,9 @@
       h += rowChk('a-all', t('alert_all'), g('alertAllEncounters'));
       h += rowChk('a-tower', t('alert_tower'), g('alertTower'));
       h += rowChk('a-pot', t('alert_pot_opt'), g('alertPot'));
+      h += '<div class="settings-dependent' + (g('alertPot') ? '' : ' is-disabled') + '" data-pot-alert-dependent>';
+      h += textSettingRow('a-pot-minutes', t('alert_pot_minutes'), t('alert_pot_minutes_help'), normalizePotAlertMinutes(g('potAlertMinutes')).join(', '), !g('alertPot'));
+      h += '</div>';
       h += '</div>';
       h += '<div class="settings-card"><div class="settings-card-title">' + t('settings_drop_alerts') + '</div>';
       h += '<div class="settings-card-help">' + t(territory === 1346 ? 'alert_dispeller' : 'alert_demiatma') + '</div><div class="color-grid">';
@@ -1901,7 +1914,18 @@
       pop.querySelectorAll('button[data-data-region]').forEach(function (button) {
         button.addEventListener('click', function () { App.changeDataRegion(button.getAttribute('data-data-region')); });
       });
-      bindChk(pop, 'a-pot', 'alertPot');
+      bindChk(pop, 'a-pot', 'alertPot', function (enabled) { syncPotAlertSettings(pop, enabled); });
+      var potMinutes = pop.querySelector('#a-pot-minutes');
+      if (potMinutes) {
+        var savePotMinutes = function () {
+          var value = normalizePotAlertMinutes(potMinutes.value);
+          OC.Settings.set('potAlertMinutes', value);
+          potMinutes.value = value.join(', ');
+        };
+        potMinutes.addEventListener('change', savePotMinutes);
+        potMinutes.addEventListener('blur', savePotMinutes);
+      }
+      syncPotAlertSettings(pop, !!g('alertPot'));
       bindChk(pop, 'a-all', 'alertAllEncounters');
       bindChk(pop, 'a-tower', 'alertTower', function () { App.updateActive(); });
       bindChk(pop, 'a-tts', 'useTts');
@@ -1959,6 +1983,18 @@
   }
 
   function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }
+  function normalizePotAlertMinutes(value) {
+    var values = Array.isArray(value) ? value : String(value == null ? '' : value).split(/[,;\s，；、]+/);
+    var seen = {};
+    var minutes = [];
+    values.forEach(function (item) {
+      var number = Number(item);
+      if (number !== Math.floor(number) || number < 1 || number > 30 || seen[number]) return;
+      seen[number] = true;
+      minutes.push(number);
+    });
+    return (minutes.length ? minutes : [3]).sort(function (a, b) { return b - a; });
+  }
   function isActiveCandidate(e) {
     return !!(e && (Number(e.state) > 0 ||
       (e.spawn_time > 0 && (e.death_time <= 0 || e.death_time < e.spawn_time))));
@@ -1999,9 +2035,19 @@
       if (input) input.disabled = !enabled;
     });
   }
+  function syncPotAlertSettings(pop, enabled) {
+    var group = pop.querySelector('[data-pot-alert-dependent]');
+    if (group) group.classList.toggle('is-disabled', !enabled);
+    var input = pop.querySelector('#a-pot-minutes');
+    if (input) input.disabled = !enabled;
+  }
   function sliderRow(id, outputId, label, value, min, max, step, displayValue) {
     return '<label class="slider-setting" for="' + id + '"><span class="slider-label"><span class="setting-name">' + label + '</span><output id="' + outputId + '">' + displayValue + '</output></span>' +
       '<input id="' + id + '" type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + value + '"></label>';
+  }
+  function textSettingRow(id, label, help, value, disabled) {
+    return '<label class="text-setting" for="' + id + '"><span class="setting-name">' + label + '</span>' +
+      '<span class="setting-help">' + help + '</span><input id="' + id + '" type="text" inputmode="numeric" value="' + esc(value) + '"' + (disabled ? ' disabled' : '') + '></label>';
   }
   function choiceButtons(items, selected, attribute) {
     return items.map(function (item) {
