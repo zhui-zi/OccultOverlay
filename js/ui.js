@@ -164,12 +164,21 @@
     host.classList.toggle('danger', !!(view.target && view.target.dangerous));
   };
 
-  UI.renderRoutePanel = function (host, view) {
+  UI.renderRouteGuide = function (host, view) {
     if (!host) return;
+    if (!view || !view.active) {
+      host.classList.add('hidden');
+      host.innerHTML = '';
+      return;
+    }
+
     var closeLabel = esc(t('close'));
-    var h = '<div class="panel-head"><span>' + esc(t('route_title')) + '</span>' +
-      '<button class="pclose" data-close>' + closeLabel + '</button></div>' +
-      '<div class="panel-body route-panel-body">';
+    var stage = view.supported && view.total
+      ? Number(view.complete ? view.total : view.progress) + ' / ' + Number(view.total)
+      : '';
+    var h = '<div class="tg-head"><span>' + esc(t('route_title')) + '</span><span class="tg-head-actions">' +
+      '<span class="tg-stage">' + stage + '</span>' +
+      '<button type="button" class="tg-close" data-route-close title="' + closeLabel + '" aria-label="' + closeLabel + '">×</button></span></div>';
     if (!view || !view.supported) {
       h += '<div class="route-empty">' + esc(t('route_unsupported')) + '</div>';
     } else if (view.complete) {
@@ -185,13 +194,10 @@
       var distanceText = isFinite(distance) ? distance.toFixed(1) : '?';
       var routeNumber = Number(view.target.displayNumber) || Number(view.target.routeNumber) || Number(view.progress) || 1;
       var floorKey = view.target.layerKey === 'subterrane' ? 'route_layer_subterrane' : 'route_layer_surface';
-      h += '<div class="route-progress"><span>' + esc(t('route_progress')) + '</span><b>' +
-        Number(view.progress) + ' / ' + Number(view.total) + '</b></div>';
-      h += '<div class="route-target"><span class="route-number">' + routeNumber + '</span>' +
-        '<span class="route-arrow" aria-hidden="true"' + arrowStyle + '>' + (hasBearing ? '↑' : '●') + '</span>' +
-        '<div class="route-destination"><strong>' + esc(t(hasBearing ? 'direction_' + view.target.directionKey : 'route_arrived')) + '</strong>' +
+      h += '<div class="tg-route"><span class="tg-arrow" aria-hidden="true"' + arrowStyle + '>' + (hasBearing ? '↑' : '●') + '</span>' +
+        '<div class="tg-destination"><strong>' + esc(t(hasBearing ? 'direction_' + view.target.directionKey : 'route_arrived')) + '</strong>' +
         '<span>' + distanceText + ' m</span></div></div>';
-      h += '<div class="route-meta">' + esc(t('route_point')) + ' ' + routeNumber +
+      h += '<div class="tg-meta">' + esc(t('route_point')) + ' ' + routeNumber +
         ' · ' + esc(t(floorKey)) + '</div>';
       if (OC.MAP && Number(OC.MAP.mapId) && Number(OC.MAP.mapId) !== Number(view.target.mapId)) {
         h += '<div class="route-layer-hint">' + esc(t('route_change_layer')) + ' ' + esc(t(floorKey)) + '</div>';
@@ -201,8 +207,9 @@
       '<button type="button" data-route-action="previous"' + (!view || (!view.complete && !view.visited) ? ' disabled' : '') + '>' + esc(t('route_previous')) + '</button>' +
       '<button type="button" data-route-action="restart">' + esc(t('route_restart')) + '</button>' +
       '<button type="button" data-route-action="next"' + (!view || view.complete || !view.target ? ' disabled' : '') + '>' + esc(t('route_next')) + '</button>' +
-      '</div></div>';
+      '</div>';
     host.innerHTML = h;
+    host.classList.remove('hidden');
   };
 
   function bindMonsterImages(host) {

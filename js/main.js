@@ -91,6 +91,7 @@
       OC.Map.render(document.getElementById('mapLayer'));
       this.updateChips();
       this.updateTreasureGuide();
+      this.updateRouteGuide();
       this.updateRadar();
       if (this.openPanel) this.renderPanel();
     },
@@ -146,9 +147,8 @@
       if (OC.Route) {
         OC.Route.onChange(function (view) {
           OC.Map.updateRoute(document.getElementById('mapLayer'));
-          if (App.openPanel === 'route' && OC.UI.renderRoutePanel) {
-            OC.UI.renderRoutePanel(document.getElementById('popover'), view);
-          }
+          App.updateRouteGuide(view);
+          App.syncRouteButton();
         });
       }
       this.wireOverlay();
@@ -174,7 +174,10 @@
       h += '<div id="chip-pot" class="chip chip-pot clickable" title="' + t('my_island_hint') + '"></div>';
       h += '<div id="chips-active" class="chips-active"></div>';
       h += '</div>';
+      h += '<div id="guide-stack" class="guide-stack hidden">';
       h += '<div id="treasure-guide" class="treasure-guide hidden" role="status" aria-live="polite"></div>';
+      h += '<div id="route-guide" class="treasure-guide route-guide hidden" role="status" aria-live="polite"></div>';
+      h += '</div>';
       h += '<div id="radar-panel" class="radar-panel hidden" role="status" aria-live="polite"></div>';
       h += '<div class="rail">' + railHtml() + '</div>';
       h += '<div id="popover" class="popover hidden"></div>';
@@ -201,15 +204,23 @@
         e.stopPropagation();
         if (OC.Treasure && OC.Treasure.dismiss) OC.Treasure.dismiss();
       });
-      var pop = document.getElementById('popover');
-      pop.addEventListener('click', function (e) {
-        if (e.target.closest('[data-close]')) App.closePanel();
+      document.getElementById('route-guide').addEventListener('click', function (e) {
+        if (!OC.Route) return;
+        if (e.target.closest('[data-route-close]')) {
+          e.stopPropagation();
+          OC.Route.pause();
+          return;
+        }
         var routeAction = e.target.closest('[data-route-action]');
-        if (!routeAction || !OC.Route) return;
+        if (!routeAction) return;
         var action = routeAction.getAttribute('data-route-action');
         if (action === 'previous') OC.Route.previous();
         else if (action === 'next') OC.Route.next();
         else if (action === 'restart') OC.Route.restartNearest(OC.Overlay.territoryId, OC.Overlay.playerPos);
+      });
+      var pop = document.getElementById('popover');
+      pop.addEventListener('click', function (e) {
+        if (e.target.closest('[data-close]')) App.closePanel();
       });
     },
 
@@ -224,6 +235,8 @@
       app.querySelectorAll('.rbtn[data-panel]').forEach(function (b) {
         b.addEventListener('click', function () { App.togglePanel(b.getAttribute('data-panel')); });
       });
+      var routeButton = app.querySelector('[data-route-toggle]');
+      if (routeButton) routeButton.addEventListener('click', function () { App.toggleRouteGuide(); });
     },
 
     refreshRail: function () {
@@ -888,15 +901,12 @@
     togglePanel: function (which) {
       if (which === 'dcpots' && !this.showsCnDcOverview()) return;
       if (this.openPanel === which) return this.closePanel();
-      if (this.openPanel === 'route' && OC.Route) OC.Route.pause();
       this.openPanel = which;
       document.getElementById('popover').classList.remove('hidden');
       if (which === 'dcpots') this.fetchDc();
-      if (which === 'route' && OC.Route) OC.Route.open(OC.Overlay.territoryId, OC.Overlay.playerPos);
       this.renderPanel();
     },
     closePanel: function () {
-      if (this.openPanel === 'route' && OC.Route) OC.Route.pause();
       this.openPanel = null;
       State.detailId = null; State.detail = null; State.detailLocating = false;
       document.getElementById('popover').classList.add('hidden');
@@ -911,9 +921,7 @@
       if (this.openPanel === 'dcpots') OC.UI.renderDcPots(pop, this._dc, !this._dcLoaded);
       else if (this.openPanel === 'battle') OC.UI.renderBattlePanel(pop, State.detail, State.detailId, State.detailLocating);
       else if (this.openPanel === 'settings') this.renderSettings(pop);
-      else if (this.openPanel === 'route' && OC.UI.renderRoutePanel) OC.UI.renderRoutePanel(pop, OC.Route && OC.Route.view(OC.Overlay.playerPos));
-      pop.classList.toggle('compact', this.openPanel === 'dcpots' || this.openPanel === 'route');
-      pop.classList.toggle('route-popover', this.openPanel === 'route');
+      pop.classList.toggle('compact', this.openPanel === 'dcpots');
       var newBody = pop.querySelector('.panel-body');
       if (newBody && scroll) newBody.scrollTop = scroll;
     },
@@ -1383,6 +1391,38 @@
       var host = document.getElementById('treasure-guide');
       if (!host || !OC.UI.renderTreasureGuide) return;
       OC.UI.renderTreasureGuide(host, view || (OC.Treasure && OC.Treasure.view()));
+      this.updateGuideStack();
+    },
+
+    toggleRouteGuide: function () {
+      if (!OC.Route) return;
+      if (OC.Route.isActive && OC.Route.isActive()) OC.Route.pause();
+      else OC.Route.open(OC.Overlay.territoryId, OC.Overlay.playerPos);
+    },
+
+    updateRouteGuide: function (view) {
+      var host = document.getElementById('route-guide');
+      if (!host || !OC.UI.renderRouteGuide) return;
+      OC.UI.renderRouteGuide(host, view || (OC.Route && OC.Route.view(OC.Overlay.playerPos)));
+      this.updateGuideStack();
+    },
+
+    syncRouteButton: function () {
+      var button = document.querySelector('[data-route-toggle]');
+      if (!button) return;
+      var active = !!(OC.Route && OC.Route.isActive && OC.Route.isActive());
+      button.classList.toggle('on', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    },
+
+    updateGuideStack: function () {
+      var stack = document.getElementById('guide-stack');
+      if (!stack || !stack.classList) return;
+      var visible = ['treasure-guide', 'route-guide'].some(function (id) {
+        var guide = document.getElementById(id);
+        return !!(guide && guide.classList && !guide.classList.contains('hidden'));
+      });
+      stack.classList.toggle('hidden', !visible);
       this.updateRadarPlacement();
     },
 
@@ -1404,10 +1444,10 @@
       var top = 8;
       var chips = document.getElementById('status-chips');
       if (chips) top = Math.max(top, Number(chips.offsetTop || 0) + Number(chips.offsetHeight || 0) + 8);
-      var guide = document.getElementById('treasure-guide');
-      var guideHidden = guide && guide.classList && guide.classList.contains && guide.classList.contains('hidden');
-      if (guide && !guideHidden) {
-        top = Math.max(top, Number(guide.offsetTop || 0) + Number(guide.offsetHeight || 0) + 8);
+      var guideStack = document.getElementById('guide-stack');
+      var guideStackHidden = guideStack && guideStack.classList && guideStack.classList.contains && guideStack.classList.contains('hidden');
+      if (guideStack && !guideStackHidden) {
+        top = Math.max(top, Number(guideStack.offsetTop || 0) + Number(guideStack.offsetHeight || 0) + 8);
       }
       host.style.top = Math.ceil(top) + 'px';
       host.style.bottom = 'auto';
@@ -1434,7 +1474,7 @@
       }
 
       includeTop(document.getElementById('status-chips'));
-      includeTop(document.getElementById('treasure-guide'));
+      includeTop(document.getElementById('guide-stack'));
       if (noMap && OC.Settings.get('radarPinned')) includeTop(document.getElementById('radar-panel'));
 
       var top = topEdge > 0 ? Math.max(0, Math.ceil(topEdge + 8)) : 0;
@@ -2129,7 +2169,8 @@
         '<img class="rbtn-icon" src="' + esc(l.icon) + '" alt="" aria-hidden="true"></button>';
     });
     h += '<div class="rail-div"></div>';
-    h += '<button class="rbtn panel route" data-panel="route" title="' + esc(OC.i18n.t('panel_route')) + '" aria-label="' + esc(OC.i18n.t('panel_route')) + '" style="--rc:#70e7d2">' +
+    var routeActive = !!(OC.Route && OC.Route.isActive && OC.Route.isActive());
+    h += '<button class="rbtn panel route' + (routeActive ? ' on' : '') + '" data-route-toggle title="' + esc(OC.i18n.t('panel_route')) + '" aria-label="' + esc(OC.i18n.t('panel_route')) + '" aria-pressed="' + (routeActive ? 'true' : 'false') + '" style="--rc:#70e7d2">' +
       '<img class="rbtn-icon" src="assets/map-icons/treasure-patrol.png" alt="" aria-hidden="true"></button>';
     if (App.showsCnDcOverview()) h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + esc(OC.i18n.t('panel_dcpots')) + '" aria-label="' + esc(OC.i18n.t('panel_dcpots')) + '">' +
       '<img class="rbtn-icon" src="assets/map-icons/pot-overview.png" alt="" aria-hidden="true"></button>';

@@ -206,8 +206,16 @@ sandbox.OC.UI.renderTreasureGuide(guideHost, { active: true, dismissed: true });
 assert.equal(guideClasses.has('hidden'), true, 'manual close must hide only the guide window');
 assert.equal(guideHost.innerHTML, '');
 
-const routeHost = { innerHTML: '' };
-sandbox.OC.UI.renderRoutePanel(routeHost, {
+const routeClasses = new Set(['hidden']);
+const routeHost = {
+  innerHTML: '',
+  classList: {
+    add(name) { routeClasses.add(name); },
+    remove(name) { routeClasses.delete(name); },
+  },
+};
+sandbox.OC.UI.renderRouteGuide(routeHost, {
+  active: true,
   supported: true,
   complete: false,
   status: 'ready',
@@ -223,9 +231,15 @@ sandbox.OC.UI.renderRoutePanel(routeHost, {
     mapId: 1244,
   },
 });
+assert.equal(routeClasses.has('hidden'), false);
 assert.match(routeHost.innerHTML, /Treasure Patrol/);
 assert.match(routeHost.innerHTML, /4 \/ 68/);
-assert.match(routeHost.innerHTML, /class="route-number">17</);
+assert.match(routeHost.innerHTML, /class="tg-head"/);
+assert.match(routeHost.innerHTML, /class="tg-route"/);
+assert.match(routeHost.innerHTML, /class="tg-arrow"/);
+assert.match(routeHost.innerHTML, /class="tg-destination"/);
+assert.match(routeHost.innerHTML, /class="tg-meta">Route point 17 · Subterrane</);
+assert.match(routeHost.innerHTML, /data-route-close/);
 assert.match(routeHost.innerHTML, /transform:rotate\(73\.2deg\)/, 'the patrol arrow must use the exact live bearing');
 assert.match(routeHost.innerHTML, />East</);
 assert.match(routeHost.innerHTML, /42\.4 m/);
@@ -234,7 +248,8 @@ assert.match(routeHost.innerHTML, /data-route-action="previous"/);
 assert.match(routeHost.innerHTML, /data-route-action="restart"/);
 assert.match(routeHost.innerHTML, /data-route-action="next"/);
 
-sandbox.OC.UI.renderRoutePanel(routeHost, {
+sandbox.OC.UI.renderRouteGuide(routeHost, {
+  active: true,
   supported: true,
   complete: true,
   progress: 68,
@@ -244,5 +259,9 @@ sandbox.OC.UI.renderRoutePanel(routeHost, {
 });
 assert.match(routeHost.innerHTML, /All coffer points visited/);
 assert.match(routeHost.innerHTML, /data-route-action="next" disabled/);
+
+sandbox.OC.UI.renderRouteGuide(routeHost, { active: false });
+assert.equal(routeClasses.has('hidden'), true, 'closing patrol guidance must hide only its guide window');
+assert.equal(routeHost.innerHTML, '');
 
 console.log('ui tests passed');
