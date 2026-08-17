@@ -398,8 +398,8 @@ assert.ok(railRule, 'right-side control rail style must exist');
 assert.match(railRule[1], /background:\s*rgba\(0,\s*0,\s*0,\s*0\.01\)/,
   'the control rail must keep a nonzero alpha hit target for locked Browsingway overlays');
 assert.match(styles, /\.rbtn-icon\s*\{[^}]*width:\s*30px[^}]*height:\s*30px/, 'rail icons must fit inside the circular controls');
-assert.match(styles, /\.rail-tool-group\s*\{[^}]*flex-direction:\s*column[^}]*gap:\s*2px[^}]*border-radius:\s*22px/,
-  'the survey, patrol, and CN pot controls must share one compact vertical group');
+assert.doesNotMatch(styles, /\.rail-tool-group\s*\{/,
+  'the survey, patrol, and CN pot controls must use the normal rail layout');
 assert.match(styles, /\.rbtn\[data-layer="potN"\]\s*\{[^}]*--pot-label:\s*'N'/,
   'the north Magic Pot control must carry an N marker');
 assert.match(styles, /\.rbtn\[data-layer="potS"\]\s*\{[^}]*--pot-label:\s*'S'/,
@@ -412,13 +412,13 @@ assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*att
   'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=144/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=144/, 'the radar state machine must load in the overlay');
-assert.match(index, /js\/route\.js\?v=144/, 'the patrol state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=144') < index.indexOf('js/treasure.js?v=144'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('data/treasureRoutes.js?v=144') < index.indexOf('js/route.js?v=144'), 'patrol points must load before route planning');
-assert.ok(index.indexOf('js/route.js?v=144') < index.indexOf('js/map.js?v=144'), 'patrol state must load before map rendering');
-assert.ok(index.indexOf('js/radar.js?v=144') < index.indexOf('js/map.js?v=144'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=145/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=145/, 'the radar state machine must load in the overlay');
+assert.match(index, /js\/route\.js\?v=145/, 'the patrol state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=145') < index.indexOf('js/treasure.js?v=145'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('data/treasureRoutes.js?v=145') < index.indexOf('js/route.js?v=145'), 'patrol points must load before route planning');
+assert.ok(index.indexOf('js/route.js?v=145') < index.indexOf('js/map.js?v=145'), 'patrol state must load before map rendering');
+assert.ok(index.indexOf('js/radar.js?v=145') < index.indexOf('js/map.js?v=145'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
@@ -454,9 +454,11 @@ assert.doesNotMatch(mainSource, /OC\.iconUrl\(l\.icon\)/, 'rail controls must no
 assert.match(mainSource, /l\.key === 'reroll'[^\n]+OC\.i18n\.t\('layer_short_reroll'\)/,
   'the reroll icon must render its localized short marker');
 assert.match(mainSource, /if \(l\.key === 'survey'\) treasureTools \+= button;/,
-  'the survey control must join the treasure tool group');
-assert.match(mainSource, /data-rail-group="treasure-tools"[^\n]+treasureTools/,
-  'the treasure tool controls must render inside one rail group');
+  'the survey control must stay adjacent to the patrol controls');
+assert.match(mainSource, /h \+= treasureTools;\s+h \+= '<div class="rail-div"><\/div>';/,
+  'the three treasure controls must render as normal rail siblings before settings');
+assert.doesNotMatch(mainSource, /data-rail-group="treasure-tools"/,
+  'the three controls must not use a shared visual container');
 assert.ok(mainSource.indexOf('data-route-toggle') < mainSource.indexOf('data-panel="dcpots"'),
   'the patrol button must appear immediately above the pot overview button');
 assert.match(mainSource, /data-route-toggle[\s\S]+?assets\/map-icons\/treasure-patrol\.png/, 'the patrol button must use its generated icon');

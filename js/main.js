@@ -2184,7 +2184,7 @@
       '<img class="rbtn-icon" src="assets/map-icons/treasure-patrol.png" alt="" aria-hidden="true"></button>';
     if (App.showsCnDcOverview()) treasureTools += '<button class="rbtn panel dc" data-panel="dcpots" title="' + esc(OC.i18n.t('panel_dcpots')) + '" aria-label="' + esc(OC.i18n.t('panel_dcpots')) + '">' +
       '<img class="rbtn-icon" src="assets/map-icons/pot-overview.png" alt="" aria-hidden="true"></button>';
-    h += '<div class="rail-tool-group" data-rail-group="treasure-tools">' + treasureTools + '</div>';
+    h += treasureTools;
     h += '<div class="rail-div"></div>';
     h += '<button class="rbtn panel" data-panel="settings" title="' + OC.i18n.t('panel_settings') + '">⚙</button>';
     return h;

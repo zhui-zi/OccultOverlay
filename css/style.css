@@ -203,10 +203,6 @@ html, body {
 .rbtn[data-layer^="pot"]::after { content: var(--pot-label); }
 .rbtn[data-layer="reroll"]::after { content: attr(data-layer-label); }
 .rbtn.panel { font-size: 17px; }
-.rail-tool-group {
-  display: flex; flex: 0 0 auto; flex-direction: column; align-items: center; gap: 2px;
-  padding: 2px; border: 1px solid var(--line); border-radius: 22px; background: rgba(14,20,30,0.52);
-}
 .rail-div { width: 22px; height: 1px; flex: 0 0 1px; background: var(--line); margin: 3px 0; }
 
 /* Popovers */
