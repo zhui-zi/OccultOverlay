@@ -29,7 +29,7 @@ assert.equal(settings.getRaw('lang'), 'auto');
 assert.equal(settings.get('lang'), 'ja');
 assert.equal(settings.get('dataRegion'), 'global');
 assert.equal(settings.get('alertTower'), false);
-assert.deepEqual(Array.from(settings.get('potAlertMinutes')), [3]);
+assert.deepEqual(Array.from(settings.get('potAlertSeconds')), [180]);
 assert.equal(settings.get('treasureGuide'), true);
 assert.equal(settings.get('radarCoffers'), true);
 assert.equal(settings.get('radarCarrots'), true);
@@ -76,12 +76,12 @@ assert.equal(loaded.settings.get('radarPinned'), true, 'the pinned radar switch 
 loaded.settings.set('radarVoice', false);
 loaded = loadSettings('en-US', loaded.stored());
 assert.equal(loaded.settings.get('radarVoice'), false, 'the radar voice switch must survive reload independently');
-loaded.settings.set('potAlertMinutes', '5，10; 3 5 0 31 2.5');
-assert.deepEqual(Array.from(loaded.settings.get('potAlertMinutes')), [10, 5, 3], 'pot reminders must normalize, deduplicate, and sort');
+loaded.settings.set('potAlertSeconds', '5m，10m; 3m, 30s, 10sec, 30秒, 0s, 31m, 2.5m');
+assert.deepEqual(Array.from(loaded.settings.get('potAlertSeconds')), [600, 300, 180, 30, 10], 'pot reminders must normalize units, deduplicate, and sort');
 loaded = loadSettings('en-US', loaded.stored());
-assert.deepEqual(Array.from(loaded.settings.get('potAlertMinutes')), [10, 5, 3], 'custom pot reminders must survive reload');
-loaded.settings.set('potAlertMinutes', '');
-assert.deepEqual(Array.from(loaded.settings.get('potAlertMinutes')), [3], 'an empty reminder list must retain the safe default');
+assert.deepEqual(Array.from(loaded.settings.get('potAlertSeconds')), [600, 300, 180, 30, 10], 'custom pot reminders must survive reload');
+loaded.settings.set('potAlertSeconds', '');
+assert.deepEqual(Array.from(loaded.settings.get('potAlertSeconds')), [180], 'an empty reminder list must retain the safe default');
 
 settings = loadSettings('zh-Hans-CN').settings;
 assert.equal(settings.get('lang'), 'zh');
@@ -96,6 +96,12 @@ settings = loadSettings('en-US', {
 }).settings;
 assert.equal(settings.get('radarCoffers'), false, 'a disabled legacy radar must keep both new scopes disabled');
 assert.equal(settings.get('radarCarrots'), false, 'a disabled legacy radar must keep both new scopes disabled');
+
+settings = loadSettings('en-US', {
+  _v: 11,
+  potAlertMinutes: [10, 3, 1],
+}).settings;
+assert.deepEqual(Array.from(settings.get('potAlertSeconds')), [600, 180, 60], 'v11 minute reminders must migrate to seconds');
 
 settings = loadSettings('en-US', {
   _v: 3,

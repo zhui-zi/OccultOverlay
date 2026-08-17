@@ -3,7 +3,7 @@
 
   var OC = global.OC = global.OC || {};
   var KEY = 'occultOverlay.settings';
-  var SCHEMA_V = 11;
+  var SCHEMA_V = 12;
   var hostLanguage = null;
 
   function normalizeLanguage(value) {
@@ -23,17 +23,30 @@
     return mode === 'auto' ? systemLanguage() : (['zh', 'en', 'ja'].indexOf(mode) >= 0 ? mode : systemLanguage());
   }
 
-  function normalizePotAlertMinutes(value) {
-    var values = Array.isArray(value) ? value : String(value == null ? '' : value).split(/[,;\s，；、]+/);
+  function normalizePotAlertSeconds(value) {
+    var isSeconds = Array.isArray(value);
+    var values = isSeconds ? value : String(value == null ? '' : value).split(/[,;，；、]+/);
     var seen = {};
-    var minutes = [];
+    var seconds = [];
     values.forEach(function (item) {
-      var number = Number(item);
-      if (number !== Math.floor(number) || number < 1 || number > 30 || seen[number]) return;
+      var number;
+      if (isSeconds) {
+        number = Number(item);
+      } else {
+        var token = String(item).trim();
+        var match = token.match(/^(\d+)\s*(s|sec|secs|second|seconds|秒)$/i);
+        if (match) number = Number(match[1]);
+        if (!match) {
+          match = token.match(/^(\d+)\s*(m|min|mins|minute|minutes|分|分钟)$/i);
+          if (match) number = Number(match[1]) * 60;
+        }
+        if (!match && /^\d+$/.test(token)) number = Number(token) * 60;
+      }
+      if (number !== Math.floor(number) || number < 1 || number > 1800 || seen[number]) return;
       seen[number] = true;
-      minutes.push(number);
+      seconds.push(number);
     });
-    return (minutes.length ? minutes : [3]).sort(function (a, b) { return b - a; });
+    return (seconds.length ? seconds : [180]).sort(function (a, b) { return b - a; });
   }
 
   var defaults = {
@@ -61,7 +74,7 @@
     alertAllEncounters: false,  // Announce all CEs, FATEs, and Magic Pots.
     alertTower: false,          // Announce Forked Tower spawns and show its chip.
     alertPot: false,            // Alert before a Magic Pot spawns.
-    potAlertMinutes: [3],       // Advance alert times in minutes.
+    potAlertSeconds: [180],     // Advance alert times in seconds.
     alertColors: {},            // Demiatma color alerts: { itemId: true }.
     _alertScope: 'dc',          // Alert scope: dc limits alerts to the current region.
     mapLayers: { bronze: false, silver: false, potN: false, potS: false, reroll: false, bunny: false, survey: false }
@@ -85,6 +98,13 @@
         obj.radarCoffers = obj.radarEnabled !== false;
         obj.radarCarrots = obj.radarEnabled !== false;
       }
+      // v12 adds second-level reminders and migrates the v11 minute list.
+      if (oldVersion < 12 && !('potAlertSeconds' in obj)) {
+        var legacyMinutes = Array.isArray(obj.potAlertMinutes)
+          ? obj.potAlertMinutes
+          : String(obj.potAlertMinutes == null ? '3' : obj.potAlertMinutes).split(/[,;，；、]+/);
+        obj.potAlertSeconds = legacyMinutes.map(function (minute) { return Number(minute) * 60; });
+      }
       var out = {};
       for (var k in defaults) out[k] = (k in obj) ? obj[k] : clone(defaults[k]);
       out._v = SCHEMA_V;
@@ -96,7 +116,7 @@
       if (['cn', 'global'].indexOf(out.dataRegion) < 0) {
         out.dataRegion = effectiveLanguage(out.lang) === 'zh' ? 'cn' : 'global';
       }
-      out.potAlertMinutes = normalizePotAlertMinutes(out.potAlertMinutes);
+      out.potAlertSeconds = normalizePotAlertSeconds(out.potAlertSeconds);
       return out;
     } catch (e) { return clone(defaults); }
   }
@@ -111,12 +131,12 @@
     getRaw: function (k) { return data[k]; },
     getAll: function () { return data; },
     set: function (k, v) {
-      data[k] = k === 'potAlertMinutes' ? normalizePotAlertMinutes(v) : v;
+      data[k] = k === 'potAlertSeconds' ? normalizePotAlertSeconds(v) : v;
       save();
       return data[k];
     },
     setMany: function (obj) {
-      for (var k in obj) data[k] = k === 'potAlertMinutes' ? normalizePotAlertMinutes(obj[k]) : obj[k];
+      for (var k in obj) data[k] = k === 'potAlertSeconds' ? normalizePotAlertSeconds(obj[k]) : obj[k];
       save();
     },
     toggleLayer: function (name) { data.mapLayers[name] = !data.mapLayers[name]; save(); return data.mapLayers[name]; },
