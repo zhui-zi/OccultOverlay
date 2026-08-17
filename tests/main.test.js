@@ -399,13 +399,13 @@ assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*att
   'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=138/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=138/, 'the radar state machine must load in the overlay');
-assert.match(index, /js\/route\.js\?v=138/, 'the patrol state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=138') < index.indexOf('js/treasure.js?v=138'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('data/treasureRoutes.js?v=138') < index.indexOf('js/route.js?v=138'), 'patrol points must load before route planning');
-assert.ok(index.indexOf('js/route.js?v=138') < index.indexOf('js/map.js?v=138'), 'patrol state must load before map rendering');
-assert.ok(index.indexOf('js/radar.js?v=138') < index.indexOf('js/map.js?v=138'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=139/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=139/, 'the radar state machine must load in the overlay');
+assert.match(index, /js\/route\.js\?v=139/, 'the patrol state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=139') < index.indexOf('js/treasure.js?v=139'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('data/treasureRoutes.js?v=139') < index.indexOf('js/route.js?v=139'), 'patrol points must load before route planning');
+assert.ok(index.indexOf('js/route.js?v=139') < index.indexOf('js/map.js?v=139'), 'patrol state must load before map rendering');
+assert.ok(index.indexOf('js/radar.js?v=139') < index.indexOf('js/map.js?v=139'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
@@ -428,6 +428,8 @@ assert.match(mainSource, /data-treasure-close[\s\S]+?OC\.Treasure\.dismiss/, 'th
 assert.match(mainSource, /data-route-close[\s\S]+?OC\.Route\.pause/, 'the patrol close button must pause only its guide');
 assert.match(mainSource, /id="guide-stack"[\s\S]+?id="treasure-guide"[\s\S]+?id="route-guide"/,
   'Magic Pot and patrol guidance must share one stacked window region');
+assert.doesNotMatch(mainSource, /includeTop\(document\.getElementById\('guide-stack'\)\)/,
+  'guidance windows must float over the map without participating in map placement');
 assert.match(mainSource, /class="rbtn-icon"[^>]+esc\(l\.icon\)/, 'rail controls must render local icon images');
 assert.doesNotMatch(mainSource, /OC\.iconUrl\(l\.icon\)/, 'rail controls must not depend on a remote icon service');
 assert.match(mainSource, /l\.key === 'reroll'[^\n]+OC\.i18n\.t\('layer_short_reroll'\)/,
@@ -541,17 +543,17 @@ guideStackHidden = false;
 guideStackHeight = 100;
 sandbox.OC.App.updateRadarPlacement();
 assert.equal(radarHost.style.top, '', 'an active Magic Pot guide must not move the bottom-aligned radar');
-assert.equal(mapHost.style.top, '160px', 'the map must start below an active Magic Pot guide');
+assert.equal(mapHost.style.top, '46px', 'an active Magic Pot guide must float over the map without moving it');
 assert.equal(mapHost.style.bottom, '0px');
 guideStackHeight = 208;
 sandbox.OC.App.updateRadarPlacement();
-assert.equal(mapHost.style.top, '268px', 'simultaneous Magic Pot and patrol guides must stack without covering the map');
+assert.equal(mapHost.style.top, '46px', 'stacked Magic Pot and patrol guides must not resize the map');
 noMap = true;
 sandbox.OC.Radar.targets = () => [];
 sandbox.OC.App.updateRadar();
 assert.equal(radarClasses.has('hidden'), true, 'a pinned radar must stay hidden when no target is detected');
 assert.equal(radarHost.innerHTML, '');
-assert.equal(radarHost.style.top, '268px', 'a pinned radar must move below both guide windows when the map is hidden');
+assert.equal(radarHost.style.top, '46px', 'guide windows must not move the pinned radar');
 assert.equal(radarHost.style.bottom, 'auto');
 sandbox.OC.Radar.targets = () => [radarTarget];
 sandbox.OC.App.updateRadar();

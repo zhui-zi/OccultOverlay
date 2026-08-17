@@ -1423,7 +1423,6 @@
         return !!(guide && guide.classList && !guide.classList.contains('hidden'));
       });
       stack.classList.toggle('hidden', !visible);
-      this.updateRadarPlacement();
     },
 
     updateRadarPlacement: function () {
@@ -1444,11 +1443,6 @@
       var top = 8;
       var chips = document.getElementById('status-chips');
       if (chips) top = Math.max(top, Number(chips.offsetTop || 0) + Number(chips.offsetHeight || 0) + 8);
-      var guideStack = document.getElementById('guide-stack');
-      var guideStackHidden = guideStack && guideStack.classList && guideStack.classList.contains && guideStack.classList.contains('hidden');
-      if (guideStack && !guideStackHidden) {
-        top = Math.max(top, Number(guideStack.offsetTop || 0) + Number(guideStack.offsetHeight || 0) + 8);
-      }
       host.style.top = Math.ceil(top) + 'px';
       host.style.bottom = 'auto';
       this.updateMapPlacement();
@@ -1474,7 +1468,6 @@
       }
 
       includeTop(document.getElementById('status-chips'));
-      includeTop(document.getElementById('guide-stack'));
       if (noMap && OC.Settings.get('radarPinned')) includeTop(document.getElementById('radar-panel'));
 
       var top = topEdge > 0 ? Math.max(0, Math.ceil(topEdge + 8)) : 0;
