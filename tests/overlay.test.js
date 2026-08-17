@@ -91,7 +91,7 @@ ws.sandbox.OverlayPluginApi = {
 };
 ws.sandbox.OC.Overlay.start();
 assert.equal(ws.websocketCount, 1);
-assert.equal(ws.intervals.length, 1); // position polling only; no legacy polling
+assert.equal(ws.intervals.length, 1); // Position polling only; no legacy poller.
 assert.equal(ws.intervalDelays[0], 250, 'the live position scheduler must react within 250 ms');
 
 const memory = loadOverlay('');
@@ -354,8 +354,8 @@ position.sandbox.OverlayPluginApi = {
 position.sandbox.OC.Overlay.on('position', (value) => { observedPosition = value; });
 position.sandbox.OC.Overlay.on('combatants', (value) => { observedCombatants = value; });
 position.sandbox.OC.Overlay.start();
-position.intervals[0](); // connect legacy transport
-position.intervals[1](); // poll getCombatants
+position.intervals[0](); // Connect the legacy transport.
+position.intervals[1](); // Poll getCombatants.
 
 Promise.resolve().then(async () => {
   assert.deepEqual(

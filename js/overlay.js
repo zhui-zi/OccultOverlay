@@ -1,11 +1,10 @@
-/* ACT connection layer for WebSocket and injected OverlayPluginApi transports. */
+/* Connects ACT through WebSocket or injected OverlayPluginApi transports. */
 (function (global) {
   'use strict';
 
   var OC = global.OC = global.OC || {};
 
-  // Occult Crescent (South Horn/North Horn) territory detection.
-  // Override the default territoryId in settings if needed; zone names provide a fallback.
+  // Detect South and North Horn by territory ID, with zone-name fallback for overrides.
   var OCCULT_TERRITORY_IDS = [1252, 1346];
   var OCCULT_NAME_RE = /occult|crescent|south horn|north horn|新月|南征|北征|隠世|クレセント|południ|kreszent/i;
   var DUPLICATE_ZONE_SIGNAL_MS = 10000;
@@ -22,8 +21,8 @@
     });
   };
 
-  // Public WorldID -> shared tracker datacenter ID.
-  // Global IDs follow the client World sheet; CN IDs follow the current CN world list.
+  // Public WorldID -> shared tracker data-center ID. Global values follow the client
+  // World sheet; CN values follow the current CN world list.
   var WORLD2DC = {
     // Elemental
     45: 1, 49: 1, 50: 1, 58: 1, 68: 1, 72: 1, 90: 1, 94: 1,
@@ -57,8 +56,7 @@
   };
   OC.WORLD2DC = WORLD2DC;
 
-  // OverlayPlugin getCombatants normally returns decimal world IDs, while
-  // ACT LogLine 03 encodes the same value as an unprefixed hexadecimal string.
+  // getCombatants returns decimal world IDs; LogLine 03 encodes them as unprefixed hexadecimal.
   function normalizeWorldId(value, unprefixedHex) {
     if (value == null || value === '') return 0;
     var text = String(value).trim();
@@ -96,18 +94,18 @@
   Overlay.zoneName = '';
   Overlay.inOccult = false;
   Overlay.playerName = '';
-  Overlay.playerPos = null; // {x, y, z, h}; y is altitude, x/z are horizontal
+  Overlay.playerPos = null; // {x, y, z, h}; y is altitude and x/z are horizontal.
   Overlay.fateSnapshotUntil = 0;
 
-  // OverlayPlugin replays existing FATEs as Add events after a zone change or
-  // reconnect. Those timestamps are observation times, not StartTimeEpoch.
+  // OverlayPlugin replays existing FATEs as Adds after zone changes and reconnects;
+  // those timestamps are observations, not StartTimeEpoch.
   var INITIAL_FATE_SYNC_SEC = 12;
   function beginFateSnapshot() {
     Overlay.fateSnapshotUntil = Math.floor(Date.now() / 1000) + INITIAL_FATE_SYNC_SEC;
   }
 
-  // onFateEvent comes from cactbot/IINACT FateWatcher packet parsing and is immediate
-  // across the island regardless of distance. Add identifies an instance; Update only proves liveness.
+  // cactbot/IINACT FateWatcher packets are island-wide and immediate. A live Add may
+  // identify an instance; Update proves only liveness.
   var SUBSCRIBE = ['ChangeZone', 'ChangePrimaryPlayer', 'LogLine', 'onFateEvent'];
 
   var ws = null;
@@ -124,8 +122,8 @@
   }
 
   function getWsUrl() {
-    // OverlayPlugin passes the WebSocket address through OVERLAY_WS or HOST_PORT.
-    // HOST_PORT is often a faker address and must remain unchanged so its bridge can reach game memory.
+    // OVERLAY_WS or HOST_PORT provides the WebSocket endpoint. HOST_PORT may be a faker
+    // bridge address and must remain unchanged.
     var m = /[?&]OVERLAY_WS=([^&]+)/.exec(location.search);
     if (m) return decodeURIComponent(m[1]);
     var hp = /[?&]HOST_PORT=([^&]+)/.exec(location.search);
@@ -252,11 +250,11 @@
         if (!me) return;
         if (!Overlay.playerName && me.Name) Overlay.playerName = me.Name;
         if (Overlay.playerId == null && me.ID != null) Overlay.playerId = me.ID;
-        // During cross-world travel, use CurrentWorldID instead of the home WorldID.
+        // CurrentWorldID, not the home WorldID, identifies cross-world sessions.
         var wid = me.CurrentWorldID || me.CurrentWorld || me.WorldID;
         if (wid) setPlayerWorld(wid);
         if (me.PosX == null) return;
-        // Dalamud(x,z) horizontal == OverlayPlugin(PosX, PosY); PosZ is altitude.
+        // Dalamud horizontal (x,z) maps to OverlayPlugin (PosX,PosY); PosZ is altitude.
         Overlay.playerPos = {
           x: Number(me.PosX),
           y: me.PosZ != null ? Number(me.PosZ) : null,
@@ -264,8 +262,8 @@
           h: Number(me.Heading)
         };
         Overlay.emit('combatants', arr);
-        // Use 258/259 memory data for all FATE/CE states. Combatant-name matching is
-        // fuzzy and can misclassify normal monsters, so it is intentionally unused.
+        // Director 258/259 data owns FATE/CE state; fuzzy combatant-name matching can
+        // misclassify ordinary monsters and is intentionally excluded.
         Overlay.emit('position', Overlay.playerPos);
       }, function () {
         positionPollPending = false;
@@ -295,10 +293,8 @@
     }
   }
 
-  // onFateEvent: { type, eventType:'add'|'remove'|'update', fateID:Number, progress:Number }
-  // Parsed from network packets by FateWatcher; immediate island-wide and distance-independent.
-  // Some hosts expose a real start epoch. Otherwise Add is trusted only after
-  // the initial snapshot window has elapsed.
+  // FateWatcher event: { type, eventType, fateID, progress }. Some hosts include a
+  // start epoch; otherwise an Add becomes trustworthy only after the snapshot window.
   function handleFateEvent(d) {
     var id = d.fateID != null ? Number(d.fateID) : (d.fateId != null ? Number(d.fateId) : 0);
     if (!id) return;
@@ -318,7 +314,7 @@
       startQuality: explicitStart > 0 ? 'exact' : 'observed',
       endQuality: eventType === 'remove' ? 'direct' : 'observed',
       source: 'onFateEvent'
-    }); // add/update = active; remove = ended.
+    }); // Add/Update is active; Remove is ended.
   }
 
   var lastZoneSignal = null;
@@ -326,10 +322,9 @@
     var territoryId = id != null ? Number(id) : null;
     var zoneName = name || '';
     var signalAt = Date.now();
-    // ChangeZone and LogLine 01 can describe the same transition, but legacy
-    // OverlayPlugin may deliver the second copy several seconds later. Do not
-    // let that delayed duplicate erase a freshly matched island. Real exits and
-    // re-entries pass through another territory and therefore still reset.
+    // ChangeZone and LogLine 01 can duplicate one transition, with the legacy copy
+    // arriving seconds late. Ignore it so a fresh island match survives; real exits
+    // still pass through another territory and reset normally.
     if (lastZoneSignal && lastZoneSignal.territoryId === territoryId &&
         signalAt - lastZoneSignal.at < DUPLICATE_ZONE_SIGNAL_MS) {
       if (!Overlay.zoneName && zoneName) Overlay.zoneName = zoneName;
@@ -352,14 +347,13 @@
     var type = parseInt(line[0], 10);
     Overlay.emit('log', type, line, d.rawLine || '');
 
-    // 01 = ChangeZone; some environments emit only LogLine, not ChangeZone events.
+    // LogLine 01 backs up ChangeZone in hosts that omit the event.
     if (type === 1) {
       setZone(parseInt(line[2], 16), line[3]);
       return;
     }
 
-    // 03 = AddCombatant. This is the most direct ACT memory path for the
-    // current player's world and survives getCombatants schema differences.
+    // LogLine 03 AddCombatant provides the player's world across getCombatants schemas.
     if (type === 3) {
       var sameId = Overlay.playerId != null && actorId(line[2]) === actorId(Overlay.playerId);
       var sameName = Overlay.playerName && line[3] === Overlay.playerName;
@@ -369,14 +363,12 @@
 
     if (Overlay.debugRaw) { try { Overlay.debugRaw(line); } catch (e) {} }
 
-    // 258 FateDirector / 259 CEDirector come from ACT memory reads. They are immediate,
-    // distance-independent, and the best source of island-wide FATE/CE state.
+    // FateDirector 258 and CEDirector 259 are immediate, island-wide ACT memory reads.
     if (type === 258) { handleFateDirector(line); return; }
     if (type === 259) { handleCeDirector(line); return; }
 
-    // System/combat logs: match CE/FATE names as a notification fallback.
-    // ACT cannot always provide a reliable in-memory FATE list, so text matching is
-    // supplemental; data-panel controls and shared tracker data remain authoritative.
+    // System/combat name matching is notification-only fallback; director state,
+    // data-panel controls, and the shared tracker remain authoritative.
     if (type === 0 || type === 257 /* 0x101 */ || type === 561) {
       var text = line[line.length - 1] || '';
       detectFromText(text);
@@ -390,7 +382,7 @@
       ['zh', 'en', 'ja'].forEach(function (lang) {
         var n = nameObj[lang];
         if (!n) return;
-        // Extract the monster name inside brackets or use the full name.
+        // Prefer the bracketed monster name; otherwise use the full match.
         var core = (/[「『](.+?)[」』]/.exec(n) || [null, n])[1];
         if (core && core.length >= 2) _matchIndex.push({ kind: kind, id: id, needle: core });
       });
@@ -410,23 +402,22 @@
           encounterId: m.id, fateId: m.id, status: 'spawned',
           name: m.kind === 'ce' ? OC.CES[m.id].name : (OC.POTS[m.id] || OC.FATES[m.id]).name
         });
-        return; // Match each line only once.
+        return; // One notification candidate per line.
       }
     }
   }
 
-  // ---- In-memory FATE/CE state (258/259 director lines) -----------------
-  // Overlay.memActive: { id: true } for active island FATEs/CEs, independent of distance.
+  // In-memory FATE/CE state from director lines 258/259.
+  // memActive maps active encounter IDs independently of distance.
   Overlay.memActive = {};
-  // Overlay.memMeta preserves trusted live start evidence. Initial snapshot
-  // packets only prove that the event is alive; a new zero-progress pot Update
-  // can also be the first director packet when ACT drops its Add packet.
+  // memMeta retains trusted start evidence. Snapshot packets prove only liveness,
+  // while a new zero-progress Pot Update may replace a dropped Add.
   Overlay.memMeta = {};
 
   function memChanged(id, active, detail) {
     id = Number(id);
     if (!id) return;
-    // Accept only known Occult Crescent CEs, FATEs, and Magic Pots; reject unrelated director data.
+    // Reject director IDs outside the known Occult Crescent encounter set.
     if (!OC.CES[id] && !OC.FATES[id] && !OC.POTS[id]) return;
     detail = detail || {};
     var was = !!Overlay.memActive[id];
@@ -439,9 +430,8 @@
       meta.directorSeen = true;
       meta.directorActive = !!active;
     } else if (ignoreSecondaryLiveness) {
-      // FateWatcher and director packets can arrive out of order. Once the local
-      // director has spoken for this encounter, secondary events may refine an
-      // exact start time but must not toggle its visible lifetime.
+      // FateWatcher and director packets can reorder. After local director evidence,
+      // secondary events may refine start time but never toggle visible lifetime.
       active = !!meta.directorActive;
     }
     var gainedExactStart = false;
@@ -499,7 +489,7 @@
     Overlay.memMeta = {};
   };
 
-  // 258|ts|category(Add/Update/Remove)|padding|fateId(hex)|progress(hex)|...
+  // 258 schema: timestamp, category, padding, hex FATE ID, hex progress, ...
   function handleFateDirector(line) {
     var cat = String(line[2] || '');
     var fateId = parseInt(line[4], 16);
@@ -508,11 +498,9 @@
     var observedAt = Date.parse(line[1] || '') / 1000;
     if (!isFinite(observedAt)) observedAt = Math.floor(Date.now() / 1000);
     var progress = parseInt(line[5], 16);
-    // ACT occasionally starts a Magic Pot with Update(progress=0) and never
-    // emits Add. Outside the reconnect snapshot, that first zero-progress
-    // packet is the live start transition; keep its epoch so the countdown
-    // can continue after Remove. Do not generalize this to ordinary FATEs,
-    // whose start time is also used as instance identity evidence.
+    // ACT may begin a Pot with Update(0) and omit Add. Outside a reconnect snapshot,
+    // treat the first such packet as its cycle anchor. Ordinary FATEs cannot use this
+    // fallback because their start time also identifies the instance.
     if (eventType === 'update' && OC.POTS[fateId] && !Overlay.memActive[fateId] &&
         progress === 0 && observedAt > Number(Overlay.fateSnapshotUntil || 0)) {
       eventType = 'add';
@@ -525,12 +513,11 @@
       source: 'FateDirector'
     };
     if (cat === 'Remove') memChanged(fateId, false, detail);
-    else memChanged(fateId, true, detail); // Add / Update
+    else memChanged(fateId, true, detail); // Add or Update.
   }
 
-  // CEDirector uses a territory-local sequence instead of the DynamicEvent row.
-  // South: 0=tower 48, 1-15 => 33-47.
-  // North: 0=tower 64, 1-15 => 49-63. Key 16 is not shared by the tracker.
+  // CEDirector uses territory-local keys: South 0 -> tower 48 and 1-15 -> 33-47;
+  // North 0 -> tower 64 and 1-15 -> 49-63. Tracker data excludes key 16.
   function ceKeyToId(k, territoryId) {
     if (Number(territoryId) === 1346) {
       if (k === 0) return 64;
@@ -541,18 +528,18 @@
   }
   OC.ceKeyToId = ceKeyToId;
 
-  // 259|ts|popTime|timeRemaining|unk|ceKey(hex)|numPlayers|status|unk|progress|...
+  // 259 schema: timestamp, popTime, remaining, unknown, hex CE key, players,
+  // status, unknown, progress, ...
   function handleCeDirector(line) {
     var ceKey = parseInt(line[5], 16);
     if (isNaN(ceKey)) return;
     var id = ceKeyToId(ceKey, Overlay.territoryId);
     if (!id) return;
-    var status = parseInt(line[7], 16) || 0;   // 0=inactive, 1=recruiting, 2=preparing, 3=in combat.
+    var status = parseInt(line[7], 16) || 0;   // 0 inactive, 1 recruiting, 2 preparing, 3 combat.
     var popTime = parseInt(line[2], 16) || 0;
     if (popTime < 1000000000) popTime = 0;
     var was = !!Overlay.memActive[id];
-    // CEDirector status 0 is a removal. Remaining time and player count can
-    // retain values in that line and must never reactivate the encounter.
+    // Status 0 is removal even when remaining time and player count retain stale values.
     var active = status !== 0;
     var observedAt = Date.parse(line[1] || '') / 1000;
     if (!isFinite(observedAt)) observedAt = Math.floor(Date.now() / 1000);
@@ -605,7 +592,7 @@
       try { global.OverlayPluginApi.callHandler(JSON.stringify(obj), function () {}); return true; } catch (e) {}
     }
     if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify(obj)); return true; } catch (e) {} }
-    return false; // When ACT is disconnected, let the caller fall back to window.open.
+    return false; // Let the caller use window.open when ACT is disconnected.
   };
 
   Overlay.say = function (text) {
@@ -618,8 +605,8 @@
   };
 
   Overlay.start = function () {
-    // Match cactbot integration: use only WebSocket when an explicit WS parameter exists;
-    // otherwise wait for the embedded-browser API so failed retries cannot replace a live connection.
+    // Match cactbot: explicit WS parameters select WebSocket; otherwise wait for the
+    // embedded API so retry failures cannot replace a live connection.
     wsUrl = getWsUrl();
     transportMode = wsUrl ? 'ws' : 'legacy';
     if (transportMode === 'ws') connectWs();

@@ -1,3 +1,4 @@
+/* Persistent overlay settings and schema migrations. */
 (function (global) {
   'use strict';
 
@@ -62,21 +63,21 @@
     notifySound: true,
     notifyOnlyInZone: true,
     opacity: 0.9,
-    uiScale: 1,                 // UI scale for chips, buttons, and panels.
-    showActiveChips: true,      // Top active FATE/CE chips; right-click to hide.
+    uiScale: 1,                 // Scale chips, buttons, and panels.
+    showActiveChips: true,      // Show active FATE/CE chips; right-click hides them.
     treasureGuide: true,
     radarCoffers: true,
     radarCarrots: true,
     radarPinned: false,
     radarVoice: true,
     collapsed: false,
-    useTts: true,               // Voice alerts; fall back to a tone when unavailable.
-    alertAllEncounters: false,  // Announce all CEs, FATEs, and Magic Pots.
+    useTts: true,               // Use voice alerts, with tone fallback.
+    alertAllEncounters: false,  // Announce every CE, FATE, and Magic Pot.
     alertTower: false,          // Announce Forked Tower spawns and show its chip.
-    alertPot: false,            // Alert before a Magic Pot spawns.
-    potAlertSeconds: [180],     // Advance alert times in seconds.
-    alertColors: {},            // Demiatma color alerts: { itemId: true }.
-    _alertScope: 'dc',          // Alert scope: dc limits alerts to the current region.
+    alertPot: false,            // Announce configured Magic Pot reminders.
+    potAlertSeconds: [180],     // Pre-spawn reminder offsets, in seconds.
+    alertColors: {},            // Enabled Demiatma rewards: { itemId: true }.
+    _alertScope: 'dc',          // "dc" restricts alerts to the current region.
     mapLayers: { bronze: false, silver: false, potN: false, potS: false, reroll: false, bunny: false, survey: false }
   };
 
@@ -87,18 +88,18 @@
       var raw = localStorage.getItem(KEY);
       var obj = raw ? JSON.parse(raw) : {};
       var oldVersion = Number(obj._v) || 0;
-      // v2 introduced per-layer defaults; only older settings need that reset.
+      // v2 introduced per-layer defaults; reset only older data.
       if (oldVersion < 2) obj.mapLayers = clone(defaults.mapLayers);
-      // Language selection did not exist before v3, so existing installs start in system mode.
+      // v3 added language selection; migrated installs begin in system mode.
       if (oldVersion < 3) obj.lang = 'auto';
-      // Data region is initialized once from the effective language, then stored independently.
+      // Initialize data region once from effective language, then persist it independently.
       if (oldVersion < 4) obj.dataRegion = effectiveLanguage(obj.lang) === 'zh' ? 'cn' : 'global';
-      // v10 splits the radar master switch without changing the existing enabled state.
+      // v10 splits the radar master switch while preserving its enabled state.
       if (oldVersion < 10) {
         obj.radarCoffers = obj.radarEnabled !== false;
         obj.radarCarrots = obj.radarEnabled !== false;
       }
-      // v12 adds second-level reminders and migrates the v11 minute list.
+      // v12 stores reminder seconds; convert the v11 minute-only values once.
       if (oldVersion < 12 && !('potAlertSeconds' in obj)) {
         var legacyMinutes = Array.isArray(obj.potAlertMinutes)
           ? obj.potAlertMinutes
@@ -108,7 +109,7 @@
       var out = {};
       for (var k in defaults) out[k] = (k in obj) ? obj[k] : clone(defaults[k]);
       out._v = SCHEMA_V;
-      // Keep only valid layer keys.
+      // Drop unsupported layer keys.
       var ml = {};
       for (var m in defaults.mapLayers) ml[m] = (m in out.mapLayers) ? !!out.mapLayers[m] : defaults.mapLayers[m];
       out.mapLayers = ml;
@@ -123,7 +124,7 @@
 
   function clone(v) { return typeof v === 'object' && v ? JSON.parse(JSON.stringify(v)) : v; }
 
-  // Persist schema migrations immediately so the initial language-based region does not drift later.
+  // Persist migrations immediately so the initial language-derived region cannot drift.
   save();
 
   var Settings = OC.Settings = {

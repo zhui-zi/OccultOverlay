@@ -1,4 +1,4 @@
-/* Magic-pot state machine aligned with OccultPotNotifier. */
+/* Magic Pot prediction and strict instance matching aligned with OccultPotNotifier. */
 (function (global) {
   'use strict';
   var OC = global.OC = global.OC || {};
@@ -56,8 +56,7 @@
     var death = number(entry && entry.death_time, -1);
     if (spawn <= 0 || (death > 0 && death >= spawn)) return false;
 
-    // The cloud may miss an end packet. A record still marked alive after a full
-    // refresh cycle must not suppress later predictions.
+    // Expire stale live rows because the cloud may miss an end packet.
     return now - spawn < RESPAWN;
   }
 
@@ -75,8 +74,7 @@
     var spawn = number(anchor.spawn_time, -1);
     if (spawn <= 0 || now < spawn) return null;
 
-    // Predict only the next cycle after an observed anchor. Once its ETA passes,
-    // wait for a new Add anchor instead of extrapolating old data indefinitely.
+    // Predict one cycle from an observed anchor; after it passes, require a new Add.
     var nextEpoch = spawn + RESPAWN;
     if (now >= nextEpoch) return null;
     var anchorSide = sideOf(anchor.fate_id);
@@ -101,8 +99,8 @@
     return (value >>> bits) | (value << (32 - bits));
   }
 
-  // SHA-256 for the 12-byte DR instance context. Keeping this synchronous avoids
-  // depending on WebCrypto availability inside older ACT embedded browsers.
+  // Synchronous SHA-256 for the 12-byte DR context avoids WebCrypto dependency in
+  // older ACT embedded browsers.
   function sha256Hex(bytes) {
     var k = [
       0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -222,7 +220,7 @@
   var Pots = OC.Pots = {
     respawnSec: RESPAWN,
 
-    // Same SHA-256(dcID, fateID, StartTimeEpoch) fingerprint used by OccultPotNotifier.
+    // SHA-256(dcID, fateID, StartTimeEpoch), compatible with OccultPotNotifier.
     contextFingerprint: contextFingerprint,
 
     contextFingerprints: function (dc, fateId, observedEpoch, radius) {
@@ -239,10 +237,8 @@
     },
 
     /**
-     * Calculate the current state from a pot_history set.
-     * Return only a live state or the next cycle anchored by the latest observed spawn;
-     * return null for an expired anchor.
-     * Returns { alive, etaSec, nextEpoch, side, anchorEpoch, anchorId, cycles } or null.
+     * Return the live Pot or the next observed-anchor cycle; expired anchors yield null.
+     * Result: { alive, etaSec, nextEpoch, side, anchorEpoch, anchorId, cycles }.
      */
     status: function (potArr, now) {
       now = number(now, Math.floor(Date.now() / 1000));
@@ -266,11 +262,7 @@
       return prediction(latestSpawn(arr), now);
     },
 
-    /**
-     * Merge cloud and local pot_history using the reference module's rules.
-     * For each fate_id, keep the newer last_seen record and prefer a populated
-     * death_time when timestamps match.
-     */
+    /** Merge cloud and local history by newest observation, then newest death time. */
     merge: function (shared, local) {
       var byId = {};
       parse(shared).concat(parse(local)).forEach(function (entry) {
@@ -289,7 +281,7 @@
       return POT_IDS.map(function (id) { return byId[id]; }).filter(Boolean);
     },
 
-    // Select the current or latest target by the greatest last_seen/spawn_time.
+    // Select the target with the latest observation or spawn.
     currentId: function (arr) {
       var best = 0, id = null;
       (arr || []).forEach(function (entry) {
@@ -300,8 +292,8 @@
     },
 
     /**
-     * List all active islands independently of Magic Pot data to identify the player's island.
-     * Returns [{ id, rowId, fingerprint, dc, lastUpdate, aliveIds:[], activeEvents:[] }].
+     * List active islands independently of Pot data for player-instance matching.
+     * Result items include IDs, fingerprint, data center, freshness, and live events.
      */
     islandList: function (rows, now) {
       now = number(now, Math.floor(Date.now() / 1000));
@@ -386,9 +378,8 @@
     },
 
     /**
-     * Bind only from a DR fingerprint or an unambiguous local Add timestamp.
-     * A plain active FATE id is intentionally insufficient because several
-     * islands can run the same FATE at once.
+     * Bind only by DR fingerprint or unambiguous local Add time; a FATE ID alone
+     * cannot distinguish concurrent islands.
      */
     matchIsland: function (islands, evidence, dc, tolerance) {
       islands = islands || [];
@@ -402,8 +393,7 @@
         return number(item.territory, 0) === territory;
       });
 
-      // A real FATE start fingerprint is stronger than a CE phase snapshot.
-      // Check it first so a coincidental CE deadline cannot select another island.
+      // FATE-start fingerprints outrank CE snapshots, whose deadlines may coincide.
       var hashes = evidence.fingerprints || [];
       if (hashes.length) {
         var exact = String(evidence.fingerprint || '').toUpperCase();
@@ -412,7 +402,7 @@
             return String(item.fingerprint || '').toUpperCase() === exact;
           });
           if (exactMatches.length === 1) return exactMatches[0];
-          // Duplicate rows with the same exact fingerprint describe one instance.
+          // Exact-fingerprint duplicates describe one logical instance.
           if (exactMatches.length > 1) return newestIsland(exactMatches);
         }
         var fingerprintMatches = scoped.filter(function (item) {
@@ -422,8 +412,7 @@
         if (fingerprintMatches.length > 1) return null;
       }
 
-      // A CE popTime is useful supporting evidence, but one phase deadline can
-      // coincide across instances and must not override a FATE fingerprint.
+      // CE popTime is supporting evidence only and never overrides a FATE fingerprint.
       var ceSignals = evidence.cePhases || [];
       if (ceSignals.length) {
         var bestCeScore = 0;
@@ -465,8 +454,7 @@
           endMatches.push(item);
         });
         if (endMatches.length === 1) return endMatches[0];
-        // Two independent Remove timestamps identify one logical instance even
-        // when multiple reporters created duplicate tracker rows for it.
+        // Two independent Removes identify one instance despite duplicate reporter rows.
         if (endMatches.length > 1) {
           return bestEndScore >= 2 ? newestIsland(endMatches) : null;
         }
@@ -494,9 +482,8 @@
     },
 
     /**
-     * Fast read-only candidate used during OverlayPlugin's initial FATE replay.
-     * Require a self-consistent tracker fingerprint and an exact match of the
-     * active 258-director FATE/pot set. This candidate is never used for writes.
+     * Find a read-only initial-replay candidate with a valid fingerprint and exact
+     * director-258 FATE/Pot set. Never use this result for writes.
      */
     matchSnapshotIsland: function (islands, activeIds, dc, territory, timestamp) {
       activeIds = sortedIds(activeIds);
@@ -514,8 +501,8 @@
     },
 
     /**
-     * Region overview. Merge duplicate records by the reference module's last_fate
-     * fingerprint, falling back to the Pot spawn-sequence signature for legacy rows.
+     * Build the region overview, merging duplicates by last_fate fingerprint or the
+     * legacy Pot spawn-sequence signature.
      */
     dcOverview: function (rows, now) {
       now = number(now, Math.floor(Date.now() / 1000));

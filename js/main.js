@@ -1,4 +1,4 @@
-/* ACT director state with strictly matched shared-tracker fallback. */
+/* Reconciles local ACT director state with strictly matched shared tracker data. */
 (function (global) {
   'use strict';
   var OC = global.OC = global.OC || {};
@@ -29,7 +29,7 @@
     openPanel: null,
     settingsSection: 'general',
     collapsed: false,
-    _dc: [],        // Deduplicated and sorted Magic Pot overview data.
+    _dc: [],        // Deduplicated Magic Pot overview, sorted for display.
     _dcTick: 0,
 
     trackerCheckDelayMs: function () {
@@ -241,9 +241,8 @@
       this.updateMapVisible();
     },
 
-    // Build the same instance evidence as DR: region + latest trusted standard FATE + Add time.
-    // OverlayPlugin replays Add on zone entry/reconnect, so those timestamps are not spawn evidence.
-    // Remove timestamps can later identify a unique cloud-history match.
+    // Build DR-compatible evidence from region and trusted standard-FATE transitions.
+    // Replayed Adds cannot identify a spawn; later Removes may match cloud history.
     instanceEvidence: function () {
       var meta = OC.Overlay.memMeta || {};
       var events = [];
@@ -357,8 +356,8 @@
       };
     },
 
-    // After strict island binding, later trusted FATE Add events still belong to this instance.
-    // Advance the bound fingerprint immediately to avoid unknown Pot timing while shared data catches up.
+    // Advance a bound island's fingerprint on trusted FATE Adds so Pot timing does not
+    // become unknown while shared data catches up.
     adoptTrustedFateContext: function (fateId, spawnEpoch) {
       var context = this.trackerContext(fateId, spawnEpoch);
       if (context && this.myIslandRowId) {
@@ -438,8 +437,8 @@
       return id;
     },
 
-    // Accept only a DR fingerprint or a unique local Add-time match. A shared active FATE
-    // cannot distinguish concurrent islands and must not authorize a Magic Pot countdown.
+    // Require a DR fingerprint or unique local Add-time match. An active FATE ID alone
+    // cannot distinguish concurrent islands or authorize a Pot countdown.
     resolveMyIsland: function () {
       var all = this._islands || [];
       var pdc = OC.Overlay.playerDc;
@@ -480,13 +479,13 @@
         var bound = this.bindMatchedIsland(matched, record, confirmed);
         if (bound) return bound;
       }
-      // Keep strong-evidence binding until zone change/disconnect; a cloud outage must not drop it.
+      // Preserve strong-evidence binding until zone change or disconnect, including cloud outages.
       if (this.myIslandRowId) return this.myIslandId;
       return null;
     },
 
-    // Follow AutoPopper/DR: query last_fate directly once an Add fingerprint exists instead
-    // of waiting for all data-center records. Apply the same strict matching to the result.
+    // Follow AutoPopper/DR by querying last_fate directly once an Add fingerprint exists;
+    // strict matching still applies to the result.
     locateMyIslandFast: function (force) {
       if (this.resolveMyIsland()) return Promise.resolve(true);
       var evidence = this.instanceEvidence();
@@ -583,9 +582,8 @@
       });
     },
 
-    // Keep the shared tower reduction counters aligned with the current zone.
-    // Every completed CE removes five minutes; every FATE or pot removes one.
-    // A completed normal tower starts the next cycle from zero in both zones.
+    // Tower reduction is zone-local: each CE removes five minutes, each FATE or Pot
+    // removes one, and a completed normal tower resets the cycle.
     recordTowerCompletion: function (id) {
       id = Number(id) || 0;
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 0;
@@ -670,8 +668,8 @@
       return record;
     },
 
-    // AutoPopper-compatible missing-instance state machine. Only scheduled
-    // FATE Add checks increment the counter; position polling never creates rows.
+    // Match AutoPopper's missing-instance state machine: only scheduled FATE Add checks
+    // increment the counter; position polling never creates rows.
     checkOrCreateIsland: function (context) {
       if (!context || !OC.Overlay.connected || !OC.Overlay.inOccult ||
           context.generation !== (this._locateGeneration || 0)) {
@@ -837,7 +835,7 @@
       return this._uploadChain;
     },
 
-    // Clear on every zone/instance change or disconnect; re-identify even if territoryId is unchanged.
+    // Re-identify after every zone, instance, or connection change, even within one territory.
     resetIsland: function (preserveLocal) {
       this.myIslandId = null; this.myIslandRowId = null; this.myIslandFingerprint = '';
       this.myIslandDatacenter = 0; this.myIslandTerritory = 0;
@@ -861,7 +859,7 @@
       this._island = null; this._potAlertedFor = null; this._alerted = {};
       this._highlightMissingSince = {};
       this._lastIslandFetch = 0; this._lastDcFetch = 0;
-      if (!preserveLocal) this._localPot = null; // Local Pot observations expire after an instance change.
+      if (!preserveLocal) this._localPot = null; // Local Pot observations are instance-scoped.
       State.detail = null; State.detailId = null;
       State.detailLocating = this.openPanel === 'battle';
       if (!preserveLocal) {
@@ -875,10 +873,10 @@
       if (State.detailLocating) this.renderPanel();
     },
 
-    // Hide the overlay off-island; on-island map visibility follows the collapsed state.
+    // Off-island hides the overlay; on-island map visibility follows the collapsed state.
     updateMapVisible: function () {
       var app = document.getElementById('app'); if (!app) return;
-      // Keep visible when disconnected for standalone/debug mode.
+      // Disconnected standalone mode remains visible for debugging.
       var outside = OC.Overlay.connected && !OC.Overlay.inOccult;
       app.style.display = outside ? 'none' : '';
       var toasts = document.getElementById('toasts');
@@ -907,7 +905,7 @@
     renderPanel: function () {
       var pop = document.getElementById('popover');
       if (this.openPanel === 'dcpots' && !this.showsCnDcOverview()) return this.closePanel();
-      // Preserve scroll position while the panel redraws each second.
+      // Preserve scroll while the panel redraws each second.
       var oldBody = pop.querySelector('.panel-body');
       var scroll = oldBody ? oldBody.scrollTop : 0;
       if (this.openPanel === 'dcpots') OC.UI.renderDcPots(pop, this._dc, !this._dcLoaded);
@@ -920,8 +918,8 @@
       if (newBody && scroll) newBody.scrollTop = scroll;
     },
 
-    // The top Pot timer always opens local-island details. Before strict identification,
-    // keep the locator view instead of duplicating the regional overview button.
+    // The top Pot timer opens local-island details. Until strict identification succeeds,
+    // retain the locator instead of duplicating the regional overview.
     showMyIsland: function () {
       var id = this.resolveMyIsland();
       if (id) return this.showIsland(id, this.myIslandRowId);
@@ -938,7 +936,7 @@
       State.detail = null; State.detailId = id; State.detailLocating = false;
       this.openPanel = 'battle';
       document.getElementById('popover').classList.remove('hidden');
-      OC.UI.renderBattlePanel(document.getElementById('popover'), null, id); // loading
+      OC.UI.renderBattlePanel(document.getElementById('popover'), null, id); // Empty detail state while loading.
       var request = rowId ? OC.Api.fetchTrackerRow(rowId) : OC.Api.fetchTracker(id);
       request.then(function (rec) {
         if (!rec) return;
@@ -964,8 +962,8 @@
     },
 
     updateChips: function () {
-      // Network data refreshes every five seconds. Advance the 30-minute cycle locally
-      // between requests so the countdown does not remain at "soon" after reaching zero.
+      // Advance the 30-minute cycle between five-second network refreshes so the timer
+      // does not remain at "soon" after zero.
       if (this._dcRows) {
         this._dc = OC.Pots.dcOverview(this._dcRows, now());
       }
@@ -1251,11 +1249,11 @@
       State.detailLocating = this.openPanel === 'battle';
     },
 
-    // Trusted local Add/Remove events do not wait for instance matching; cloud time requires strict confirmation.
+    // Trusted local transitions bypass instance matching; cloud timestamps require strict confirmation.
     localPotInfo: function () {
-      // The current fingerprint changes as FATEs rotate and must not repeatedly reject a
-      // confirmed island. Revalidate with accumulated independent Add/Remove signals while
-      // locking territory + data center. Local director state still corrects Pot liveness below.
+      // FATE rotation changes the current fingerprint. Revalidate a confirmed island with
+      // accumulated transitions while locking territory and data center; local directors
+      // remain authoritative for Pot liveness.
       var cloudTimingAuthorized = this.boundIslandEvidenceStatus().authorized;
       var cloud = cloudTimingAuthorized && this._island && this._island.pot;
       if ((!cloud || !cloud.length) && cloudTimingAuthorized) {
@@ -1307,8 +1305,7 @@
       var merged = OC.Pots.merge(cloud || [], localHistory);
       var status = OC.Pots.status(merged, now());
 
-      // Update may be the first event after an overlay reload and has no reliable spawn_time.
-      // Confirm only liveness and side; do not fabricate an exact next-cycle time.
+      // A post-reload Update proves liveness and side, not spawn time; never derive a cycle anchor from it.
       if (activeId) {
         var side = (OC.POTS[activeId] || {}).side || null;
         if (!status) return {
@@ -1321,7 +1318,7 @@
       return status;
     },
 
-    // Active island FATE/CE chips scale with the UI and include colored drop suffixes.
+    // Active encounter chips share UI scaling and optional reward suffixes.
     updateActive: function () {
       var box = document.getElementById('chips-active');
       if (!box) return;
@@ -1345,8 +1342,7 @@
         }).filter(function (chip) { return !!chip; });
       }
       var html = chips.map(function (chip) { return chip.html; }).join('');
-      // Keep unchanged encounter nodes alive when another FATE/CE starts or ends.
-      // Replacing the whole container makes ACT's Chromium flash every capsule.
+      // Preserve unchanged nodes; replacing the container makes ACT Chromium flash every chip.
       if (box._ocActiveHtml === html) {
         this.updateRadarPlacement();
         return;
@@ -1532,7 +1528,7 @@
         }
         OC.Map.updatePlayer(document.getElementById('mapLayer'));
         if (OC.Route) OC.Route.updatePosition(OC.Overlay.playerPos, OC.Overlay.territoryId);
-        App.refreshHighlights();   // Include nearby bosses in highlights.
+        App.refreshHighlights();
         if (App.resolveMyIsland()) App.pollMyIsland(true);
         else App.locateMyIslandFast();
       });
@@ -1588,12 +1584,12 @@
       var tn = Date.now();
       if (throttled && this._lastDcFetch && tn - this._lastDcFetch < 3000) return;
       this._lastDcFetch = tn;
-      // Use a 30-minute window because long report intervals can otherwise hide the current island.
+      // A 30-minute window keeps slowly reporting current islands discoverable.
       var territory = Number(OC.Overlay.territoryId) || Number(OC.MAP && OC.MAP.territory) || 1252;
       OC.Api.fetchDcPots(this.trackerDatacenters(), 1800, territory).then(function (rows) {
         App._dcRows = rows;
         App._dc = OC.Pots.dcOverview(rows);
-        App._islands = OC.Pots.islandList(rows);  // All active islands for identification, independent of Pot data.
+        App._islands = OC.Pots.islandList(rows);  // Identification candidates independent of Pot data.
         App._dcLoaded = true;
         var boundBefore = App.myIslandRowId;
         var resolved = App.resolveMyIsland();
@@ -1627,15 +1623,15 @@
     },
 
     pollMyIsland: function (throttled) {
-      // Do not fetch island data off-island; stale data could trigger alerts.
+      // Off-island polling is disabled because stale rows could trigger alerts.
       if (OC.Overlay.connected && !OC.Overlay.inOccult) {
         this._island = null;
         this.refreshHighlights();
         return;
       }
       var id = this.myIslandId;
-      // Strict tracker binding is not required for local 258/259 liveness.
-      // A DC refresh must drop only unbound cloud state, never active local capsules.
+      // Local 258/259 liveness does not require tracker binding. A DC refresh may clear
+      // unbound cloud state but never active local chips.
       if (!id) {
         this._island = null;
         this.refreshHighlights();
@@ -1653,11 +1649,10 @@
       }).catch(function () {});
     },
 
-    // Map highlights combine local memory state with cloud state strictly bound to this island.
+    // Map highlights merge local memory with cloud state strictly bound to this island.
     refreshHighlights: function () {
-      // 258 FateDirector is local island-wide state and takes priority for FATEs/Magic Pots.
-      // Some ACT/game versions emit no 259 CEDirector in North Horn, so merge CEs from the
-      // island tracker strictly bound by territory + world/DC + player-instance evidence.
+      // FateDirector 258 is authoritative for local FATEs and Pots. If North Horn lacks
+      // CEDirector 259, supplement CEs only from the strictly bound tracker row.
       var ids = [];
       Object.keys(OC.Overlay.memActive || {}).forEach(function (k) {
         var id = Number(k); if (ids.indexOf(id) < 0) ids.push(id);
@@ -1669,16 +1664,14 @@
         shared.forEach(function (e) {
           var id = Number(e.fate_id);
           var localMeta = (OC.Overlay.memMeta || {})[id];
-          // A local 259 state is authoritative for this CE. Use the shared
-          // tracker only when this ACT session has no director evidence for it.
+          // Local 259 evidence overrides shared CE state; use shared data only when absent locally.
           if (trustLocalOnly && OC.CES[id] && localMeta && localMeta.directorSeen) return;
           var active = OC.POTS[id] ? isActiveCandidate(e) : isAlive(e, isl.lastUpdate);
           if (active && id && ids.indexOf(id) < 0) ids.push(id);
         });
       }
-      // ACT directors and the shared tracker can each miss transient samples.
-      // Show new encounters immediately, but cover three five-second refresh
-      // intervals before removing a capsule so short gaps cannot make it flash.
+      // Show new encounters immediately, but tolerate three missed five-second samples
+      // before removal because either source can have transient gaps.
       var activeNow = {};
       ids.forEach(function (id) { activeNow[id] = true; });
       var missingSince = this._highlightMissingSince = this._highlightMissingSince || {};
@@ -1717,7 +1710,7 @@
       this.notifyEncounter(kind, id, def);
     },
 
-    // Alert filtering: the global switch takes priority; otherwise use Pot and zone reward filters.
+    // Global encounter alerts override the narrower Pot and reward filters.
     notifyEncounter: function (kind, id, def) {
       if (OC.Settings.get('alertAllEncounters')) {
         this.fireAlert(kind, t('notify_' + kind) + ' · ' + nm(def.name), 'spawn:' + id);
@@ -1736,13 +1729,12 @@
       if (hit) this.fireAlert(kind, nm(def.name) + ' · ' + OC.localName(OC.ITEMS[hit].name, OC.Settings.get('lang')), 'spawn:' + id);
     },
 
-    // Alert once per active lifetime when an island FATE/CE appears. Different reporters
-    // repeatedly update cloud spawn_time, so it cannot identify a new spawn.
+    // Alert once per active lifetime; reporter-written spawn_time is too unstable to define one.
     checkIslandAlerts: function (h) {
-      // Use local 258 state for island FATEs/Magic Pots. Some ACT versions lack 259 for
-      // North Horn CEs, so a strictly bound island tracker may supplement CE alerts.
+      // Use local 258 state for FATEs and Pots; a strictly bound tracker may supplement
+      // North Horn CE alerts when local 259 data is unavailable.
       var ceFallbackOnly = OC.Overlay.connected && OC.Overlay.inOccult;
-      var first = !this._island;                 // First island fetch establishes a baseline without alerts.
+      var first = !this._island;                 // Suppress alerts while establishing the baseline.
       var alerted = this._alerted = this._alerted || {};
       ['ce', 'fate', 'pot'].forEach(function (tp) {
         if (ceFallbackOnly && tp !== 'ce') return;
@@ -1750,13 +1742,13 @@
           var key = tp + ':' + e.fate_id;
           var active = tp === 'pot' ? isActiveCandidate(e) : isAlive(e, h.lastUpdate);
           if (!active) {
-            // Do not release the alert lock while memory shows active; cloud lag would duplicate alerts.
+            // Hold the lock while memory remains active; cloud lag must not retrigger it.
             if (!(OC.Overlay.memActive || {})[e.fate_id]) delete alerted[key];
             return;
           }
-          if (alerted[key]) return;                            // Already alerted during this active lifetime.
+          if (alerted[key]) return;                            // Already alerted for this active lifetime.
           alerted[key] = 1;
-          if (first) return;                                   // Do not alert for the baseline.
+          if (first) return;                                   // Baseline state is not a new encounter.
           var def = tp === 'ce' ? OC.CES[e.fate_id] : tp === 'pot' ? OC.POTS[e.fate_id] : OC.FATES[e.fate_id];
           if (!def) return;
           App.notifyEncounter(tp, e.fate_id, def);
@@ -1764,7 +1756,7 @@
       });
     },
 
-    // Magic Pot: alert once at each configured time before the expected spawn.
+    // Emit each configured pre-spawn Pot reminder once.
     checkPotPreAlert: function () {
       if (!OC.Settings.get('alertPot')) return;
       var mine = this.localPotInfo();
@@ -1772,7 +1764,7 @@
       var eta = mine.nextEpoch - Math.floor(Date.now() / 1000);
       if (eta <= 0) return;
       var seconds = normalizePotAlertSeconds(OC.Settings.get('potAlertSeconds'));
-      // Key alerts by a five-minute bucket to avoid duplicates from reporter timestamp jitter.
+      // Group jittered reporter epochs into one spawn cycle while tracking each reminder separately.
       var slot = Math.round(mine.nextEpoch / 300);
       var state = this._potAlertedFor;
       if (!state || state.slot !== slot) state = this._potAlertedFor = { slot: slot, seconds: {} };
@@ -1780,7 +1772,7 @@
         return eta <= second && !state.seconds[second];
       });
       if (!due.length) return;
-      // On a late load, skip older missed alerts and announce only the closest configured time.
+      // Late loads emit only the nearest missed reminder, never a backlog burst.
       due.forEach(function (second) { state.seconds[second] = true; });
       var reminder = Math.min.apply(Math, due);
       var side = mine.side === 'north' ? t('pot_north') : mine.side === 'south' ? t('pot_south') : '';
@@ -1790,18 +1782,18 @@
     },
 
     fireAlert: function (kind, msg, dedupKey) {
-      // Do not alert off-island; this prevents unrelated or other-island announcements.
+      // Suppress alerts off-island to exclude unrelated instances.
       if (OC.Overlay.connected && !OC.Overlay.inOccult) return;
       var now = Date.now();
       var key = dedupKey || msg;
-      // Use a ten-minute spawn-alert window because a single spawn remains active for several minutes.
+      // A ten-minute window covers one spawn lifetime without reaching the next cycle.
       var ttl = /^spawn:/.test(key) ? 600000 : 60000;
       this._alertLast = this._alertLast || {};
       if (this._alertLast[key] && now - this._alertLast[key] < ttl) return;
-      // Deduplicate across overlay instances so only the first instance announces an alert.
+      // Only the first overlay instance announces a shared alert key.
       if (!claimAlert(key, ttl, now)) { this._alertLast[key] = now; return; }
       this._alertLast[key] = now;
-      // Queue simultaneous alerts to prevent overlapping TTS playback.
+      // Serialize simultaneous alerts to prevent overlapping TTS.
       this._alertQueue = this._alertQueue || [];
       this._alertQueue.push({ kind: kind, msg: msg });
       this._drainAlerts();
@@ -1821,7 +1813,7 @@
 
     startLoops: function () {
       setInterval(function () { App.fetchDc(); }, 5000);
-      // Each second: update chips, timer text without redraw, and advance Pot warning alerts.
+      // The one-second tick updates chips, timer text, and Pot reminders without full redraws.
       setInterval(function () {
         App.updateChips();
         App.checkPotPreAlert();
@@ -1988,19 +1980,18 @@
     }
   };
 
-  // Deduplicate alerts across instances with origin-shared localStorage keys.
-  // This prevents repeated announcements from multiple overlays or tabs.
+  // Origin-shared localStorage keys suppress duplicate alerts across overlays and tabs.
   var ALERT_LS = 'occultOverlay.alerts';
   function claimAlert(key, ttl, now) {
     try {
       var map = JSON.parse(localStorage.getItem(ALERT_LS) || '{}');
-      if (map[key] && now - map[key] < ttl) return false; // Another instance already announced it.
+      if (map[key] && now - map[key] < ttl) return false; // Already announced by another instance.
       map[key] = now;
-      // Remove expired entries to prevent unbounded growth.
+      // Prune expired keys to bound storage growth.
       Object.keys(map).forEach(function (k) { if (now - map[k] > 1800000) delete map[k]; });
       localStorage.setItem(ALERT_LS, JSON.stringify(map));
       return true;
-    } catch (e) { return true; } // Do not block alerts when localStorage is unavailable.
+    } catch (e) { return true; } // Storage failure must not suppress alerts.
   }
 
   function pj(s) { try { return JSON.parse(s || '[]'); } catch (e) { return []; } }

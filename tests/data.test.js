@@ -15,7 +15,7 @@ for (const file of ['../js/data.js', '../data/mapPoints.js']) {
 }
 
 const OC = sandbox.OC;
-// EN/JA game-name and trigger-image assertions mirror EurekaTrackerAutoPopper@840f246.
+// EN/JA names and trigger images mirror EurekaTrackerAutoPopper@840f246.
 assert.equal(OC.TERRITORIES[1346].mapId, 1135);
 assert.deepEqual(Array.from(OC.TERRITORIES[1346].mapIds), [1135, 1244]);
 assert.equal(OC.TERRITORIES[1346].fateIds.length, 11);

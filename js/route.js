@@ -1,8 +1,9 @@
-/* Manual treasure-point patrol guidance. */
+/* Plans and advances manual coffer patrols from live player coordinates. */
 (function (global) {
   'use strict';
   var OC = global.OC = global.OC || {};
   var ARRIVAL_RADIUS = 12;
+  // Confirm arrival twice so one noisy position sample cannot skip a point.
   var ARRIVAL_CONFIRM_SAMPLES = 2;
   var DIRECTION_KEYS = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
   var listeners = [];
@@ -70,11 +71,11 @@
     var points = def.points.map(point);
     var startIndex = nearestIndex(points, from);
     if (def.mode === 'loop') {
+      // Rotate the authored loop to the nearest point without changing its sequence.
       return points.slice(startIndex).concat(points.slice(0, startIndex));
     }
 
-    // South Horn uses the same nearest-node Euclidean fallback as BOCCHI when
-    // a full vnavmesh cost graph is not available to this browser overlay.
+    // Match BOCCHI's greedy Euclidean fallback when vnavmesh costs are unavailable.
     var remaining = points.slice();
     var ordered = [];
     var current = from;
@@ -148,6 +149,7 @@
 
   function bearingForDelta(dx, dz) {
     if (dx * dx + dz * dz < 0.000001) return null;
+    // Game-map north is -Z; the UI arrow rotates clockwise from north.
     var degrees = Math.atan2(dx, -dz) * 180 / Math.PI;
     return (degrees + 360) % 360;
   }
@@ -174,6 +176,7 @@
 
     open: function (territory, position) {
       territory = Number(territory) || 0;
+      // Pausing guidance preserves unfinished progress within the same territory.
       var resume = state.territory === territory && state.order.length > 0 && !state.complete;
       state.active = true;
       if (!resume && validPosition(position)) reset(territory, position);
@@ -278,6 +281,7 @@
       return {
         active: true,
         territory: state.territory,
+        // Limit the preview to keep dense routes readable on the map.
         points: state.order.slice(state.index, state.index + 6).map(function (target, index) {
           return {
             x: target.x,

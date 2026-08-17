@@ -1,4 +1,4 @@
-/* Magic Pot treasure guidance from ACT system messages and player position. */
+/* Resolves Magic Pot treasure candidates from ACT messages and player position. */
 (function (global) {
   'use strict';
 
@@ -98,8 +98,8 @@
 
   function playerOwnsMessage(message) {
     var name = overlay && String(overlay.playerName || '');
-    // ACT uses 08AE/08B0 for the local player and 222E for nearby players.
-    // Match the name when available, but do not miss the personal subtype while player context is still loading.
+    // ACT uses 08AE/08B0 for the local player and 222E for nearby players. Match names
+    // when available, but trust the personal subtype while player context loads.
     return !name || message.indexOf(name) === 0;
   }
 
@@ -289,7 +289,7 @@
     state.pendingDirection = '';
     var matches = refineCandidates(state.candidates, position, direction);
     if (!matches.length) {
-      // Keep the previous set for recovery, but never select a point outside the reported sector.
+      // Retain the previous set for recovery, but never select outside the reported sector.
       state.target = null;
       state.status = 'mismatch';
       state.mismatch = true;

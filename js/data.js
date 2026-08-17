@@ -1,7 +1,6 @@
-/* Static Occult Crescent data from EurekaTrackerAutoPopper and OccultTrackerV3.
- * Keep English and Japanese game names identical to the upstream zone/const data;
- * never derive them by translating the Simplified Chinese strings.
- * Audited at Infiziert90/EurekaTrackerAutoPopper@840f246 against:
+/* Static Occult Crescent data sourced from EurekaTrackerAutoPopper and OccultTrackerV3.
+ * Preserve upstream English and Japanese game text; never translate it from Simplified Chinese.
+ * Last audited against Infiziert90/EurekaTrackerAutoPopper@840f246:
  * website/src/lib/zones/{southHorn,northHorn}.js and website/src/lib/const.js.
  */
 (function (global) {
@@ -33,10 +32,10 @@
     }
   };
 
-  // --- Backend and icon services -----------------------------------------
+  // Backend services.
   OC.BACKEND = {
     url: 'https://infi.ovh/api/OccultTrackerV3',
-    // Public anonymous JWT (role: anon), matching the official site.
+    // Public anon-role JWT used by the upstream site.
     anonKey:
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.Ur6wgi_rD4dr3uLLvbLoaEvfLCu4QFWdrF-uHRtbl_s',
     iconBase: 'https://beta.xivapi.com/api/1/asset?format=png&path='
@@ -47,7 +46,7 @@
     return OC.BACKEND.iconBase + encodeURIComponent(texPath);
   };
 
-  // --- Regions and data centers -----------------------------------------
+  // Regions and data centers.
   OC.DATACENTERS = {
     1: { name: 'Elemental', region: 'Japan' },
     2: { name: 'Gaia', region: 'Japan' },
@@ -67,11 +66,11 @@
     201: { name: 'Eorzea', region: 'Korea' }
   };
 
-  // --- Time constants in seconds, sourced from the data provider --------
+  // Provider timer values in seconds.
   OC.TIMERS = {
-    FATE_WINDOW_MIN: 1800, // 30min
-    FATE_WINDOW_MAX: 7200, // 2h
-    CE_COOLDOWN: 3600,     // Approximate CE cooldown; configurable in settings.
+    FATE_WINDOW_MIN: 1800, // 30 minutes.
+    FATE_WINDOW_MAX: 7200, // 2 hours.
+    CE_COOLDOWN: 3600,     // Approximate; user-configurable.
     RESPAWN: 3600
   };
 
@@ -91,7 +90,7 @@
     misc: { zh: '其他', en: 'Misc', color: '#9aa0a6' }
   };
 
-  // --- Drops (item_id -> definition) ------------------------------------
+  // Drops: item ID -> definition.
   OC.ITEMS = {
     // Demiatma
     47744: { cat: 'demiatma', img: 'ui/icon/026000/026025.tex', name: { zh: '青色半魂晶', en: 'Azurite Demiatma', ja: '青晶のデミアートマ' } },
@@ -104,7 +103,7 @@
     50974: { cat: 'dispeller', img: 'ui/icon/026000/026229.tex', name: { zh: '消幻晶α', en: 'Phantom Dispeller α', ja: 'ファントムディスペラーα' } },
     50975: { cat: 'dispeller', img: 'ui/icon/026000/026231.tex', name: { zh: '消幻晶β', en: 'Phantom Dispeller β', ja: 'ファントムディスペラーβ' } },
     50976: { cat: 'dispeller', img: 'ui/icon/026000/026230.tex', name: { zh: '消幻晶γ', en: 'Phantom Dispeller γ', ja: 'ファントムディスペラーγ' } },
-    // Exploration Notes
+    // South Horn exploration notes
     47728: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：封印大妖', en: 'Notes on the Cloister Demon', ja: '探査記録:クロイスターデーモン' } },
     47729: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：神秘偶像', en: 'Notes on the Mythic Idol', ja: '探査記録:ミシカルアイドル' } },
     47730: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：狂战士', en: 'Notes on the Crescent Berserker', ja: '探査記録:クレセント・バーサーカー' } },
@@ -116,7 +115,7 @@
     47736: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：大理石龙', en: 'Notes on the Marble Dragon', ja: '探査記録:マーブルドラゴン' } },
     47737: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：魔导牛头', en: 'Notes on Magitaur', ja: '探査記録:マギタウロス' } },
     47738: { cat: 'notes', img: 'ui/icon/026000/026603.tex', name: { zh: '调查记录：撒娇罐', en: 'Notes on Persistent Pots', ja: '探査記録:おねだりポット' } },
-    // Soul Shard
+    // Soul Shards
     47751: { cat: 'soulshard', img: 'ui/icon/026000/026681.tex', name: { zh: '灵魂碎晶：狂战士', en: "Berserker's Soul Shard", ja: 'ソウルシャード:バーサーカー' } },
     47752: { cat: 'soulshard', img: 'ui/icon/026000/026681.tex', name: { zh: '灵魂碎晶：游侠', en: "Ranger's Soul Shard", ja: 'ソウルシャード:狩人' } },
     47757: { cat: 'soulshard', img: 'ui/icon/026000/026681.tex', name: { zh: '灵魂碎晶：预言者', en: "Oracle's Soul Shard", ja: 'ソウルシャード:予言士' } },
@@ -148,7 +147,7 @@
     48008: { cat: 'misc', img: 'ui/icon/026000/026187.tex', name: { zh: '大妖异的契约书', en: 'Voidsent Contract', ja: '大妖異の契約書' } }
   };
 
-  // --- Standard FATEs (fate_id -> definition) ---------------------------
+  // Standard FATEs: FATE ID -> definition.
   OC.FATES = {
     1962: { name: { zh: '涌潮海魔—纳木', en: 'Rough Waters', ja: '波起こしの海魔「ナンム」' }, drops: [47744], encounter_id: 28 },
     1963: { name: { zh: '古代怪石—金色石面', en: 'The Golden Guardian', ja: '金色の怪石「ゴールデンブロックス」' }, drops: [47744], encounter_id: 14 },
@@ -162,7 +161,7 @@
     1971: { name: { zh: '美丽的咒杀者—执行者', en: 'Fatal Allure', ja: '美しき呪殺者「イグゼクレーター」' }, drops: [47749], encounter_id: 17 },
     1972: { name: { zh: '凶恶使魔—生命收割者', en: 'Serving Darkness', ja: '命の収奪者「ライフギャザラー」' }, drops: [47748], encounter_id: 24 },
 
-    // North Horn Phantom Dispeller drops and elemental weaknesses.
+    // North Horn rewards and elemental weaknesses.
     2074: { name: { zh: '暴力牛魔—好战弥诺陶洛斯', en: 'Raging Thrall', ja: '暴力の牛魔「ミノタウロス・マキア」' }, drops: [50974], weakness: ['fire'], encounter_id: 0 },
     2075: { name: { zh: '诅咒宝珠—邪瞳', en: 'Eye to Eye', ja: '呪いの宝珠「イビルシーア」' }, drops: [50975], weakness: ['fire'], encounter_id: 0 },
     2076: { name: { zh: '水边暴君—统领奇美拉', en: 'Shoreline Showdown', ja: '水辺の暴君「レグナントキマイラ」' }, drops: [50976], weakness: ['wind'], encounter_id: 0 },
@@ -176,7 +175,7 @@
     2084: { name: { zh: '高傲的雷兽—新月女王', en: 'Thunderregnum', ja: '気高き雷獣「クレセントレギナ」' }, drops: [50975], weakness: ['fire'], encounter_id: 0 }
   };
 
-  // --- Magic Pots (fate_id -> definition) -------------------------------
+  // Magic Pots: FATE ID -> definition.
   OC.POTS = {
     1976: { name: { zh: '幸福的魔法罐（北）', en: 'Pleading Pots (North)', ja: 'しあわせのマジックポット (北)' }, territory: 1252, side: 'north', drops: [47749, 47738], encounter_id: 40 },
     1977: { name: { zh: '瑟瑟发抖的魔法罐（南）', en: 'Persistent Pots (South)', ja: 'カチカチのマジックポット (南)' }, territory: 1252, side: 'south', drops: [47745, 47737], encounter_id: 18 },
@@ -184,8 +183,7 @@
     2073: { name: { zh: '被吹飞的魔法罐(南)', en: 'In a Pot of Bother (South)', ja: '飛ばされのマジックポット (南)' }, territory: 1346, side: 'south', drops: [50975], weakness: ['lightning'], encounter_id: 0 }
   };
 
-  // --- Critical Encounters (encounter_id -> definition) -----------------
-  // spawn_type=true means kills of a specific monster trigger the encounter.
+  // Critical Encounters: encounter ID -> definition; spawn_type marks kill-triggered CEs.
   OC.CES = {
     33: { name: { zh: '脑髓爱好者—夺心魔', en: 'Scourge of the Mind', ja: '脳髄愛好家「マインドフレイア」' }, drops: [49831, 49826, 47744], spawn_type: true, monster: { zh: '新月鬼鱼', en: 'Crescent Monk', ja: 'クレセント・モンク' }, monster_image: 'assets/trigger-monsters/33.png' },
     34: { name: { zh: '黑色连队', en: 'The Black Regiment', ja: '黒の連隊' }, drops: [49831, 49826, 47749, 47752, 47732], spawn_type: false },
@@ -204,7 +202,7 @@
     47: { name: { zh: '昏暗妖魂—鬼火苗', en: 'Flame of Dusk', ja: '昏き篝火「ヒンキーパンク」' }, drops: [49833, 49828, 47746], spawn_type: false },
     48: { name: { zh: '两歧塔 力之塔', en: 'The Forked Tower: Blood', ja: 'フォークタワー：力の塔' }, drops: [47868, 47734, 47735, 47736, 47737], spawn_type: false, type: 'tower' },
 
-    // North Horn elemental weaknesses and reward drops.
+    // North Horn rewards and elemental weaknesses.
     49: { name: { zh: '四颚斧花—提蔛', en: 'Many Mouths to Feed', ja: '四つ顎の魔樹「ペレキュス」' }, drops: [49826, 49831, 50974], weakness: ['fire'], spawn_type: true, monster: { zh: '新月瓦魔蛾', en: 'Crescent Wamoura', ja: 'クレセント・ワモーラ' }, monster_image: 'assets/trigger-monsters/49.png' },
     50: { name: { zh: '魔女复制体—卡洛菲斯提莉二重身', en: 'Doubled Trouble', ja: '魔女の複製体「カロフィステリ・ダブル」' }, drops: [49832, 49827, 51988, 50976], weakness: ['wind'], spawn_type: true, monster: { zh: '新月黑卫', en: 'Crescent Blackguard', ja: 'クレセント・ブラックガード' }, monster_image: 'assets/trigger-monsters/50.png' },
     51: { name: { zh: '纯白守护者—雪石膏之剑', en: 'Quarried Away', ja: '白の守護者「アラバスターブレード」' }, drops: [49831, 49826, 51987, 50975], weakness: ['lightning'], spawn_type: false },
@@ -223,12 +221,11 @@
     64: { name: { zh: '两岐塔 魔之塔', en: 'The Forked Tower: Magic', ja: 'フォークタワー：魔の塔' }, drops: [], spawn_type: false, type: 'tower' }
   };
 
-  // --- Magic Pot schedule constants in minutes, based on community data -
+  // Community-derived Magic Pot schedule, in minutes.
   OC.POT_SCHEDULE = {
-    firstMin: 5,     // First spawn (North) five minutes after instance creation.
-    intervalMin: 30, // Alternate North/South every 30 minutes.
+    firstMin: 5,     // First North spawn after instance creation.
+    intervalMin: 30, // Alternating North/South interval.
     instanceMaxMin: 180 // Maximum instance lifetime.
-    // Even index = North (1976); odd index = South (1977).
   };
 
   OC.localName = function (nameObj, lang) {

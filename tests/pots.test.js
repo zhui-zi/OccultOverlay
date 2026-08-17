@@ -105,7 +105,7 @@ const expectedFingerprint = drFingerprint(101, 1962, 1720000000);
 assert.equal(Pots.contextFingerprint(101, 1962, 1720000000), expectedFingerprint);
 assert.ok(Pots.contextFingerprints(101, 1962, 1720000001, 1).includes(expectedFingerprint));
 
-// Field replay: ACT Add at 2026-07-28 07:31:29 +08:00 on CN DC 103.
+// Field replay: ACT Add on CN data center 103 at 2026-07-28 07:31:29 +08:00.
 const observedFingerprint = '2DE19B44DAC2C6E0FBE683AD311F9ACEF44A326B6B37D7AB27DF4CDD937CCC8D';
 assert.equal(Pots.contextFingerprint(103, 1962, 1785195089), observedFingerprint);
 assert.equal(Pots.contextFingerprints(103, 2074, 1785195089, 0).length, 1);

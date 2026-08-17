@@ -1,4 +1,4 @@
-/* CE state and cooldown calculations from shared tracker history. */
+/* Derives CE state and cooldowns from shared tracker history. */
 (function (global) {
   'use strict';
 

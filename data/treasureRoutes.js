@@ -1,4 +1,6 @@
-/* Treasure patrol coordinates in game-world [x, y, z, mapId, nodeId]. */
+/* Treasure patrol data: [worldX, worldY, worldZ, mapId, optional nodeId].
+ * "loop" preserves authored order; "nearest" lets the planner derive visit order.
+ */
 (function (global) {
   'use strict';
   var OC = global.OC = global.OC || {};

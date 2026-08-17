@@ -1,4 +1,4 @@
-/* Live coffer and carrot radar from OverlayPlugin game objects. */
+/* Tracks live coffers and carrots from OverlayPlugin game objects. */
 (function (global) {
   'use strict';
 

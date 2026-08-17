@@ -30,7 +30,7 @@
     });
     return h + '</span>';
   };
-  // Key reward suffixes: Demiatma colors for South Horn and Phantom Dispeller types for North Horn.
+  // Compact reward suffixes cover South Horn Demiatma and North Horn Dispellers.
   var REWARD_BADGES = {
     47744: ['青', '#4aa3ff'], 47745: ['碧', '#2ec4b6'], 47746: ['绿', '#3ddb63'],
     47747: ['橙', '#ff8a3c'], 47748: ['紫', '#b061ff'], 47749: ['黄', '#ffce4d'],
@@ -43,7 +43,7 @@
     });
     return out;
   };
-  // Show suffixes only for key rewards enabled in the alert settings.
+  // Show suffixes only for rewards enabled in alert settings.
   UI.rewardSuffixIfWanted = function (drops) {
     var want = OC.Settings.get('alertColors') || {};
     return UI.rewardSuffix((drops || []).filter(function (id) { return want[id]; }));
@@ -72,7 +72,7 @@
     return h + '</span>';
   };
 
-  // ---- Magic Pot overview for the four CN regions ----
+  // Magic Pot overview for the four CN regions.
   UI.renderDcPots = function (host, list, loading) {
     var current = now();
     var visible = (list || []).filter(function (item) {
@@ -105,7 +105,7 @@
     });
   };
 
-  // ---- Island details: CE / FATE / Magic Pot ----
+  // Island details: CE, FATE, and Magic Pot.
   UI.renderBattlePanel = function (host, hist, id, locating) {
     var n = now();
     var h = '<div class="panel-head">' + t('panel_battle') + (id ? ' · ' + esc(id) : '') +
@@ -282,7 +282,7 @@
   function avgInterval(e) {
     var r = e.respawn_times;
     if (r && r.length) { var s = 0; r.forEach(function (x) { s += x; }); return Math.round(s / r.length); }
-    return 1800; // Default to 30 minutes.
+    return 1800; // Default cooldown: 30 minutes.
   }
   function span(cls, kind, val) {
     return '<span class="' + cls + '" data-tk="' + kind + '" data-tv="' + val + '">' + UI.timerText(kind, val) + '</span>';
@@ -346,7 +346,7 @@
       }
       var base = e.last_seen > 0 ? e.last_seen : (e.death_time > 0 ? e.death_time : 0);
       if (base > 0) { var na = base + avgInterval(e); return span('bdg ' + (n >= na ? 'canpop' : 'gone'), 'cd', na); }
-      return span('bdg canpop', 'canpop', 0); // Treat a never-seen encounter as triggerable.
+      return span('bdg canpop', 'canpop', 0); // Never-seen encounters are triggerable.
     }
     if (type === 'pot') {
       if (potStatus && !potStatus.alive && potStatus.side === def.side)
@@ -360,7 +360,7 @@
     return '<span class="bdg unk">' + t('unknown') + '</span>';
   }
 
-  // Timer text shared by render and the one-second tick.
+  // Shared timer formatting for initial render and one-second ticks.
   UI.timerText = function (kind, val, now) {
     now = now || Math.floor(Date.now() / 1000);
     switch (kind) {
@@ -373,7 +373,7 @@
     }
     return '';
   };
-  // Update only timer text each second to preserve scroll position and avoid flicker.
+  // Update timer text in place to preserve scroll and prevent flicker.
   UI.tickPanel = function () {
     var now = Math.floor(Date.now() / 1000);
     var expiredPot = false;
@@ -387,7 +387,7 @@
     return expiredPot;
   };
 
-  // ---- Notifications ----
+  // Notifications.
   var last = {};
   UI.notify = function (kind, title, body, key) {
     var k = key || (kind + ':' + title), tn = Date.now();
@@ -419,7 +419,7 @@
     } catch (e) {}
   }
   UI.beep = beep;
-  // Use OverlayPlugin TTS instead of system TTS; return false to fall back to a tone when disconnected.
+  // Prefer OverlayPlugin TTS; return false for tone fallback when disconnected.
   UI.speak = function (text) {
     if (!OC.Settings.get('useTts')) return false;
     if (OC.Overlay && OC.Overlay.connected && OC.Overlay.say(text)) return true;

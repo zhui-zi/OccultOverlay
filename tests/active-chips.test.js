@@ -85,8 +85,7 @@ assert.equal(activeBox.children.length, 2);
 const stableCeNode = activeBox.children[0];
 const firstFateNode = activeBox.children[1];
 
-// Reproduce the unresolved-island refresh observed on 2026-08-16: local
-// 258/259 state remains authoritative before a strict tracker row is bound.
+// Regression: unresolved-island refresh must preserve authoritative local 258/259 state.
 sandbox.OC.Overlay.memActive = { 49: true, 2074: true };
 sandbox.OC.App.myIslandId = null;
 sandbox.OC.App._island = { ce: [], fate: [], pot: [] };

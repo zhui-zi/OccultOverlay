@@ -169,6 +169,7 @@
     var currentMapId = Number(map.mapId) || 0;
     var targetMapId = Number(view.points[0].mapId) || 0;
     var sameLayer = !currentMapId || !targetMapId || currentMapId === targetMapId;
+    // Never connect floors; show only the next target until the map layer changes.
     var points = sameLayer
       ? view.points.filter(function (target) { return !targetMapId || Number(target.mapId) === targetMapId; })
       : [view.points[0]];
@@ -196,7 +197,7 @@
 
   function highlightsSvg() {
     var ids = (OC.State && OC.State.highlights) || [];
-    // Prefer live coordinates from getCombatants when near the boss; otherwise use static data.
+    // Prefer nearby getCombatants coordinates; fall back to static encounter data.
     var bossPos = (OC.Overlay && OC.Overlay.bossPos) || {};
     var center = (OC.MAP && OC.MAP.center) || 1024;
     var s = '';
@@ -222,7 +223,7 @@
     var center = (OC.MAP && OC.MAP.center) || 1024;
     var x = pp.x + center, y = pp.z + center;
     var g = '<g class="you">';
-    // Facing: a soft conical field of view; heading is radians, with 0 facing south/down.
+    // Heading is radians; zero faces south/down on the SVG map.
     if (pp.h != null) {
       var d = { x: Math.sin(pp.h), y: Math.cos(pp.h) };
       var pr = { x: Math.cos(pp.h), y: -Math.sin(pp.h) };
@@ -240,7 +241,7 @@
 
   function marker(x, y, L) {
     var c = L.color, r = L.r;
-    // Add a white outline glow for map visibility.
+    // A dark halo keeps markers legible on bright map regions.
     var halo = 'stroke="#0a0f16" stroke-width="4"';
     if (L.diamond) {
       return '<path d="M' + x + ' ' + (y - r) + ' L' + (x + r) + ' ' + y + ' L' + x + ' ' + (y + r) + ' L' + (x - r) + ' ' + y + ' Z" fill="' + c + '" ' + halo + '/>';

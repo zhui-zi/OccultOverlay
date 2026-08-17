@@ -1,4 +1,4 @@
-/* PostgREST client for the shared OccultTrackerV3 backend. */
+/* PostgREST transport for the shared OccultTrackerV3 backend. */
 (function (global) {
   'use strict';
 
@@ -44,7 +44,7 @@
       });
     },
 
-    /** Read a confirmed instance by primary key to avoid stale or duplicate tracker_id rows. */
+    // Bound instances use the primary key because tracker_id rows may be stale or duplicated.
     fetchTrackerRow: function (rowId) {
       var url = OC.BACKEND.url + '?id=eq.' + encodeURIComponent(rowId) + '&limit=1';
       return fetch(url, { headers: headers(), cache: 'no-store' }).then(function (r) {
@@ -112,7 +112,7 @@
       });
     },
 
-    /** Query this island by its DR fingerprint without downloading all active regional records. */
+    // Filter by DR fingerprint server-side instead of downloading every active regional row.
     fetchIslandByFingerprints: function (fingerprints, territory, datacenter) {
       fingerprints = (fingerprints || []).filter(function (value, index, all) {
         return /^[0-9A-F]{64}$/i.test(String(value)) && all.indexOf(value) === index;
@@ -146,7 +146,7 @@
       });
     },
 
-    /** Update only a strictly bound primary key to avoid duplicate tracker_id rows. */
+    // Patch only the bound primary key; tracker_id is not unique.
     updateIslandTracker: function (rowId, record) {
       var url = OC.BACKEND.url + '?id=eq.' + encodeURIComponent(rowId);
       return fetch(url, {

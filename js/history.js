@@ -1,3 +1,4 @@
+/* Shared tracker history freshness checks. */
 (function (global) {
   'use strict';
 
@@ -9,11 +10,8 @@
     return isFinite(value) ? value : fallback;
   }
 
-  /**
-   * Shared tracker entries can contain a previous death timestamp that is
-   * earlier than the current server spawn timestamp. Treat that as active only
-   * while the entry was observed alongside the tracker's latest upload.
-   */
+  // Reused entries may retain a death before the current spawn; accept them only
+  // when last_seen remains fresh relative to the tracker upload.
   OC.historyAlive = function (entry, recordLastUpdate, observedNow) {
     if (!entry) return false;
 
