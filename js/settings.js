@@ -42,7 +42,7 @@
         }
         if (!match && /^\d+$/.test(token)) number = Number(token) * 60;
       }
-      if (number !== Math.floor(number) || number < 1 || number > 1800 || seen[number]) return;
+      if (number !== Math.floor(number) || number < 1 || number > 600 || seen[number]) return;
       seen[number] = true;
       seconds.push(number);
     });

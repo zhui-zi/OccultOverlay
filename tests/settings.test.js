@@ -76,10 +76,12 @@ assert.equal(loaded.settings.get('radarPinned'), true, 'the pinned radar switch 
 loaded.settings.set('radarVoice', false);
 loaded = loadSettings('en-US', loaded.stored());
 assert.equal(loaded.settings.get('radarVoice'), false, 'the radar voice switch must survive reload independently');
-loaded.settings.set('potAlertSeconds', '5m，10m; 3m, 30s, 10sec, 30秒, 0s, 31m, 2.5m');
-assert.deepEqual(Array.from(loaded.settings.get('potAlertSeconds')), [600, 300, 180, 30, 10], 'pot reminders must normalize units, deduplicate, and sort');
+loaded.settings.set('potAlertSeconds', '10m，5m，3m，30s，10sec，30秒，1s，0s，11m，2.5m');
+assert.deepEqual(Array.from(loaded.settings.get('potAlertSeconds')), [600, 300, 180, 30, 10, 1], 'pot reminders must accept compact Chinese commas and reject values over ten minutes');
+loaded.settings.set('potAlertSeconds', '10m,5m,3m,30s,10s,1s');
+assert.deepEqual(Array.from(loaded.settings.get('potAlertSeconds')), [600, 300, 180, 30, 10, 1], 'pot reminders must accept English commas without spaces');
 loaded = loadSettings('en-US', loaded.stored());
-assert.deepEqual(Array.from(loaded.settings.get('potAlertSeconds')), [600, 300, 180, 30, 10], 'custom pot reminders must survive reload');
+assert.deepEqual(Array.from(loaded.settings.get('potAlertSeconds')), [600, 300, 180, 30, 10, 1], 'custom pot reminders must survive reload');
 loaded.settings.set('potAlertSeconds', '');
 assert.deepEqual(Array.from(loaded.settings.get('potAlertSeconds')), [180], 'an empty reminder list must retain the safe default');
 

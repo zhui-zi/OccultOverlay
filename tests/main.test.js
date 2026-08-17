@@ -394,10 +394,13 @@ assert.match(styles, /\.rbtn\[data-layer="reroll"\]::after\s*\{\s*content:\s*att
   'the reroll badge must read its localized marker');
 const index = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 assert.equal((index.match(/class="resize-anchor /g) || []).length, 4, 'all four ACT resize corners must remain hit-testable');
-assert.match(index, /js\/treasure\.js\?v=134/, 'the treasure state machine must load in the overlay');
-assert.match(index, /js\/radar\.js\?v=134/, 'the radar state machine must load in the overlay');
-assert.ok(index.indexOf('data/mapPoints.js?v=134') < index.indexOf('js/treasure.js?v=134'), 'treasure points must load before guidance');
-assert.ok(index.indexOf('js/radar.js?v=134') < index.indexOf('js/map.js?v=134'), 'radar state must load before map rendering');
+assert.match(index, /js\/treasure\.js\?v=137/, 'the treasure state machine must load in the overlay');
+assert.match(index, /js\/radar\.js\?v=137/, 'the radar state machine must load in the overlay');
+assert.match(index, /js\/route\.js\?v=137/, 'the patrol state machine must load in the overlay');
+assert.ok(index.indexOf('data/mapPoints.js?v=137') < index.indexOf('js/treasure.js?v=137'), 'treasure points must load before guidance');
+assert.ok(index.indexOf('data/treasureRoutes.js?v=137') < index.indexOf('js/route.js?v=137'), 'patrol points must load before route planning');
+assert.ok(index.indexOf('js/route.js?v=137') < index.indexOf('js/map.js?v=137'), 'patrol state must load before map rendering');
+assert.ok(index.indexOf('js/radar.js?v=137') < index.indexOf('js/map.js?v=137'), 'radar state must load before map rendering');
 const mapSource = fs.readFileSync(require.resolve('../js/map.js'), 'utf8');
 const layerSandbox = {};
 layerSandbox.window = layerSandbox;
@@ -421,6 +424,16 @@ assert.match(mainSource, /class="rbtn-icon"[^>]+esc\(l\.icon\)/, 'rail controls 
 assert.doesNotMatch(mainSource, /OC\.iconUrl\(l\.icon\)/, 'rail controls must not depend on a remote icon service');
 assert.match(mainSource, /l\.key === 'reroll'[^\n]+OC\.i18n\.t\('layer_short_reroll'\)/,
   'the reroll icon must render its localized short marker');
+assert.ok(mainSource.indexOf('data-panel="route"') < mainSource.indexOf('data-panel="dcpots"'),
+  'the patrol button must appear immediately above the pot overview button');
+assert.match(mainSource, /data-panel="route"[\s\S]+?assets\/map-icons\/treasure-patrol\.png/, 'the patrol button must use its generated icon');
+assert.match(mainSource, /data-panel="dcpots"[\s\S]+?assets\/map-icons\/pot-overview\.png/, 'the pot overview button must use its generated icon');
+for (const panelIcon of ['treasure-patrol.png', 'pot-overview.png']) {
+  const image = fs.readFileSync(require.resolve('../assets/map-icons/' + panelIcon));
+  assert.equal(image.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', panelIcon + ' must be a bundled PNG');
+  assert.equal(image.readUInt32BE(16), 128, panelIcon + ' must retain a high-density square export');
+  assert.equal(image.readUInt32BE(20), 128, panelIcon + ' must retain a high-density square export');
+}
 assert.match(mapSource, /preserveAspectRatio="xMidYMin meet"/,
   'the map must stay horizontally centered and align below the top overlays');
 assert.match(mapSource, /OC\.Radar\.mapTargets\(\)/, 'the map must read the persisted discovery target list');
@@ -428,6 +441,8 @@ assert.doesNotMatch(mapSource, /slice\(0,\s*3\)/, 'the fixed-panel row limit mus
 assert.match(mapSource, /class="treasure-wrap"/, 'the map must include a dedicated dynamic treasure layer');
 assert.match(mapSource, /OC\.Treasure\.view\(\)/, 'the dynamic treasure layer must read the live candidate set');
 assert.match(mapSource, /treasure-target-ring/, 'the selected treasure target must stand out from other candidates');
+assert.match(mapSource, /class="route-wrap"/, 'the map must include a dedicated patrol layer');
+assert.match(mapSource, /OC\.Route\.mapView\(\)/, 'the patrol layer must read the current ordered route');
 
 const radarClasses = new Set(['hidden']);
 const radarHost = {
@@ -1226,10 +1241,10 @@ settingsControls['#a-pot'].checked = true;
 settingsControls['#a-pot'].change();
 assert.equal(alertPot, true, 'the pot alert switch must persist');
 assert.equal(settingsControls['#a-pot-times'].disabled, false, 'enabling pot alerts must enable the reminder editor');
-settingsControls['#a-pot-times'].value = '5m，10m; 3m, 30s, 10s, 30s';
+settingsControls['#a-pot-times'].value = '10m，5m，3m，30s，10s，1s，11m';
 settingsControls['#a-pot-times'].blur();
-assert.deepEqual(Array.from(potAlertSeconds), [600, 300, 180, 30, 10], 'the reminder editor must support minute and second alerts');
-assert.equal(settingsControls['#a-pot-times'].value, '10m, 5m, 3m, 30s, 10s', 'the reminder editor must show the normalized list');
+assert.deepEqual(Array.from(potAlertSeconds), [600, 300, 180, 30, 10, 1], 'the reminder editor must accept compact Chinese commas and enforce the ten-minute limit');
+assert.equal(settingsControls['#a-pot-times'].value, '10m, 5m, 3m, 30s, 10s, 1s', 'the reminder editor must show the normalized list');
 
 settingsControls['#s-treasure'].checked = false;
 settingsControls['#s-treasure'].change();

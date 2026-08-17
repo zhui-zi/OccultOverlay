@@ -57,6 +57,7 @@
       s += '</g>';
 
       s += '<g class="treasure-wrap">' + treasureSvg() + '</g>';
+      s += '<g class="route-wrap">' + routeSvg() + '</g>';
       s += '<g class="radar-wrap">' + radarSvg() + '</g>';
       s += '<g class="hi-wrap">' + highlightsSvg() + '</g>';
       s += '<g class="you-wrap">' + youMarker() + '</g>';
@@ -87,6 +88,14 @@
       var wrap = container.querySelector('.treasure-wrap');
       if (!wrap) return this.render(container);
       wrap.innerHTML = treasureSvg();
+    },
+
+    updateRoute: function (container) {
+      container = container || document.getElementById('mapLayer');
+      if (!container) return;
+      var wrap = container.querySelector('.route-wrap');
+      if (!wrap) return this.render(container);
+      wrap.innerHTML = routeSvg();
     },
 
     updateRadar: function (container) {
@@ -147,6 +156,39 @@
         '<circle class="radar-pulse" cx="' + x + '" cy="' + y + '" r="34" fill="none" stroke="' + color + '" stroke-width="7"/>' +
         '<circle cx="' + x + '" cy="' + y + '" r="22" fill="' + color + '" stroke="#071019" stroke-width="6"/>' +
         '<text x="' + x + '" y="' + (y + 10) + '" text-anchor="middle" class="radar-label">' + label + '</text>' +
+        '</g>';
+    });
+    return s;
+  }
+
+  function routeSvg() {
+    var view = OC.Route && OC.Route.mapView ? OC.Route.mapView() : null;
+    var map = OC.MAP || {};
+    if (!view || !view.active || Number(view.territory) !== Number(map.territory) || !view.points.length) return '';
+    var center = map.center || 1024;
+    var currentMapId = Number(map.mapId) || 0;
+    var targetMapId = Number(view.points[0].mapId) || 0;
+    var sameLayer = !currentMapId || !targetMapId || currentMapId === targetMapId;
+    var points = sameLayer
+      ? view.points.filter(function (target) { return !targetMapId || Number(target.mapId) === targetMapId; })
+      : [view.points[0]];
+    var s = '';
+    if (sameLayer && points.length > 1) {
+      s += '<polyline points="' + points.map(function (target) {
+        return (Number(target.x) + center) + ',' + (Number(target.z) + center);
+      }).join(' ') + '" fill="none" stroke="#70e7d2" stroke-opacity="0.72" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 9"/>';
+    }
+    points.forEach(function (target, index) {
+      if (!isFinite(target.x) || !isFinite(target.z)) return;
+      var x = Number(target.x) + center;
+      var y = Number(target.z) + center;
+      var current = index === 0;
+      var color = current ? '#70e7d2' : '#b7fff2';
+      var opacity = current ? '1' : String(Math.max(0.32, 0.72 - index * 0.08));
+      s += '<g class="route-mark' + (current ? ' current' : '') + (sameLayer ? '' : ' other-layer') + '">' +
+        (current ? '<circle class="route-pulse" cx="' + x + '" cy="' + y + '" r="31" fill="none" stroke="' + color + '" stroke-width="7"' + (sameLayer ? '' : ' stroke-dasharray="7 6"') + '/>' : '') +
+        '<circle cx="' + x + '" cy="' + y + '" r="' + (current ? 20 : 15) + '" fill="' + color + '" fill-opacity="' + opacity + '" stroke="#071019" stroke-width="5"/>' +
+        '<text x="' + x + '" y="' + (y + (current ? 7 : 5)) + '" text-anchor="middle" class="route-label' + (current ? ' current' : '') + '">' + esc(target.routeNumber) + '</text>' +
         '</g>';
     });
     return s;

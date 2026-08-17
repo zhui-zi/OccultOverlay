@@ -375,6 +375,12 @@ Promise.resolve().then(async () => {
   position.advanceTime(250);
   position.intervals[1]();
   assert.equal(combatantPolls, 3, 'a visible radar target must keep the same live position polling rate');
+  await Promise.resolve();
+  position.sandbox.OC.Radar = { isActive() { return false; } };
+  position.sandbox.OC.Route = { isActive() { return true; } };
+  position.advanceTime(250);
+  position.intervals[1]();
+  assert.equal(combatantPolls, 4, 'an open patrol guide must keep the same live position polling rate');
   console.log('overlay tests passed');
 }).catch((error) => {
   console.error(error);

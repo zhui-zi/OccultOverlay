@@ -13,7 +13,12 @@ const uiStrings = {
     tower_upcoming: 'More after completion', tower_history: 'Previous intervals',
     treasure_title: 'Magic Pot Treasure', treasure_reroll: 'Reroll coffer', treasure_candidates: 'Candidates',
     treasure_safe: 'Safe', treasure_reported: 'Reported', treasure_danger: 'Only dangerous points remain.',
-    direction_east: 'East', close: 'Close',
+    route_title: 'Treasure Patrol', route_unsupported: 'No treasure patrol route is available in this area.',
+    route_complete: 'All coffer points visited', route_complete_help: 'Replan to start another lap.',
+    route_wait_position: 'Reading player position…', route_progress: 'Patrol progress', route_point: 'Route point',
+    route_layer_surface: 'Surface', route_layer_subterrane: 'Subterrane', route_change_layer: 'Next point is on',
+    route_previous: 'Previous', route_restart: 'Replan', route_next: 'Next',
+    direction_north: 'North', direction_east: 'East', close: 'Close',
   },
   zh: {
     weakness: '弱点', tower: '两歧塔', last_seen: '上次', tower_predicted: '预计',
@@ -29,7 +34,7 @@ const sandbox = {
   OC: {
     Settings: { get(key) { return key === 'lang' ? currentLang : null; } },
     Overlay: { territoryId: 1346 },
-    MAP: { territory: 1346 },
+    MAP: { territory: 1346, mapId: 1135 },
     Pots: { status() { return null; } },
     i18n: { t(key) { return (uiStrings[currentLang] && uiStrings[currentLang][key]) || key; } },
   },
@@ -200,5 +205,44 @@ assert.match(guideHost.innerHTML, /Only dangerous points remain/);
 sandbox.OC.UI.renderTreasureGuide(guideHost, { active: true, dismissed: true });
 assert.equal(guideClasses.has('hidden'), true, 'manual close must hide only the guide window');
 assert.equal(guideHost.innerHTML, '');
+
+const routeHost = { innerHTML: '' };
+sandbox.OC.UI.renderRoutePanel(routeHost, {
+  supported: true,
+  complete: false,
+  status: 'ready',
+  progress: 4,
+  visited: 3,
+  total: 68,
+  target: {
+    routeNumber: 17,
+    bearing: 73.2,
+    directionKey: 'east',
+    distance: 42.4,
+    layerKey: 'subterrane',
+    mapId: 1244,
+  },
+});
+assert.match(routeHost.innerHTML, /Treasure Patrol/);
+assert.match(routeHost.innerHTML, /4 \/ 68/);
+assert.match(routeHost.innerHTML, /class="route-number">17</);
+assert.match(routeHost.innerHTML, /transform:rotate\(73\.2deg\)/, 'the patrol arrow must use the exact live bearing');
+assert.match(routeHost.innerHTML, />East</);
+assert.match(routeHost.innerHTML, /42\.4 m/);
+assert.match(routeHost.innerHTML, /Next point is on Subterrane/, 'a cross-layer target must show a map transition hint');
+assert.match(routeHost.innerHTML, /data-route-action="previous"/);
+assert.match(routeHost.innerHTML, /data-route-action="restart"/);
+assert.match(routeHost.innerHTML, /data-route-action="next"/);
+
+sandbox.OC.UI.renderRoutePanel(routeHost, {
+  supported: true,
+  complete: true,
+  progress: 68,
+  visited: 68,
+  total: 68,
+  target: null,
+});
+assert.match(routeHost.innerHTML, /All coffer points visited/);
+assert.match(routeHost.innerHTML, /data-route-action="next" disabled/);
 
 console.log('ui tests passed');

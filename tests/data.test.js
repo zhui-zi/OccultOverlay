@@ -145,7 +145,11 @@ assert.equal(i18nSandbox.OC.i18n.t('set_radar_carrots'), '胡萝卜雷达');
 assert.equal(i18nSandbox.OC.i18n.t('set_radar_pinned_help'), '收起地图时仍显示雷达面板。');
 assert.equal(i18nSandbox.OC.i18n.t('alert_pot_opt'), '魔法罐提前提示');
 assert.equal(i18nSandbox.OC.i18n.t('alert_pot_times'), '提前时间');
+assert.match(i18nSandbox.OC.i18n.t('alert_pot_times_help'), /中英文逗号/);
+assert.match(i18nSandbox.OC.i18n.t('alert_pot_times_help'), /1 秒–10 分钟/);
 assert.equal(i18nSandbox.OC.i18n.t('layer_short_reroll'), '续');
+assert.equal(i18nSandbox.OC.i18n.t('panel_route'), '跑刀辅助');
+assert.equal(i18nSandbox.OC.i18n.t('route_change_layer'), '下一点位于');
 i18nLanguage = 'en';
 assert.equal(i18nSandbox.OC.i18n.t('set_lang'), 'Language');
 assert.equal(i18nSandbox.OC.i18n.t('set_data_region'), 'Data region');
@@ -156,6 +160,8 @@ assert.equal(i18nSandbox.OC.i18n.t('set_radar_pinned_help'), 'Keep the radar pan
 assert.equal(i18nSandbox.OC.i18n.t('minute_short'), 'min');
 assert.equal(i18nSandbox.OC.i18n.t('second_short'), 'sec');
 assert.equal(i18nSandbox.OC.i18n.t('layer_short_reroll'), 'R');
+assert.equal(i18nSandbox.OC.i18n.t('panel_route'), 'Treasure Patrol');
+assert.equal(i18nSandbox.OC.i18n.t('route_restart'), 'Replan');
 i18nLanguage = 'ja';
 assert.equal(i18nSandbox.OC.i18n.t('set_lang'), '言語');
 assert.equal(i18nSandbox.OC.i18n.t('data_region_global'), 'グローバル版');
@@ -165,6 +171,8 @@ assert.equal(i18nSandbox.OC.i18n.t('set_radar_carrots'), 'ニンジンレーダ�
 assert.equal(i18nSandbox.OC.i18n.t('set_radar_pinned_help'), 'マップを折りたたんでもレーダーを表示します。');
 assert.equal(i18nSandbox.OC.i18n.t('alert_pot_times'), '出現前の時間');
 assert.equal(i18nSandbox.OC.i18n.t('layer_short_reroll'), '再');
+assert.equal(i18nSandbox.OC.i18n.t('panel_route'), '宝箱巡回');
+assert.equal(i18nSandbox.OC.i18n.t('route_layer_subterrane'), '地下');
 
 assert.equal(OC.selectMap(1346), true);
 assert.equal(OC.MAP.background, 'https://pic.imgdd.cc/i/033yZEk5hNqakHejLVO4sm.png');

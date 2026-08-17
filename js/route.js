@@ -1,0 +1,297 @@
+/* Manual treasure-point patrol guidance. */
+(function (global) {
+  'use strict';
+  var OC = global.OC = global.OC || {};
+  var ARRIVAL_RADIUS = 12;
+  var ARRIVAL_CONFIRM_SAMPLES = 2;
+  var DIRECTION_KEYS = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+  var listeners = [];
+  var state = freshState();
+
+  function freshState() {
+    return {
+      active: false,
+      territory: 0,
+      order: [],
+      index: 0,
+      complete: false,
+      arrivalKey: '',
+      arrivalSamples: 0
+    };
+  }
+
+  function definition(territory) {
+    return OC.TREASURE_ROUTES && OC.TREASURE_ROUTES[Number(territory)] || null;
+  }
+
+  function point(row, index) {
+    return {
+      x: Number(row[0]),
+      y: Number(row[1]),
+      z: Number(row[2]),
+      mapId: Number(row[3]) || 0,
+      nodeId: Number(row[4]) || 0,
+      routeNumber: index + 1
+    };
+  }
+
+  function validPosition(position) {
+    return !!position && isFinite(Number(position.x)) && isFinite(Number(position.z));
+  }
+
+  function distanceSquared(from, to) {
+    var dx = Number(to.x) - Number(from.x);
+    var dz = Number(to.z) - Number(from.z);
+    var total = dx * dx + dz * dz;
+    if (isFinite(Number(from.y)) && isFinite(Number(to.y))) {
+      var dy = Number(to.y) - Number(from.y);
+      total += dy * dy;
+    }
+    return total;
+  }
+
+  function nearestIndex(points, from) {
+    var bestIndex = 0;
+    var bestDistance = Infinity;
+    points.forEach(function (candidate, index) {
+      var distance = distanceSquared(from, candidate);
+      if (distance < bestDistance ||
+          (distance === bestDistance && candidate.routeNumber < points[bestIndex].routeNumber)) {
+        bestIndex = index;
+        bestDistance = distance;
+      }
+    });
+    return bestIndex;
+  }
+
+  function buildOrder(territory, from) {
+    var def = definition(territory);
+    if (!def || !validPosition(from)) return [];
+    var points = def.points.map(point);
+    var startIndex = nearestIndex(points, from);
+    if (def.mode === 'loop') {
+      return points.slice(startIndex).concat(points.slice(0, startIndex));
+    }
+
+    // South Horn uses the same nearest-node Euclidean fallback as BOCCHI when
+    // a full vnavmesh cost graph is not available to this browser overlay.
+    var remaining = points.slice();
+    var ordered = [];
+    var current = from;
+    while (remaining.length) {
+      var nextIndex = nearestIndex(remaining, current);
+      var next = remaining.splice(nextIndex, 1)[0];
+      ordered.push(next);
+      current = next;
+    }
+    return ordered;
+  }
+
+  function currentPoint() {
+    return !state.complete && state.order[state.index] || null;
+  }
+
+  function pointKey(value) {
+    if (!value) return '';
+    return [value.routeNumber, value.x, value.y, value.z].join(':');
+  }
+
+  function resetArrival() {
+    state.arrivalKey = '';
+    state.arrivalSamples = 0;
+  }
+
+  function notify() {
+    var snapshot = Route.view(OC.Overlay && OC.Overlay.playerPos);
+    listeners.slice().forEach(function (listener) {
+      try { listener(snapshot); } catch (error) { console.error('[route] listener', error); }
+    });
+  }
+
+  function reset(territory, position) {
+    territory = Number(territory) || 0;
+    state.territory = territory;
+    state.order = buildOrder(territory, position);
+    state.index = 0;
+    state.complete = false;
+    resetArrival();
+    notify();
+    return state.order.length > 0;
+  }
+
+  function advance() {
+    if (!state.order.length || state.complete) return false;
+    state.index += 1;
+    if (state.index >= state.order.length) {
+      state.index = state.order.length;
+      state.complete = true;
+    }
+    resetArrival();
+    notify();
+    return true;
+  }
+
+  function retreat() {
+    if (!state.order.length) return false;
+    if (state.complete) {
+      state.complete = false;
+      state.index = state.order.length - 1;
+    } else if (state.index > 0) {
+      state.index -= 1;
+    } else {
+      return false;
+    }
+    resetArrival();
+    notify();
+    return true;
+  }
+
+  function bearingForDelta(dx, dz) {
+    if (dx * dx + dz * dz < 0.000001) return null;
+    var degrees = Math.atan2(dx, -dz) * 180 / Math.PI;
+    return (degrees + 360) % 360;
+  }
+
+  function directionForDelta(dx, dz) {
+    if (dx * dx + dz * dz < 0.000001) return '';
+    var angle = Math.atan2(dx, -dz);
+    var turn = Math.PI * 2;
+    angle %= turn;
+    if (angle < 0) angle += turn;
+    return DIRECTION_KEYS[Math.round(angle / (Math.PI / 4)) % 8];
+  }
+
+  var Route = OC.Route = {
+    arrivalRadius: ARRIVAL_RADIUS,
+
+    supported: function (territory) {
+      return !!definition(territory);
+    },
+
+    isActive: function () {
+      return !!state.active;
+    },
+
+    open: function (territory, position) {
+      territory = Number(territory) || 0;
+      var resume = state.territory === territory && state.order.length > 0 && !state.complete;
+      state.active = true;
+      if (!resume && validPosition(position)) reset(territory, position);
+      else {
+        state.territory = territory;
+        notify();
+      }
+      return Route.view(position);
+    },
+
+    pause: function () {
+      if (!state.active) return false;
+      state.active = false;
+      resetArrival();
+      notify();
+      return true;
+    },
+
+    restartNearest: function (territory, position) {
+      state.active = true;
+      return reset(territory, position);
+    },
+
+    next: advance,
+    previous: retreat,
+
+    updatePosition: function (position, territory) {
+      territory = Number(territory) || 0;
+      if (!state.active || !Route.supported(territory) || !validPosition(position)) return false;
+      if (state.territory !== territory || !state.order.length) {
+        reset(territory, position);
+        return true;
+      }
+
+      var target = currentPoint();
+      if (!target) return false;
+      var distance = Math.sqrt(distanceSquared(position, target));
+      var key = pointKey(target);
+      if (distance <= ARRIVAL_RADIUS) {
+        if (state.arrivalKey !== key) {
+          state.arrivalKey = key;
+          state.arrivalSamples = 1;
+        } else {
+          state.arrivalSamples += 1;
+        }
+        if (state.arrivalSamples >= ARRIVAL_CONFIRM_SAMPLES) return advance();
+      } else {
+        resetArrival();
+      }
+      notify();
+      return false;
+    },
+
+    handleZone: function (territory) {
+      territory = Number(territory) || 0;
+      if (state.territory === territory) return false;
+      state = freshState();
+      state.territory = territory;
+      notify();
+      return true;
+    },
+
+    onChange: function (listener) {
+      if (typeof listener === 'function') listeners.push(listener);
+    },
+
+    view: function (position) {
+      var target = currentPoint();
+      var def = definition(state.territory);
+      var ready = validPosition(position) && !!target;
+      var dx = ready ? target.x - Number(position.x) : NaN;
+      var dz = ready ? target.z - Number(position.z) : NaN;
+      var distance = ready ? Math.sqrt(distanceSquared(position, target)) : null;
+      return {
+        active: state.active,
+        supported: Route.supported(state.territory),
+        territory: state.territory,
+        status: state.complete ? 'complete' : state.order.length ? (ready ? 'ready' : 'waiting-position') : 'waiting-position',
+        complete: state.complete,
+        total: state.order.length || Number(definition(state.territory) && definition(state.territory).points.length) || 0,
+        visited: Math.min(state.index, state.order.length),
+        progress: state.complete ? state.order.length : state.index + (state.order.length ? 1 : 0),
+        target: target && {
+          x: target.x,
+          y: target.y,
+          z: target.z,
+          mapId: target.mapId,
+          nodeId: target.nodeId,
+          routeNumber: target.routeNumber,
+          displayNumber: def && def.mode === 'loop' ? target.routeNumber : state.index + 1,
+          distance: distance,
+          bearing: ready ? bearingForDelta(dx, dz) : null,
+          directionKey: ready ? directionForDelta(dx, dz) : '',
+          layerKey: target.mapId === 1244 ? 'subterrane' : 'surface'
+        }
+      };
+    },
+
+    mapView: function () {
+      if (!state.active || state.complete || !state.order.length) return { active: false, points: [] };
+      var def = definition(state.territory);
+      return {
+        active: true,
+        territory: state.territory,
+        points: state.order.slice(state.index, state.index + 6).map(function (target, index) {
+          return {
+            x: target.x,
+            y: target.y,
+            z: target.z,
+            mapId: target.mapId,
+            routeNumber: def && def.mode === 'loop' ? target.routeNumber : state.index + index + 1,
+            current: index === 0
+          };
+        })
+      };
+    },
+
+    _buildOrder: buildOrder,
+    _state: function () { return state; }
+  };
+})(typeof window !== 'undefined' ? window : this);

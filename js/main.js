@@ -143,6 +143,14 @@
         OC.Radar.onAlert(function (target) { App.alertRadar(target); });
         OC.Radar.start(OC.Overlay);
       }
+      if (OC.Route) {
+        OC.Route.onChange(function (view) {
+          OC.Map.updateRoute(document.getElementById('mapLayer'));
+          if (App.openPanel === 'route' && OC.UI.renderRoutePanel) {
+            OC.UI.renderRoutePanel(document.getElementById('popover'), view);
+          }
+        });
+      }
       this.wireOverlay();
       if (OC.Treasure) {
         OC.Treasure.onChange(function (view) {
@@ -196,6 +204,12 @@
       var pop = document.getElementById('popover');
       pop.addEventListener('click', function (e) {
         if (e.target.closest('[data-close]')) App.closePanel();
+        var routeAction = e.target.closest('[data-route-action]');
+        if (!routeAction || !OC.Route) return;
+        var action = routeAction.getAttribute('data-route-action');
+        if (action === 'previous') OC.Route.previous();
+        else if (action === 'next') OC.Route.next();
+        else if (action === 'restart') OC.Route.restartNearest(OC.Overlay.territoryId, OC.Overlay.playerPos);
       });
     },
 
@@ -876,12 +890,15 @@
     togglePanel: function (which) {
       if (which === 'dcpots' && !this.showsCnDcOverview()) return;
       if (this.openPanel === which) return this.closePanel();
+      if (this.openPanel === 'route' && OC.Route) OC.Route.pause();
       this.openPanel = which;
       document.getElementById('popover').classList.remove('hidden');
       if (which === 'dcpots') this.fetchDc();
+      if (which === 'route' && OC.Route) OC.Route.open(OC.Overlay.territoryId, OC.Overlay.playerPos);
       this.renderPanel();
     },
     closePanel: function () {
+      if (this.openPanel === 'route' && OC.Route) OC.Route.pause();
       this.openPanel = null;
       State.detailId = null; State.detail = null; State.detailLocating = false;
       document.getElementById('popover').classList.add('hidden');
@@ -896,7 +913,9 @@
       if (this.openPanel === 'dcpots') OC.UI.renderDcPots(pop, this._dc, !this._dcLoaded);
       else if (this.openPanel === 'battle') OC.UI.renderBattlePanel(pop, State.detail, State.detailId, State.detailLocating);
       else if (this.openPanel === 'settings') this.renderSettings(pop);
-      pop.classList.toggle('compact', this.openPanel === 'dcpots'); // Use compact styling for the Pot overview.
+      else if (this.openPanel === 'route' && OC.UI.renderRoutePanel) OC.UI.renderRoutePanel(pop, OC.Route && OC.Route.view(OC.Overlay.playerPos));
+      pop.classList.toggle('compact', this.openPanel === 'dcpots' || this.openPanel === 'route');
+      pop.classList.toggle('route-popover', this.openPanel === 'route');
       var newBody = pop.querySelector('.panel-body');
       if (newBody && scroll) newBody.scrollTop = scroll;
     },
@@ -1497,6 +1516,7 @@
         App.updateMapVisible();
       });
       OC.Overlay.on('zone', function (territoryId) {
+        if (OC.Route) OC.Route.handleZone(territoryId);
         if (OC.selectMap && OC.selectMap(territoryId)) {
           OC.Map.render(document.getElementById('mapLayer'));
           App.refreshRail();
@@ -1511,6 +1531,7 @@
           App.refreshRail();
         }
         OC.Map.updatePlayer(document.getElementById('mapLayer'));
+        if (OC.Route) OC.Route.updatePosition(OC.Overlay.playerPos, OC.Overlay.territoryId);
         App.refreshHighlights();   // Include nearby bosses in highlights.
         if (App.resolveMyIsland()) App.pollMyIsland(true);
         else App.locateMyIslandFast();
@@ -2002,7 +2023,7 @@
         }
         if (!match && /^\d+$/.test(token)) number = Number(token) * 60;
       }
-      if (number !== Math.floor(number) || number < 1 || number > 1800 || seen[number]) return;
+      if (number !== Math.floor(number) || number < 1 || number > 600 || seen[number]) return;
       seen[number] = true;
       seconds.push(number);
     });
@@ -2117,7 +2138,10 @@
         '<img class="rbtn-icon" src="' + esc(l.icon) + '" alt="" aria-hidden="true"></button>';
     });
     h += '<div class="rail-div"></div>';
-    if (App.showsCnDcOverview()) h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + OC.i18n.t('panel_dcpots') + '">罐</button>';
+    h += '<button class="rbtn panel route" data-panel="route" title="' + esc(OC.i18n.t('panel_route')) + '" aria-label="' + esc(OC.i18n.t('panel_route')) + '" style="--rc:#70e7d2">' +
+      '<img class="rbtn-icon" src="assets/map-icons/treasure-patrol.png" alt="" aria-hidden="true"></button>';
+    if (App.showsCnDcOverview()) h += '<button class="rbtn panel dc" data-panel="dcpots" title="' + esc(OC.i18n.t('panel_dcpots')) + '" aria-label="' + esc(OC.i18n.t('panel_dcpots')) + '">' +
+      '<img class="rbtn-icon" src="assets/map-icons/pot-overview.png" alt="" aria-hidden="true"></button>';
     h += '<button class="rbtn panel" data-panel="settings" title="' + OC.i18n.t('panel_settings') + '">⚙</button>';
     return h;
   }

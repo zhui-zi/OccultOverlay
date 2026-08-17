@@ -223,7 +223,8 @@
   function needsLivePosition() {
     var treasureActive = OC.Treasure && OC.Treasure.isActive && OC.Treasure.isActive();
     var radarActive = OC.Radar && OC.Radar.isActive && OC.Radar.isActive();
-    return !!(treasureActive || radarActive);
+    var routeActive = OC.Route && OC.Route.isActive && OC.Route.isActive();
+    return !!(treasureActive || radarActive || routeActive);
   }
 
   function startPositionPolling() {
