@@ -41,6 +41,10 @@ or run `npx wrangler pages deploy .`.
 
 The fixed `dev` branch is published as a Pages preview at `https://dev.occultoverlay.pages.dev/`.
 
+## Reference
+
+- [EurekaTrackerAutoPopper](https://github.com/Infiziert90/EurekaTrackerAutoPopper)
+
 ## License
 
 MIT. Not affiliated with SQUARE ENIX. FINAL FANTASY XIV © SQUARE ENIX.
