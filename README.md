@@ -43,4 +43,6 @@ The fixed `dev` branch is published as a Pages preview at `https://dev.occultove
 
 ## License
 
-MIT. Not affiliated with SQUARE ENIX. FINAL FANTASY XIV © SQUARE ENIX.
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Source and adaptations may be shared for noncommercial purposes only, and distributed adaptations must use the same license.
+Commercial use requires separate written permission. Not affiliated with SQUARE ENIX. FINAL FANTASY XIV © SQUARE ENIX.
