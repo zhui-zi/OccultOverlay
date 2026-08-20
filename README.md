@@ -1,43 +1,23 @@
 # Occult Crescent Overlay
 
-A map overlay for FFXIV's Occult Crescent (South Horn and North Horn), for ACT / OverlayPlugin.
-Everything is automatic — no setup, no tracker id. Data comes from the shared cloud.
+A multilingual ACT / OverlayPlugin map overlay for FFXIV's South Horn and North Horn.
+It connects automatically and uses shared cloud data without a tracker ID.
 
 ## Features
 
-- Translucent zone map with toggleable point layers: bronze / silver coffers, north / south / reroll pots, carrots, and survey points.
-- Your character position on the map.
-- Live bronze/silver coffer and carrot radar with map markers, absolute compass directions, continuous target bearings, live distance, collapsed-map persistence, independent voice control, and opacity-aware panels.
-- Optional Magic Pot treasure guidance with strict eight-sector filtering, safe-point priority, live distance, and continuous target bearing.
-- Simplified Chinese, English, and Japanese UI with an independent CN/global data-region selector.
-- CN pot overview when the CN data region is selected, sorted by next-pot time; click an island for its CE / FATE and drops.
-- Pot timing only uses an observed current-cycle spawn from a strictly matched instance.
-- Optional ACT TTS alerts for every CE and FATE, plus configurable minute- and second-level Magic Pot advance alerts.
-- Optional Forked Tower alerts and active-event chips.
-- South Horn demiatma filters; North Horn soul-shard and exploration-note drops.
-- On-demand North Horn trigger-monster location maps.
-- North Horn Phantom Dispeller mappings and filtered spawn alerts.
-- Only visible while you are in Occult Crescent.
-- Collapse mode to hide the map.
-
-## Language
-
-The default `System default` mode follows the computer language: Chinese selects Simplified Chinese, Japanese selects Japanese, and all other languages select English. The language can also be selected manually in Settings.
-
-On first use, the data region defaults to CN for Chinese and Global for other languages. It is then stored independently from the UI language.
-
-- CN matches datacenters `101–104` and shows the CN pot overview.
-- Global matches datacenters `1–11` and hides the CN pot overview.
+- Live map and radar for the player, coffers, carrots, Magic Pots, and survey points.
+- Magic Pot guidance, timing, and configurable ACT TTS reminders.
+- CE, FATE, Forked Tower, drop, trigger-monster, and Phantom Dispeller information.
+- Simplified Chinese, English, and Japanese UI with independent CN and Global data regions.
+- Toggleable layers, opacity and voice controls, collapse mode, and automatic zone visibility.
 
 ## Use
 
-Add as a Custom/URL overlay in OverlayPlugin, pointing at `index.html` (or a deployed URL).
-It connects to the game automatically via the `HOST_PORT` / `OVERLAY_WS` parameter OverlayPlugin provides.
+Add `index.html` or a deployed URL as a Custom/URL overlay in OverlayPlugin. The overlay connects through the `HOST_PORT` or `OVERLAY_WS` parameter supplied by OverlayPlugin.
 
-## Deploy (Cloudflare Pages)
+## Deploy
 
-Static site. Connect the repo in Cloudflare Pages with framework preset None and output directory `/`,
-or run `npx wrangler pages deploy .`.
+Deploy the repository as a static site with the Cloudflare Pages framework preset set to None and output directory `/`, or run `npx wrangler pages deploy .`.
 
 The fixed `dev` branch is published as a Pages preview at `https://dev.occultoverlay.pages.dev/`.
 
